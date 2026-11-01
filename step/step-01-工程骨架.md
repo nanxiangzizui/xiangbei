@@ -2,7 +2,7 @@
 
 > **所属步骤**：一 · 工程骨架（对应 向北-项目计划书.md 执行步骤 3）
 > **状态源**：.claude/CLAUDE.md「分步骤」表；本文件不另存状态，执行时只回填文末《复核记录》
-> **当前状态（2026-11-01）**：步骤零 ✅（tag step-0-done）；project/ 只有 tools/，六个运行文件均不存在。本计划已就绪，**尚未开工**。
+> **当前状态（2026-11-01）**：步骤一 ✅ 完成，tag `step-1-done`；六文件 + tools×3 + 三份 docs 已提交，浏览器实测 12 项全绿。提交记录见 §11.6，执行记录见 §11。
 > **本步骤出口**（逐字引自 .claude/CLAUDE.md）：标题→地图→一段对话→返回；刷新恢复；控制台无报错。
 > **时间盒**：标准版 9h（540 min）／压缩版 5h10（310 min）
 > **不可逆动作**：无。?reset=1 只清开发存档；提交与 tag 在 T1.9；不部署、不发视频、不打包字体。
@@ -934,9 +934,12 @@ OK：构建自检 9 项全绿 / OK：纯状态层烟测 14 项全绿
 
 ### 11.6 提交
 
-- commit：见下方执行记录（提交信息「feat: 工程骨架（步骤一）」）
-- tag：step-1-done
-- 本机 shell 0xC0000142 未恢复：提交与 tag 通过 run_code 内 `child_process`（danger-full-access）执行，命令与 hash 回填在本节。
+- 首版提交（代码 + 文档）：`feat: 工程骨架（步骤一）`，commit `d0cdedabb8cd40ca1fb96dfda80cad6f5a395f4c`（short `d0cdeda`），main 分支，15 files changed / +2820 −27。
+- 复核回填（本节）：docs 提交，见 `git log -1 --stat`；tag `step-1-done` 指向该提交，即 `git rev-parse step-1-done^{commit}` == `git rev-parse HEAD`。
+- tag：与 `step-0-done` 一致用轻量 tag（`.git/refs/tags/step-1-done` 直接写 commit hash，无 tag 对象）。
+- 命令：`git add project docs step .claude` → `git commit -m "feat: 工程骨架（步骤一）"` → `git tag step-1-done`；首版提交后 `git status --porcelain` 为空。回填本节为单独 docs 提交，随后 `git tag -f step-1-done` 前移，使 `git rev-parse step-1-done^{commit}` == `git rev-parse HEAD`。
+- 执行方式：本机 shell 仍 0xC0000142、受限沙箱子进程 spawn EPERM，故用一次 `run_code`（danger-full-access）内 `child_process.spawnSync` 调用 `C:\Program Files\Git\cmd\git.exe`，cwd 为项目根；未走 pwsh，也未手工写 git 对象。
+- 未入库：`docs/evidence/`、`node_modules/`、`my-playwright-project/`、`screenshots/`、`*.zip` 均被 `.gitignore` 排除；工作区提交后 clean。
 
 ---
 
