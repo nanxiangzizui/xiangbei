@@ -23,7 +23,7 @@
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
       </div>
-      <p class="title-version">步骤二 · 人物虚构，非史料人物</p>
+      <p class="title-version">试玩版 · 人物虚构，非史料人物</p>
     </section>
 
     <!-- 地图画面：ui-layout §1.5 -->
@@ -37,25 +37,101 @@
       <p class="map-hint">点亮的站点可以进入；其余还在路上</p>
     </section>
 
-    <!-- 对话画面：ui-layout §1 -->
+    <!-- 对话画面：ui-layout §1 + §7 -->
     <section id="scene-vn" class="scene" aria-label="对话" hidden>
       <p id="vn-chapter" class="vn-chapter"></p>
+
+      <!-- 自动 / 跳过：只在线性节点显示 -->
+      <div id="vn-toolbar" class="vn-toolbar" hidden>
+        <button type="button" id="vn-auto" class="vn-tool" aria-pressed="false" data-action="auto">自动</button>
+        <button type="button" id="vn-skip" class="vn-tool" aria-pressed="false" data-action="skip">跳过</button>
+      </div>
+
       <button type="button" class="vn-pause" data-action="pause" aria-label="暂停">Ⅱ</button>
+
       <div id="vn-dialogue" class="vn-dialogue">
         <p id="vn-name" class="vn-name"></p>
         <p id="vn-text" class="vn-text"></p>
         <span id="vn-next" class="vn-next" aria-hidden="true">▼</span>
       </div>
+
+      <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
+      <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
+
+      <!-- 小游戏入口占位（步骤四换成真画布）与行囊结算（只列清单，不评分） -->
+      <div id="vn-minigame" class="vn-seam" role="group" aria-label="小游戏入口" hidden></div>
+      <div id="vn-result" class="vn-result" role="group" aria-label="结算" hidden></div>
+
+      <!-- 章节标题卡：全屏，1200ms 自动关 -->
+      <div id="vn-title-card" class="xb-title-card" role="presentation" hidden>
+        <p id="vn-title-chapter" class="xb-title-card__chapter"></p>
+        <div class="xb-title-card__rule"></div>
+        <p id="vn-title-sub" class="xb-title-card__sub"></p>
+      </div>
+
+      <!-- 分页量具：屏外，与正文同字号同宽，只用来量行数；不能 display:none -->
+      <p id="vn-measure" class="vn-measure" aria-hidden="true"></p>
     </section>
 
-    <!-- 暂停遮罩（布尔遮罩，不是场景） -->
+    <!-- 暂停遮罩：继续 / 设置 / 返回地图 / 回到标题（ui-layout §7） -->
     <div id="pause" class="overlay" hidden>
-      <div class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
+      <div id="pause-menu" class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
         <p class="pause-title">暂停</p>
         <button type="button" class="pause-button" data-action="resume">继续</button>
+        <button type="button" class="pause-button" data-action="open-settings">设置</button>
         <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
         <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
       </div>
+
+      <div id="vn-settings" class="xb-settings" role="dialog" aria-modal="true" aria-label="设置" hidden>
+        <p class="pause-title">设置</p>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">文字速度</span>
+          <div class="xb-settings__control">
+            <input id="set-speed" class="xb-range" type="range" min="10" max="60" step="5" value="30" aria-label="文字速度">
+            <span id="set-speed-value" class="xb-settings__value">30 字/秒</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">字号</span>
+          <div id="set-scale" class="xb-segmented" role="group" aria-label="字号">
+            <button type="button" data-scale="1" aria-pressed="true">100%</button>
+            <button type="button" data-scale="1.15" aria-pressed="false">115%</button>
+            <button type="button" data-scale="1.3" aria-pressed="false">130%</button>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">音量<small class="xb-settings__hint">音效步骤六接入</small></span>
+          <div class="xb-settings__control">
+            <input id="set-volume" class="xb-range" type="range" min="0" max="100" step="5" value="60" aria-label="音量">
+            <span id="set-volume-value" class="xb-settings__value">60</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">静音</span>
+          <button type="button" id="set-muted" class="xb-switch" role="switch" aria-checked="false" aria-label="静音"></button>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">减少动效</span>
+          <button type="button" id="set-motion" class="xb-switch" role="switch" aria-checked="false" aria-label="减少动效"></button>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">跳读已读</span>
+          <button type="button" id="set-skip" class="xb-switch" role="switch" aria-checked="false" aria-label="跳读已读"></button>
+        </div>
+        <button type="button" class="pause-button" data-action="close-settings">返回</button>
+      </div>
+    </div>
+
+    <!-- 史实注：单张弹窗，四块（标题 / 类型 / 正文 / 出处）+ 争议行（ui-layout §7） -->
+    <div id="codex" class="xb-modal xb-codex" role="dialog" aria-modal="true" aria-labelledby="codex-title" hidden>
+      <button type="button" id="codex-close" class="xb-modal__close" aria-label="关闭">×</button>
+      <h2 id="codex-title" class="xb-modal__title"></h2>
+      <div id="codex-badges" class="xb-codex__badges"></div>
+      <div id="codex-body" class="xb-codex__body" tabindex="0"></div>
+      <p id="codex-note" class="xb-codex__note" hidden></p>
+      <p id="codex-source" class="xb-codex__source"></p>
+      <p class="xb-codex__disclaimer">人物虚构，非史料人物。</p>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>

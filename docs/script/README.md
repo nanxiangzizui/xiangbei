@@ -32,8 +32,8 @@
 |---|---|---|
 | `【说话人】文本` | 一句台词/旁白；旁白固定写 `【旁白】` | `{type:'line', speaker, text}` |
 | `[[bg:id]]` `[[sfx:id]]` | 挂到**下一条** line 的 `bg`/`sfx` 字段 | 字段合并 |
-| `[[if:key]]` … `[[else]]` … `[[end]]` | 条件块；`key` 为旗标路径，真值走第一段 | 编译期展开为分支数组 |
-| `>> 选项｜限时 8s｜默认 A｜记录到 choice.x.y` + `A｜文案｜set: …｜cost: …` | 选项；无“限时”即不计时，无“默认”即无超时 | `{type:'choice', prompt, timeout, defaultOption, options:[{text,set,cost}]}` |
+| `[[if:key]]` … `[[else]]` … `[[end]]` | 条件块；`key` 为旗标路径，真值走第一段 | 编译为**同位置条件节点**：两段各给一个 id（主序号 + `a`/`b`），带 `when` 字段；不在运行期展开（§6） |
+| `>> 选项｜限时 8s｜默认 A｜记录到 choice.x.y` + `A｜文案｜set: …｜cost: …` | 选项；无“限时”即不计时，无“默认”即无超时 | `{type:'choice', id, record, timeout, defaultOption, options:[{key,text,value,set,cost}]}` |
 | `【小游戏】door｜duration=75, capacity=6` | 小游戏入口；参数写行内 | `{type:'minigame', id, config}` |
 | `【史实注】yudu` | 弹史实注并解锁图鉴 | `{type:'codex', id}` |
 | `【标题卡】第一章 · 湘江` | 章节标题卡 | `{type:'title', text}` |
@@ -47,8 +47,10 @@
 
 - 每个选项必须有 `cost:`，写**可读的一句代价**，结算时原样显示。
 - 限时选项必须有 `默认 X`；超时按默认项结算，并记录 `timedOut: true`。
+- 每个选项必须有 `key`（A/B/C）与 `value`：`record:` 指向的旗标写入 `value`，所以「带门板 = true」这类语义是数据，不是代码。
+- `record:` 一律写 `choice.<章>.<事件>`；同一事件只记一次，不覆盖（重玩由重置存档负责）。
 - 选项之间不允许有“显然更好”的一项：如果一眼能看出哪项对，就给“看起来对”的那项加一个更痛的代价。
-- `set:` 只写 `docs/state-schema.md` §3 里的键；新增键先补 schema。
+- `set:` 只写 `docs/state-schema.md` §3 里的键；新增键先补 schema。`set` 支持两种写法：赋值（`item.door=true`）与增量（`fire=+10`、`load=-1`）。
 - 选项文案 ≤ 14 字；`cost` ≤ 22 字（手机上两行放得下）。
 
 ## 5. 字数口径
@@ -59,20 +61,65 @@
 - 统计工具：`node project/tools/count-words.js docs/script`（输出每章字数、总数、A 口径秒数）。
 - 换算：A 口径（正常点按）= 0.166 秒/字；B 口径（慢读）= 0.258 秒/字。验收用 A。
 
-## 6. 三步转换（步骤一照抄，不许再发明）
+## 6. 节点契约（步骤三定稿）
+
+`story.js` 的每章是**按序扁平数组**，不用树、不用栈：条件分支靠节点上的 `when` 字段过滤，运行时永远「从当前下标往后找第一个可见节点」。
+
+| 字段 | 适用 | 说明 |
+|---|---|---|
+| `id` | 全部 | 全局唯一字符串；规则见 §7 |
+| `type` | 全部 | `line` / `choice` / `minigame` / `result` / `title` / `codex` / `end` |
+| `when` | 全部（可选） | 条件字符串；`item.door` 真、`!item.door` 假、`a && b` 与；同位置的互斥分支各写一条 |
+| `speaker` `text` | line | 旁白写 `旁白`；`speaker` 为旁白时 UI 不显示姓名签 |
+| `bg` | line | 只写 `art.js` `SCENES` 里的 id；不给就沿用上一句的背景 |
+| `record` `timeout` `defaultOption` `prompt` `options` | choice | `options[].key/text/value/set/cost`；`timeout` 单位秒，0 或省略 = 不计时 |
+| `game` `config` | minigame | 步骤三只用 `game:"door"` 显示占位面板；真实参数见 `docs/minigame-tuning.md` |
+| `lists` | result | `[{when, heading, items[]}]`；只列清单，不评分、不写旗标 |
+| `text` `sub` | title | 章名与副题；显示后自动关或点击关 |
+| `codexId` | codex | 必须是 `story.codex` 里的 id；关闭时解锁 |
+| `next` | end | 下一章 id 或 `map` |
+
+**`when` / `set` 白名单**（越界在 `check-build` 与 `smoke` 里直接失败，不在运行期兜底）：
+
+- `when` 只读：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`，支持前置 `!` 与 `&&`。
+- `set` 只写：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`；`fire` clamp 0–100，`trust` clamp 0–6，`load` 取整且 ≥0。
+- `item.door` 写入时同步 `inventory.door`（存档里两处必须一致）。
+- `ending.*`、`card.*`、`unlockedChapters` **不许**由剧本写，只能由引擎写。
+
+**三步转换**（步骤一照抄，不许再发明）：
 
 1. 去文件头与 `[[…]]` 指令，得到纯节点序列。
-2. `[[if]]` 块按当前旗标展开；`[[else]]` 取反；嵌套最多 2 层。
-3. 每个节点按 §7 规则分配字符串 `id`（如 `p001`），写入 `chapterId`；章末 `{type:'end', next}` 指向下一章 id 或 `map`。
+2. `[[if]]` 块两段各给一个 id（主序号 + `a`/`b`），写 `when`；`[[else]]` 段写 `!key`；嵌套最多 2 层，用 `&&` 拍平。
+3. 章末 `{type:'end', next}` 指向下一章 id 或 `map`。
 
-## 7. 节点 id 规则（步骤一新增）
+## 7. 节点 id 规则（步骤一新增，步骤三补映射）
 
 - 章前缀：`prologue=p`、`xiangjiang=x`、`zunyi=z`、`jinsha=j`、`luding=l`、`grass=g`、`wuqi=w`。
-- 顺序号 `001–899`；分支正文用主序号加后缀 `a`/`b`（如 `p041a`/`p041b`）；`900–999` 保留给该章 end 节点（如 `p900`）。
+- 顺序号 `001–899`；分支正文用主序号加后缀 `a`/`b`（如 `p022a`/`p022b`）；`900–999` 保留给该章 end 节点（如 `p900`）。
 - id **全局唯一、一经写入 story.js 不再改**；确需改名，必须同时写存档迁移（`docs/state-schema.md` §5）。
-- 存档只存当前节点 id，不存数组下标；载入时按 id 在章节点表里重建运行时栈。
-- 映射示例：`00-prologue.md` 第 9 行 → `p001`；第 31 行 → `p020`；试片临时章末 → `p900`（`next=map`）。
-- 步骤三只能追加 id，不得重排 `p001–p020`；删除/改名 `p900` 前先写迁移：找不到节点时回本章第一句并提示。
+- 存档只存当前节点 id，不存数组下标；载入时按 id 在全章节点表里定位。
+- 步骤三只能追加 id，不得重排 `p001–p020`；`p900` 的 `next` 由 `map` 改为 `xiangjiang`（第一章尚未接入，引擎按“章末待续”回地图）。
+
+**序章映射（步骤三定稿，48 节点）**
+
+| 源文件行 | id | 类型 | 条件 / 说明 |
+|---|---|---|---|
+| 9–31 | p001–p020 | line | 原样；p001 挂 `bg:yudu_river`，p006 挂 `bg:yudu_night` |
+| 33–35 | p021 | choice | 限时 8s，默认 A，`record:choice.prologue.door` |
+| 38–39 | p022a / p023a | line | `when:item.door` |
+| 41 | p022b | line | `when:!item.door` |
+| 44 | p024 | minigame | `door`，`duration=75,capacity=6,doorCost=2,items=8`；步骤三只显示占位面板 |
+| 46 | p025 | result | 行囊两清单（带走/留下），不评分 |
+| 47–49 | p026–p028 | line | |
+| 51 / 53 | p029a / p029b | line | `when:item.door` / `when:!item.door` |
+| 55 | p030 | line | |
+| 58–63 | p031–p036 | line | p031 挂 `bg:yudu_river` |
+| 65–67 | p037 | choice | 限时 8s，默认 B，`record:choice.prologue.lookback` |
+| 70 / 72 | p038a / p038b | line | `when:choice.prologue.lookback` / `when:!choice.prologue.lookback` |
+| 76–79 | p039–p042 | line | p039 挂 `bg:yudu_night` |
+| 80 | p043 | title | 「第一章 · 湘江」 |
+| 81 | p044 | codex | `yudu` |
+| 82 | p900 | end | `next:xiangjiang` |
 
 ## 8. 统计表（每次改稿后回填，与正文一致）
 

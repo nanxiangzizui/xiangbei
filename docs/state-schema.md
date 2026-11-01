@@ -108,17 +108,24 @@
 **规则**
 
 - 读取时按默认值深合并：顶层键缺失取默认值，`settings` 逐键合并（不能用 `Object.assign` 浅合并，否则旧档会整块覆盖新默认键）；缺字段不报错、不崩。
+- 旗标在 JSON 里是**扁平的带点键**（`flags["item.door"]`），不是嵌套对象；写读都走 `XB.core.setFlag(state, path, value)`，不要在别处拼键名。
+- 载入时补齐六个默认旗标：`item.door=false`、`item.pot=false`、`load=0`、`trust=0`、`fire=50`、`lights_lost=0`；`memory.*` / `choice.*` 缺失按 false 读。
+- **写入白名单**（`set:` 只能用这些键，越界在 check-build 与 smoke 里直接失败）：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`。`ending.*`、`card.*`、`unlockedChapters` 只由引擎写。
+- `inventory.door` 是 `flags["item.door"]` 的**镜像**：`setFlag` 写 `item.door` 时同步，载入时以 `flags` 为准重算；两处不一致视为坏档。
+- 选项日志 `choices[]` 每条固定五个字段：`{chapter, nodeId, option, text, timedOut}`；`option` 是 A/B/C，`text` 是当时的选项文案（供遵义错误卡引用），`timedOut` 为布尔。只保留最近 64 条。
 - 旗标只增不改名；改名必须写迁移函数（见 §5）。
 - 不在 flags 里存大段文本；文本进 `story.js`。
 - 时间/随机数不进存档；重开小游戏用固定种子（`seed: chapterId`）。
 - 人物显示名从 `story.js` 取，存档只存 id。
-- `trust` 与 `fire` 的上下限：0–6 / 0–100，写入时 clamp。
+- `trust` 与 `fire` 的上下限：0–6 / 0–100，写入时 clamp；`load` 取整且 ≥0。
+- `codex` 只保留 `story.codex` 里已知的 id，其余丢弃（防止旧档塞进未知项）。
 
 ## 4. 保存点
 
 - **每个 line beat 推进即保存**：一次推进 = 一次 `xiangbei.save.v1` 写入；单次序列化目标 <4KB，4096 字节是上限（超限视为 schema 设计错误：不写、控制台报错、提示“存档异常”）。
 - 刷新/关闭恢复到当前 beat，不回退到关卡开头。
-- 以下保存点照旧保留：进入新章、每个选项结算、小游戏 end()、记名/点名交互结束、设置变更、结局生成。
+- 以下保存点照旧保留并新增：进入新章、每个选项结算（含超时）、小游戏 end()、记名/点名交互结束、设置变更、结局生成；**标题卡关闭**、**史实注关闭**（同时写入 `codex`）、**占位/结算面板继续**。
+- `paused`（暂停）、打字机进度、`seenNodes`（跳过已读）是运行时状态：**不写存档**，刷新后回到节点开头。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
 
 ## 5. 迁移
