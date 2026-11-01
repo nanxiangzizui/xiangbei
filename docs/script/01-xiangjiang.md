@@ -1,6 +1,6 @@
 # 第一章 · 湘江
 - id: xiangjiang ｜ 史实注: xiangjiang ｜ 小游戏: abandon(80s)
-- 预算: 790 字 ±40 ｜ beat 36 ±4 ｜ 时长 3:31
+- 定稿: 776 字 ｜ 36 beat ｜ 时长 3:21
 - bg: xiangjiang_ford, xiangjiang_dawn ｜ sfx: river, gunfire_far, wind, boat
 - 演出: 浮桥人潮横移长镜 / 江面漂物 / 名册特写（划名）
 - 注意: 结算后 `item.door` 以 abandon 结算结果为准，后续 [[if]] 读的是最终值；“三百斤的箱子”只写重量，不点名
@@ -37,7 +37,7 @@
 【旁白】我把名册摊在膝盖上，开始划。
 【旁白】划第一个名字的时候，手还稳。划到第五个，铅笔在纸上顿了一下。
 【旁白】有个名字我划错了行，刮不掉，只好在旁边画个小叉。
-【旁白】后来那种小叉越画越多，一页纸像下了一场雨。
+【旁白】后来那种小叉越画越多，都是划错的行。一页纸像下了一场雨。
 
 >> 选项｜限时 10s｜默认 C｜记录到 choice.xiangjiang.hold
 A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜cost: 你晚过江一个时辰，丢了半袋粮

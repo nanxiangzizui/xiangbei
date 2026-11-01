@@ -30,7 +30,7 @@
 
 | 步骤 | 状态 | 对应计划书 | 技术栈 / 组件 | 出口（可验证） |
 |---|---|---|---|---|
-| 零 定题、史料与剧本 | 🚧 资料准备 | 1–2 | Markdown；七段结构、4–5 游戏、五精神机制；《史实锚点表》 | 一页结构表 + 一页史料表；序章/湘江/点名三场重头戏；全文 4000–6000 字；红线复核 |
+| 零 定题、史料与剧本 | ✅ 完成（2026-11-01，tag `step-0-done`） | 1–2 | Markdown；七段结构、4 关、五精神机制；《史实锚点表》A1–A7 + 出处 S1–S15 | 结构表 story-bible §4.1 + 台账 §4.2 + 史料表 sources.md；七章剧本 4108 字 / 229 beat；7 张史实注；红线 10/10；T0.0–T0.9 逐卡见 step-00 §11.1（真人外读 1 项待步骤七补） |
 | 一 工程骨架 | ⬜ 未开始 | 3 | `index.html / style.css / engine.js / story.js / minigames.js / art.js`；固定舞台缩放；状态机；localStorage | 标题→地图→一段对话→返回；刷新恢复；控制台无报错 |
 | 二 视觉系统 | ⬜ 未开始 | 4 | CSS 变量；Canvas/SVG 程序化版画；剪影；UI 组件库 | 标题画面 + 一套 UI 组件；三档分辨率不出界；字体回退可用 |
 | 三 VN 引擎 | ⬜ 未开始 | 5 | 打字机、点击/空格推进、限时选项与旗标、标题卡、自动/跳过、史实注、暂停/设置 | 完整播放一章；旗标生效；存档/读档；超时选项有代价 |
@@ -45,17 +45,25 @@
 ```text
 ./                             # 当前项目根：D:\deepseek harness\新建文件夹
 ├─ 向北-项目计划书.md          # 唯一权威计划
-├─ index.html                  # 舞台、UI 层、脚本入口
-├─ style.css                   # 版式、配色、UI 组件、纸纹
-├─ engine.js                   # 状态机、输入、存档、转场、音频模块
-├─ story.js                    # 七章剧情数据、选项、旗标、史实注
-├─ minigames.js                # 4 个核心小游戏 + 可选探路/分粮 + 共享引擎
-├─ art.js                      # 程序化版画/纹理/剪影
-├─ assets/
-│  └─ fonts/                   # 仅在授权与体积允许时打包
+├─ project/                    # 全部代码与运行资产（用户指令：代码文件统一放这里）
+│  ├─ index.html               # 舞台、UI 层、脚本入口
+│  ├─ style.css                # 版式、配色、UI 组件、纸纹
+│  ├─ engine.js                # 状态机、输入、存档、转场、音频模块
+│  ├─ story.js                 # 七章剧情数据、选项、旗标、史实注（由 docs/script 誊写）
+│  ├─ minigames.js             # 4 个核心小游戏 + 可选探路/分粮 + 共享引擎
+│  ├─ art.js                   # 程序化版画/纹理/剪影
+│  ├─ assets/
+│  │  └─ fonts/                # 仅在授权与体积允许时打包
+│  └─ tools/                   # 开发期脚本，不进运行时
+│     ├─ count-words.js        # 剧本字数与时长统计
+│     └─ check-script.js       # 剧本红线自检（禁用词/真名/选项/结构）
 ├─ docs/
-│  ├─ story-bible.md           # 人物/名册/道具/分幕/五卡
-│  ├─ sources.md               # 史实锚点表/出处/争议
+│  ├─ story-bible.md           # 人物/名册/道具/分幕/五卡/决策记录 D1–D7
+│  ├─ sources.md               # 史实锚点表 A1–A7/出处 S1–S15/争议/停用项
+│  ├─ codex.md                 # 7 张史实注定稿（游戏内“史实图鉴”）
+│  ├─ script/                  # 七章剧本文本源（story.js 的誊写来源）
+│  │  ├─ README.md             # 行格式/字数口径/统计表
+│  │  └─ 00-prologue.md … 06-wuqi.md
 │  ├─ style-guide.md           # 术语/文风/史实审校
 │  ├─ state-schema.md          # 存档 JSON/旗标/迁移
 │  ├─ minigame-tuning.md       # 数值表/参考游戏
@@ -66,6 +74,7 @@
 │  ├─ design-note.md           # 交差用一页设计说明（步骤八）
 │  ├─ test-record.md           # 测试记录与修复清单（步骤七）
 │  └─ credits.md               # 制作名单与字体授权（步骤八）
+├─ step/                       # 分步骤执行卡（step-00 起）
 ├─ .claude/
 │  ├─ CLAUDE.md                # 本文件
 │  └─ skills/xiangbei-dev/SKILL.md
@@ -78,11 +87,13 @@
 - 项目根目录：`D:\deepseek harness\新建文件夹`（当前工作区；如移动/改名，命令同步改）。
 - **本文件是唯一状态源**；`SKILL.md` 不再维护独立状态，只链接到这里。
 - Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。原 `.cursor/rules/000`–`040` 编码规范已合并进同一文件，不再单独维护。
-- 已有：`向北-项目计划书.md`（唯一权威计划）、`docs/` 十份准备文档（另 design-note/test-record 待步骤七/八）。
-- 步骤零：🚧 资料准备完成（结构、sources、story-bible、style-guide 初稿）；剧本尚未写。
-- 步骤一至八：⬜ 未开始；代码、剧本、测试记录、部署均未开始。
-- 范围已定：核心版 4 个真小游戏（门板/弃物/渡船/攀索）+ 点名结局；草地纯对话 + 资源选择；完整版再加探路/分粮为第 5 关。
-- 建议下一步：步骤零收尾——写序章·于都、第一章·湘江、终章·点名三场重头戏，再接步骤一骨架。
+- **代码目录约定（用户指令）**：所有代码/运行文件放 `project/`（index.html、style.css、engine.js、story.js、minigames.js、art.js、assets/、tools/）；docs、step、.claude、.cursor 留在根目录。
+- 已有：`向北-项目计划书.md`（唯一权威计划）、`docs/`（story-bible / sources / codex / script×8 / style-guide / state-schema / minigame-tuning / ui-layout / test-cases / demo-script / quality-bar / credits）、`step/`（step-00 执行卡）、`project/tools/`（count-words.js、check-script.js）。
+- 步骤零：✅ 完成（2026-11-01）。七章剧本 4108 字 / 229 beat / 12 抉择点 / 26 选项 / 9 限时；口播 A 口径 11:22，整章合计 19:44；7 张史实注（120–220 字，含 4 项争议口径）；红线 10/10；T0.0–T0.9 逐卡记录见 `step/step-00-定题史料与剧本.md` §11.1；tag `step-0-done`。
+- 步骤一至八：⬜ 未开始。
+- 已知风险：整章时长 19:44，仅余 16 秒；上限情形 22:30。裁剪顺序按红线 13（草地 → 金沙江 → 遵义改纯对话）。终章 820 字超 §5.6.3 的 660 字预算（+24%），已记录不隐藏，步骤七实测超时再裁。
+- 已知欠账：①真人外读（同学）未执行——2026-11-01 用无上下文的 AI 读者替代，记录在 step-00 §11.4，真人外读顺延到步骤七测试前补；②本机 pwsh 与子进程创建全挂（0xC0000142），commit/tag 由手工写 git 对象完成，真 shell 恢复后需跑一次 `git fsck` + `git status` 复核。
+- 建议下一步：步骤一工程骨架——在 `project/` 下建 index.html / style.css / engine.js / art.js / minigames.js 与 story.js 誊写七章。
 
 ## 关键约束与红线
 
