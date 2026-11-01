@@ -77,7 +77,7 @@
 
 - 项目根目录：`D:\deepseek harness\新建文件夹`（当前工作区；如移动/改名，命令同步改）。
 - **本文件是唯一状态源**；`SKILL.md` 不再维护独立状态，只链接到这里。
-- Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。
+- Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。原 `.cursor/rules/000`–`040` 编码规范已合并进同一文件，不再单独维护。
 - 已有：`向北-项目计划书.md`（唯一权威计划）、`docs/` 十份准备文档（另 design-note/test-record 待步骤七/八）。
 - 步骤零：🚧 资料准备完成（结构、sources、story-bible、style-guide 初稿）；剧本尚未写。
 - 步骤一至八：⬜ 未开始；代码、剧本、测试记录、部署均未开始。
