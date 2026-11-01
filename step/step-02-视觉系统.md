@@ -955,8 +955,8 @@
 ### 11.6 提交
 
 - 提交信息：feat: 视觉系统（步骤二）
-- commit：提交后回填（本机 pwsh/git 子进程全挂 0xC0000142，用手工 git 对象法：blob/tree/commit + zlib 写进 .git/objects，再写 refs）
-- tag：step-2-done（轻量 tag，指向记录哈希的第二条提交）
+- commit：`a66529a022317cd4a16c2651c2bee8bd0c7f9efd`（tree `57f705ed4c0706fd22578fd88c5ccc288343de2c`，parent `d6d8848fb1f5724e35712f68cb482f05b605c7f8`，42 个文件）；随后一条 `docs: 回填步骤二提交哈希` 提交记录本行
+- tag：step-2-done（轻量 tag，指向回填哈希的那条提交）
 - 未入库：docs/evidence/、node_modules/、my-playwright-project/、screenshots/、*.zip、.tools/
 - 执行方式：run_code 内 Node 直接读写 .git（不经过 git 可执行文件）；提交后用自校验脚本重算 tree/commit 哈希核对引用一致；真 shell 恢复后需跑一次 git fsck + git status 复核（同步骤一欠账）
 
