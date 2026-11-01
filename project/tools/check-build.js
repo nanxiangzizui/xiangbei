@@ -15,7 +15,24 @@ const SCRIPT_ORDER = ["art.js", "story.js", "minigames.js", "engine.js"];
 const REQUIRED_IDS = [
   "stage", "scene-title", "scene-map", "scene-vn", "pause", "toast", "debug", "orientation",
   "title-menu", "map-stations", "map-route",
-  "vn-bg", "vn-chapter", "vn-name", "vn-text", "vn-next"
+  "stage-art", "vn-chapter", "vn-name", "vn-text", "vn-next"
+];
+
+const PREVIEW_UI = [
+  "btn", "dialog", "choice", "title-card", "codex",
+  "ending", "pause", "settings", "hud", "feedback"
+];
+
+const REQUIRED_TOKENS = [
+  "--paper", "--paper-hi", "--paper-lo", "--ink", "--ink-muted",
+  "--cinnabar", "--ember", "--night", "--night-deep",
+  "--scrim", "--overlay", "--shadow", "--ink-a12", "--ink-a45", "--paper-a72",
+  "--focus-color", "--focus-gap", "--paper-texture",
+  "--font-title", "--font-body", "--font-num",
+  "--fs-title", "--fs-body", "--fs-small",
+  "--z-art", "--z-scene", "--z-dialogue", "--z-pause", "--z-toast", "--z-orientation",
+  "--dur-fast", "--dur-med", "--ease-out",
+  "--stage-w", "--stage-h", "--scale"
 ];
 
 const failures = [];
@@ -88,7 +105,13 @@ function checkHtml() {
   }
   if (/\son[a-z]+\s*=/i.test(html)) fail("C03", "index.html 含内联事件属性");
   if (html.indexOf('data-scene="title"') === -1) fail("C03", "index.html 缺 data-scene 初始值");
-  notes.push("C03 OK 必需 id 齐全、脚本顺序 art → story → minigames → engine");
+  // 画布必须在场景之前：透明底的标题/地图要能透出插画
+  var artIndex = html.indexOf('id="stage-art"');
+  var titleIndex = html.indexOf('id="scene-title"');
+  if (artIndex === -1 || titleIndex === -1 || artIndex > titleIndex) {
+    fail("C03", "#stage-art 必须在 #scene-title 之前");
+  }
+  notes.push("C03 OK 必需 id 齐全、画布在场景前、脚本顺序 art → story → minigames → engine");
 }
 
 function checkPaths() {
@@ -127,12 +150,15 @@ function checkStoryWords() {
 }
 
 function checkPlaceholders() {
-  if (readProject("art.js").indexOf("XB.art = {}") === -1) fail("C07", "art.js 不是空命名空间占位");
+  var art = readProject("art.js");
+  ["SCENES: SCENES", "mount: mount", "paint: paint", "resize: resize", "rng: rng"].forEach(function (needle) {
+    if (art.indexOf(needle) === -1) fail("C07", "art.js 缺契约 " + needle);
+  });
   if (readProject("minigames.js").indexOf("XB.minigames = {}") === -1) fail("C07", "minigames.js 不是空命名空间占位");
   var engine = stripComments(readProject("engine.js"));
-  if (/XB\.art\b/.test(engine)) fail("C07", "engine.js 引用了 XB.art");
+  if (!/XB\.art\b/.test(engine)) fail("C07", "engine.js 未接入 XB.art");
   if (/XB\.minigames\b/.test(engine)) fail("C07", "engine.js 引用了 XB.minigames");
-  notes.push("C07 OK 占位命名空间就位，engine.js 不引用未实现模块");
+  notes.push("C07 OK art.js 五项契约就位、engine 已接入、minigames 仍占位");
 }
 
 function checkDocs() {
@@ -149,7 +175,21 @@ function checkDocs() {
 
   var readme = readRoot(path.join("docs", "script", "README.md"));
   if (!/^## 7\.\s/m.test(readme)) fail("C08", "script/README.md 缺 §7");
-  notes.push("C08 OK 三份文档已同步（state-schema / ui-layout §1.5 / script README §7）");
+
+  var visual = readRoot(path.join("docs", "visual-system.md"));
+  ["--cinnabar", "--paper-hi", "13.69", "5.10", "prefers-reduced-motion"].forEach(function (needle) {
+    if (visual.indexOf(needle) === -1) fail("C08", "visual-system.md 缺 " + needle);
+  });
+  ["--z-art", "#stage-art"].forEach(function (needle) {
+    if (ui.indexOf(needle) === -1) fail("C08", "ui-layout.md 缺 " + needle);
+  });
+  if (ui.indexOf("96px") === -1) fail("C08", "ui-layout.md 标题字号未同步 96px");
+  if (!/^## 6\.\s/m.test(ui)) fail("C08", "ui-layout.md 缺 §6 组件壳尺寸");
+
+  var credits = readRoot(path.join("docs", "credits.md"));
+  if (credits.indexOf("步骤二状态") === -1) fail("C08", "credits.md 缺步骤二字体状态");
+  if (credits.indexOf("local(") === -1) fail("C08", "credits.md 未说明只用 local()");
+  notes.push("C08 OK 四份文档已同步（state-schema / ui-layout §1.5+§6 / visual-system / credits）");
 }
 
 function checkAssets() {
@@ -158,6 +198,110 @@ function checkAssets() {
   });
   if (/<audio\b|<img\b/i.test(readProject("index.html"))) fail("C09", "index.html 含 audio/img 标签");
   notes.push("C09 OK 无音频/图片文件引用");
+}
+
+// C10：色值只能出现在 :root；组件规则一律 var()
+function checkTokens() {
+  var css = readProject("style.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+  var rootMatch = /:root\s*\{([^}]*)\}/.exec(css);
+  if (!rootMatch) {
+    fail("C10", "style.css 缺 :root 令牌块");
+  } else {
+    REQUIRED_TOKENS.forEach(function (name) {
+      if (rootMatch[1].indexOf(name + ":") === -1) fail("C10", ":root 缺 " + name);
+    });
+    if (!/:root\s*\{[^}]*--paper-texture/.test(css)) fail("C10", ":root 缺 --paper-texture");
+  }
+  var rest = css.replace(/:root\s*\{[^}]*\}/g, " ");
+  var bodies = rest.match(/\{[^{}]*\}/g) || [];
+  bodies.forEach(function (body) {
+    body.slice(1, -1).split(";").forEach(function (declaration) {
+      var colon = declaration.indexOf(":");
+      if (colon === -1) return;
+      var value = declaration.slice(colon + 1).replace(/var\([^)]*\)/g, " ");
+      if (/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(value)) {
+        fail("C10", "组件里写了色值：" + declaration.trim());
+      }
+    });
+  });
+  notes.push("C10 OK 令牌集中在 :root，组件只写 var()");
+}
+
+// C11：art.js 场景注册表与 story.js 背景指令必须对得上
+function checkArtScenes() {
+  var sandbox = {
+    console: { log: function () {}, warn: function () {}, error: function () {} },
+    document: { addEventListener: function () {} },
+    setTimeout: setTimeout,
+    clearTimeout: clearTimeout
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  try {
+    ["art.js", "story.js"].forEach(function (file) {
+      vm.runInContext(readProject(file), sandbox, { filename: file });
+    });
+  } catch (err) {
+    fail("C11", "art.js/story.js 无法在同一上下文加载：" + err.message);
+    return;
+  }
+  var art = sandbox.XB && sandbox.XB.art;
+  if (!art || !Array.isArray(art.SCENES)) {
+    fail("C11", "XB.art.SCENES 不是数组");
+    return;
+  }
+  ["title", "map", "yudu_river", "yudu_night"].forEach(function (id) {
+    if (art.SCENES.indexOf(id) === -1) fail("C11", "SCENES 缺 " + id);
+  });
+  var chapterList = (sandbox.XB.story && sandbox.XB.story.chapters) || [];
+  chapterList.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.bg && art.SCENES.indexOf(node.bg) === -1) {
+        fail("C11", "story.js " + node.id + " 的 bg「" + node.bg + "」不在 SCENES");
+      }
+    });
+  });
+  notes.push("C11 OK SCENES = " + art.SCENES.join(" / "));
+}
+
+// C12：组件预览页与字体策略
+function checkPreview() {
+  var htmlPath = path.join(PROJECT_DIR, "tools", "ui-preview.html");
+  var jsPath = path.join(PROJECT_DIR, "tools", "ui-preview.js");
+  if (!fs.existsSync(htmlPath)) {
+    fail("C12", "缺 tools/ui-preview.html");
+    return;
+  }
+  if (!fs.existsSync(jsPath)) fail("C12", "缺 tools/ui-preview.js");
+  var html = fs.readFileSync(htmlPath, "utf8");
+  if (html.indexOf('href="../style.css"') === -1) fail("C12", "预览页没有引用 ../style.css");
+  if (/https?:\/\//.test(html)) fail("C12", "预览页含外部地址");
+  if (/<(img|audio|video|iframe)\b/i.test(html)) fail("C12", "预览页含图片/音频/视频/内嵌页");
+  var matches = html.match(/data-ui="([^"]+)"/g) || [];
+  var ids = matches.map(function (item) {
+    return item.slice(9, -1);
+  });
+  PREVIEW_UI.forEach(function (ui) {
+    var count = ids.filter(function (id) { return id === ui; }).length;
+    if (count !== 1) fail("C12", 'data-ui="' + ui + '" 出现 ' + count + ' 次（应 1 次）');
+  });
+  ids.forEach(function (id) {
+    if (PREVIEW_UI.indexOf(id) === -1) fail("C12", "预览页有未知组件 data-ui=" + id);
+  });
+
+  var fontBlocks = readProject("style.css").match(/@font-face\s*\{[^}]*\}/g) || [];
+  if (!fontBlocks.length) fail("C12", "style.css 没有 @font-face");
+  fontBlocks.forEach(function (block) {
+    if (/url\(/.test(block)) fail("C12", "@font-face 用了 url()（本步不打包字体）");
+    if (!/local\(/.test(block)) fail("C12", "@font-face 缺 local()");
+  });
+  var fontDir = path.join(PROJECT_DIR, "assets", "fonts");
+  if (fs.existsSync(fontDir)) {
+    fs.readdirSync(fontDir).forEach(function (name) {
+      if (/\.(woff2?|ttf|otf|eot)$/i.test(name)) fail("C12", "assets/fonts 混入字体文件：" + name);
+    });
+  }
+  notes.push("C12 OK 预览页 10 类组件唯一、只引 ../style.css、字体只用 local()");
 }
 
 checkCompile();
@@ -169,6 +313,9 @@ checkStoryWords();
 checkPlaceholders();
 checkDocs();
 checkAssets();
+checkTokens();
+checkArtScenes();
+checkPreview();
 
 notes.forEach(function (line) {
   console.log(line);
@@ -181,5 +328,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 9 项全绿");
+  console.log("OK：构建自检 12 项全绿");
 }

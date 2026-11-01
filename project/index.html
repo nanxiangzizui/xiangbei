@@ -10,17 +10,20 @@
 <body>
   <!-- 固定 1280×720 舞台：所有坐标都是舞台坐标（docs/ui-layout.md） -->
   <div id="stage" data-scene="title">
+    <!-- 单画布：标题 / 地图 / VN 共用的程序化版画底（art.js 绘制，不接收点击） -->
+    <canvas id="stage-art" class="stage-art" width="1280" height="720" aria-hidden="true"></canvas>
+
     <!-- 标题画面：ui-layout §2 -->
     <section id="scene-title" class="scene" aria-label="标题画面">
       <h1 class="title-main">向北</h1>
+      <span class="title-seal" aria-hidden="true">北</span>
       <p class="title-sub">一块门板，两万五千里</p>
       <div id="title-menu" class="title-menu" role="menu" aria-label="主菜单">
-        <button type="button" class="menu-button" role="menuitem" data-action="start">开始</button>
-        <button type="button" class="menu-button" role="menuitem" data-action="continue">继续</button>
-        <button type="button" class="menu-button" role="menuitem" data-action="codex">史实图鉴</button>
+        <button type="button" class="menu-button xb-btn xb-btn--primary" role="menuitem" data-action="start">开始</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
       </div>
-      <div class="title-board" aria-hidden="true">门板（步骤二绘制）</div>
-      <p class="title-version">步骤一 · 人物虚构，非史料人物</p>
+      <p class="title-version">步骤二 · 人物虚构，非史料人物</p>
     </section>
 
     <!-- 地图画面：ui-layout §1.5 -->
@@ -36,7 +39,6 @@
 
     <!-- 对话画面：ui-layout §1 -->
     <section id="scene-vn" class="scene" aria-label="对话" hidden>
-      <div id="vn-bg" class="vn-bg"></div>
       <p id="vn-chapter" class="vn-chapter"></p>
       <button type="button" class="vn-pause" data-action="pause" aria-label="暂停">Ⅱ</button>
       <div id="vn-dialogue" class="vn-dialogue">

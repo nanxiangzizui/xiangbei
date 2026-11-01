@@ -202,6 +202,45 @@ check("S14", "存档体积与字段", function () {
   assertEqual(Object.keys(JSON.parse(json)), XB.core.PERSIST_KEYS, "存档字段");
 });
 
+check("S15", "art.js 契约：SCENES 与四个方法", function () {
+  assert(XB.art && typeof XB.art === "object", "XB.art 缺失");
+  assert(Array.isArray(XB.art.SCENES), "SCENES 不是数组");
+  ["mount", "paint", "resize", "rng"].forEach(function (name) {
+    assert(typeof XB.art[name] === "function", name + " 不是函数");
+  });
+});
+
+check("S16", "rng 同种子同序列、异种子不同", function () {
+  var first = [];
+  var second = [];
+  var other = [];
+  var a = XB.art.rng("title");
+  var b = XB.art.rng("title");
+  var c = XB.art.rng("map");
+  for (var i = 0; i < 8; i += 1) {
+    first.push(a());
+    second.push(b());
+    other.push(c());
+  }
+  assertEqual(first, second, "同种子应一致");
+  assert(JSON.stringify(first) !== JSON.stringify(other), "异种子应不同");
+  first.forEach(function (value) {
+    assert(value >= 0 && value < 1, "随机数应在 [0,1)");
+  });
+});
+
+check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
+  ["title", "map", "yudu_river", "yudu_night"].forEach(function (id) {
+    assert(XB.art.SCENES.indexOf(id) !== -1, "SCENES 缺 " + id);
+  });
+  assert(XB.art.SCENES.length >= 4, "SCENES 少于 4 个");
+  XB.story.chapters.forEach(function (chapter) {
+    chapter.nodes.forEach(function (node) {
+      if (node.bg) assert(XB.art.SCENES.indexOf(node.bg) !== -1, node.id + " 的 bg 不在 SCENES");
+    });
+  });
+});
+
 if (failures.length) {
   failures.forEach(function (line) {
     console.log("× " + line);
@@ -209,5 +248,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 项失败");
   process.exitCode = 1;
 } else {
-  console.log("OK：纯状态层烟测 14 项全绿");
+  console.log("OK：纯状态层烟测 17 项全绿");
 }

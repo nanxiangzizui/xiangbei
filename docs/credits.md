@@ -18,6 +18,14 @@
 - 不把完整字体打进 ZIP；不把未授权字体转成图片。
 - 回退：Songti SC, SimSun, serif；回退后版式不崩。
 
+### 1.1 步骤二状态（2026-11-01）
+
+- 本步**不打包任何字体文件**：仓库没有 `project/assets/fonts/`，没有 `.woff2/.ttf/.otf`，ZIP 不附字体。
+- 只用 `@font-face { src: local(...) }` 读系统已装字体：标题 `Smiley Sans` / `得意黑`，正文 `LXGW WenKai` / `霞鹜文楷`；`font-display: swap`。
+- 系统缺失时回退：标题 → `Microsoft YaHei` / `PingFang SC` / `Noto Sans CJK SC`；正文 → `Songti SC` / `SimSun` / `Noto Serif CJK SC`。`?fonts=fallback` 强制走回退栈做对照验收。
+- 没有下载、没有 CDN、没有 data URI；`@font-face` 里不出现 `url(`（C12 检查）。
+- 子集化 + 随 ZIP 附 LICENSE 的欠账留步骤八；上线前必须补 LICENSE 与体积核算（≤300KB）。
+
 ## 2. 素材
 
 - 图像：全部 Canvas/SVG 程序化版画；不使用影视/游戏/网络图片。

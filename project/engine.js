@@ -272,7 +272,7 @@
   var REQUIRED_IDS = [
     "stage", "scene-title", "scene-map", "scene-vn", "pause", "toast", "debug", "orientation",
     "title-menu", "map-stations", "map-route",
-    "vn-bg", "vn-chapter", "vn-name", "vn-text", "vn-next"
+    "stage-art", "vn-chapter", "vn-name", "vn-text", "vn-next"
   ];
 
   var state = null;
@@ -281,6 +281,9 @@
   var toastTimer = null;
   var stationsBuilt = false;
   var lastFocused = null;
+  var artWarned = false;
+  var artResizeFrame = 0;
+  var artResizeScale = 1;
   var els = {};
 
   function cacheElements() {
@@ -306,6 +309,7 @@
   function init() {
     if (!XB.story || !XB.core) throw new Error("engine.js 依赖 story.js 先加载");
     cacheElements();
+    mountArt();
     bindInput();
     resize();
     window.addEventListener("resize", resize);
@@ -314,6 +318,10 @@
     var params = readParams();
     debugEnabled = params.get("debug") === "1";
     els.debug.hidden = !debugEnabled;
+    // ?fonts=fallback：强制走系统回退字体，做低配/对照验收
+    if (params.get("fonts") === "fallback") {
+      document.documentElement.classList.add("fonts-fallback");
+    }
 
     if (params.get("reset") === "1") {
       try {
@@ -417,9 +425,85 @@
   }
 
   function resize() {
-    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    // 用布局视口而不是 innerWidth：手机横屏首次渲染时 #stage 是 1280 原生宽，
+    // Chrome 的 shrink-to-fit 会把 innerWidth 放大（实测 844 → 1062），舞台就跟着出界。
+    var docEl = document.documentElement;
+    var viewportW = docEl.clientWidth || window.innerWidth;
+    var viewportH = docEl.clientHeight || window.innerHeight;
+    var scale = Math.min(viewportW / 1280, viewportH / 720);
     document.documentElement.style.setProperty("--scale", String(scale));
-    updateDebug("");
+    scheduleArtResize(scale);
+  }
+
+  // ---------- 插画（单画布 art.js） ----------
+
+  function mountArt() {
+    if (!XB.art || typeof XB.art.mount !== "function") {
+      console.error("art.js 未提供 mount：本局不画背景");
+      return;
+    }
+    try {
+      XB.art.mount(els.stageArt);
+    } catch (err) {
+      console.error("插画初始化失败", err);
+      hideStageArt();
+    }
+  }
+
+  function hideStageArt() {
+    if (els.stageArt) els.stageArt.hidden = true;
+  }
+
+  // 插画失败只降级：隐藏画布 + 一次性提示，页面回落到 CSS 纸白/夜蓝底，不白屏
+  function paintStage(sceneId) {
+    if (!els.stageArt || !XB.art || typeof XB.art.paint !== "function") return;
+    var painted = false;
+    try {
+      painted = XB.art.paint(els.stageArt, sceneId);
+    } catch (err) {
+      console.error("插画绘制异常：" + sceneId, err);
+      painted = false;
+    }
+    if (painted) {
+      els.stageArt.hidden = false;
+      return;
+    }
+    hideStageArt();
+    if (!artWarned) {
+      artWarned = true;
+      toast("插画加载失败");
+    }
+  }
+
+  // 拖动窗口时合并成一次重绘，避免每帧整幅重画。
+  // debug 行必须等画布真正改过尺寸再写，否则读到的是上一帧的像素尺寸。
+  function scheduleArtResize(scale) {
+    if (!els.stageArt || !XB.art || typeof XB.art.resize !== "function") {
+      updateDebug("");
+      return;
+    }
+    artResizeScale = scale;
+    if (typeof window.requestAnimationFrame !== "function") {
+      try {
+        XB.art.resize(artResizeScale);
+      } catch (err) {
+        console.error("插画缩放失败", err);
+        hideStageArt();
+      }
+      updateDebug("");
+      return;
+    }
+    if (artResizeFrame) return;
+    artResizeFrame = window.requestAnimationFrame(function () {
+      artResizeFrame = 0;
+      try {
+        XB.art.resize(artResizeScale);
+      } catch (err) {
+        console.error("插画缩放失败", err);
+        hideStageArt();
+      }
+      updateDebug("");
+    });
   }
 
   function updateDebug(extra) {
@@ -429,6 +513,7 @@
     var parts = [];
     if (state) parts.push("scene=" + state.scene, "chapter=" + state.chapterId, "node=" + String(state.nodeId));
     parts.push("scale=" + scale.toFixed(3));
+    if (els.stageArt) parts.push("canvas=" + els.stageArt.width + "x" + els.stageArt.height);
     if (extra) parts.push(extra);
     els.debug.textContent = parts.join(" · ");
   }
@@ -445,6 +530,7 @@
   }
 
   function renderTitle() {
+    paintStage("title");
     var continueButton = els.titleMenu.querySelector('[data-action="continue"]');
     if (!continueButton) return;
     continueButton.setAttribute("aria-disabled", resumeNode() ? "false" : "true");
@@ -490,6 +576,7 @@
   }
 
   function renderMap() {
+    paintStage("map");
     if (!stationsBuilt) buildStations();
   }
 
@@ -512,7 +599,7 @@
       return;
     }
     els.vnChapter.textContent = located.chapter.title;
-    els.vnBg.dataset.bg = backgroundAt(located.chapter, located.index);
+    paintStage(backgroundAt(located.chapter, located.index) || "yudu_night");
     if (!located.node.speaker || located.node.speaker === "旁白") {
       els.vnName.hidden = true;
       els.vnName.textContent = "";
