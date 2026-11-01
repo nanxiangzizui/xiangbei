@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>向北</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- 固定 1280×720 舞台：所有坐标都是舞台坐标（docs/ui-layout.md） -->
+  <div id="stage" data-scene="title">
+    <!-- 标题画面：ui-layout §2 -->
+    <section id="scene-title" class="scene" aria-label="标题画面">
+      <h1 class="title-main">向北</h1>
+      <p class="title-sub">一块门板，两万五千里</p>
+      <div id="title-menu" class="title-menu" role="menu" aria-label="主菜单">
+        <button type="button" class="menu-button" role="menuitem" data-action="start">开始</button>
+        <button type="button" class="menu-button" role="menuitem" data-action="continue">继续</button>
+        <button type="button" class="menu-button" role="menuitem" data-action="codex">史实图鉴</button>
+      </div>
+      <div class="title-board" aria-hidden="true">门板（步骤二绘制）</div>
+      <p class="title-version">步骤一 · 人物虚构，非史料人物</p>
+    </section>
+
+    <!-- 地图画面：ui-layout §1.5 -->
+    <section id="scene-map" class="scene" aria-label="长征路线图" hidden>
+      <h2 class="map-title">往北</h2>
+      <p class="map-sub">一条路，七段</p>
+      <svg id="map-route" class="map-route" viewBox="0 0 1280 720" aria-hidden="true" focusable="false">
+        <polyline points="186,592 346,532 506,482 676,412 826,332 986,252 1146,162"></polyline>
+      </svg>
+      <div id="map-stations" class="map-stations"></div>
+      <p class="map-hint">点亮的站点可以进入；其余还在路上</p>
+    </section>
+
+    <!-- 对话画面：ui-layout §1 -->
+    <section id="scene-vn" class="scene" aria-label="对话" hidden>
+      <div id="vn-bg" class="vn-bg"></div>
+      <p id="vn-chapter" class="vn-chapter"></p>
+      <button type="button" class="vn-pause" data-action="pause" aria-label="暂停">Ⅱ</button>
+      <div id="vn-dialogue" class="vn-dialogue">
+        <p id="vn-name" class="vn-name"></p>
+        <p id="vn-text" class="vn-text"></p>
+        <span id="vn-next" class="vn-next" aria-hidden="true">▼</span>
+      </div>
+    </section>
+
+    <!-- 暂停遮罩（布尔遮罩，不是场景） -->
+    <div id="pause" class="overlay" hidden>
+      <div class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
+        <p class="pause-title">暂停</p>
+        <button type="button" class="pause-button" data-action="resume">继续</button>
+        <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
+        <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
+      </div>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <pre id="debug" hidden></pre>
+  </div>
+
+  <div id="orientation">
+    <p>请把手机横过来</p>
+  </div>
+
+  <!-- 顺序固定：art → story → minigames → engine；全部经典 script，不用 module -->
+  <script src="./art.js"></script>
+  <script src="./story.js"></script>
+  <script src="./minigames.js"></script>
+  <script src="./engine.js"></script>
+</body>
+</html>

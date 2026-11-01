@@ -7,8 +7,9 @@
 
     {
       "version": 1,
+      "scene": "vn",
       "chapterId": "jinsha",
-      "nodeId": 42,
+      "nodeId": "j042",
       "flags": {
         "item.door": true,
         "item.pot": true,
@@ -36,7 +37,7 @@
         "items": ["maps", "medicine", "radio"]
       },
       "choices": [
-        { "chapter": "xiangjiang", "nodeId": 8, "option": "C", "text": "把门板横在桥头挡一下", "timedOut": false }
+        { "chapter": "xiangjiang", "nodeId": "x008", "option": "C", "text": "把门板横在桥头挡一下", "timedOut": false }
       ],
       "codex": ["yudu", "xiangjiang"],
       "settings": {
@@ -56,8 +57,9 @@
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | version | 1 | 存档格式版本 |
+| scene | title | 当前场景：title/map/vn/choice/minigame/result/codex/ending（共 8 个） |
 | chapterId | prologue | 当前章 id（prologue/xiangjiang/zunyi/jinsha/luding/grass/wuqi） |
-| nodeId | 0 | 当前节点（story.js 数组下标） |
+| nodeId | null | 当前节点 id（字符串，如 "p010"）或 null；数字下标已废弃，见 §5 v1 内部修订 |
 | flags | {} | 旗标；缺省按 false/0 处理 |
 | inventory.items | [] | 序章与湘江带过江的物品 id |
 | choices | [] | 选择记录；错误卡与五卡文案从这里取 |
@@ -105,7 +107,7 @@
 
 **规则**
 
-- 读取时用默认值合并：`Object.assign(defaults, saved)`；缺字段不报错、不崩。
+- 读取时按默认值深合并：顶层键缺失取默认值，`settings` 逐键合并（不能用 `Object.assign` 浅合并，否则旧档会整块覆盖新默认键）；缺字段不报错、不崩。
 - 旗标只增不改名；改名必须写迁移函数（见 §5）。
 - 不在 flags 里存大段文本；文本进 `story.js`。
 - 时间/随机数不进存档；重开小游戏用固定种子（`seed: chapterId`）。
@@ -114,15 +116,17 @@
 
 ## 4. 保存点
 
-- 进入新章、每个选项结算、小游戏 end()、记名/点名交互结束、设置变更、结局生成。
-- 刷新/关闭前不强制保存；以最后保存点为准。
+- **每个 line beat 推进即保存**：一次推进 = 一次 `xiangbei.save.v1` 写入；单次序列化目标 <4KB，4096 字节是上限（超限视为 schema 设计错误：不写、控制台报错、提示“存档异常”）。
+- 刷新/关闭恢复到当前 beat，不回退到关卡开头。
+- 以下保存点照旧保留：进入新章、每个选项结算、小游戏 end()、记名/点名交互结束、设置变更、结局生成。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
 
 ## 5. 迁移
 
-- 当前只有 v1；未来 v1→v2 示例：新增 `settings.textScale` 默认 1。
-- 读取到更高版本：备份为 `xiangbei.save.v1.bak`，提示“存档来自更新版本”，允许重置。
-- 解析失败：备份原始字符串，重置默认存档；不静默丢弃。
+- **v1 内部修订（2026-11）**：`nodeId` 由数字数组下标改为字符串节点 id（如 `"p010"`，规则见 `docs/script/README.md` §7），新增 `scene` 字段。v1 从未发布、没有真实玩家存档，因此**不升 version**，仍为 1。
+- 读到数字 `nodeId` 的旧开发存档：备份为 `xiangbei.save.v1.bad` 后重置默认存档，提示“存档与当前版本不匹配，已重置”。
+- 读取到更高版本：备份为 `xiangbei.save.v1.bak`，提示“存档来自更新版本，已备份”，允许重置。
+- 解析失败或结构校验不通过（未知 scene、未知 chapter、找不到 nodeId）：统一备份 `.bad`，重置默认存档；不静默丢弃，不白屏。
 - 迁移函数集中在一个 `migrate(save)`；每步只加字段，不删字段。
 
 ## 6. 调试

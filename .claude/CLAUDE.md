@@ -31,7 +31,7 @@
 | 步骤 | 状态 | 对应计划书 | 技术栈 / 组件 | 出口（可验证） |
 |---|---|---|---|---|
 | 零 定题、史料与剧本 | ✅ 完成（2026-11-01，tag `step-0-done`） | 1–2 | Markdown；七段结构、4 关、五精神机制；《史实锚点表》A1–A7 + 出处 S1–S15 | 结构表 story-bible §4.1 + 台账 §4.2 + 史料表 sources.md；七章剧本 4108 字 / 229 beat；7 张史实注；红线 10/10；T0.0–T0.9 逐卡见 step-00 §11.1（真人外读 1 项待步骤七补） |
-| 一 工程骨架 | ⬜ 未开始 | 3 | `index.html / style.css / engine.js / story.js / minigames.js / art.js`；固定舞台缩放；状态机；localStorage | 标题→地图→一段对话→返回；刷新恢复；控制台无报错 |
+| 一 工程骨架 | ✅ 完成（2026-11-01，tag `step-1-done`） | 3 | 六文件 + `tools/redlines.js / check-build.js / smoke.js`；固定舞台缩放；XB.core 纯状态层 + XB.engine；localStorage 每 beat 存档 | 标题→地图→序章 20 句→返回；p010 刷新回原句；三种坏档不白屏；控制台 0 error；check-build 9/9、smoke 14/14、浏览器 12 项全绿（Edge 156 + Playwright） |
 | 二 视觉系统 | ⬜ 未开始 | 4 | CSS 变量；Canvas/SVG 程序化版画；剪影；UI 组件库 | 标题画面 + 一套 UI 组件；三档分辨率不出界；字体回退可用 |
 | 三 VN 引擎 | ⬜ 未开始 | 5 | 打字机、点击/空格推进、限时选项与旗标、标题卡、自动/跳过、史实注、暂停/设置 | 完整播放一章；旗标生效；存档/读档；超时选项有代价 |
 | 四 核心小游戏（4 关） | ⬜ 未开始 | 6 | 统一 `init/update/draw/end`；共享“限时分配”引擎；Canvas 2D；拖拽/调度/动作/网格 | 4 关可独立试玩（第 5 关探路/分粮可选）；每关 60–90 秒；失败只结算代价；触摸单手可玩 |
@@ -88,12 +88,13 @@
 - **本文件是唯一状态源**；`SKILL.md` 不再维护独立状态，只链接到这里。
 - Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。原 `.cursor/rules/000`–`040` 编码规范已合并进同一文件，不再单独维护。
 - **代码目录约定（用户指令）**：所有代码/运行文件放 `project/`（index.html、style.css、engine.js、story.js、minigames.js、art.js、assets/、tools/）；docs、step、.claude、.cursor 留在根目录。
-- 已有：`向北-项目计划书.md`（唯一权威计划）、`docs/`（story-bible / sources / codex / script×8 / style-guide / state-schema / minigame-tuning / ui-layout / test-cases / demo-script / quality-bar / credits）、`step/`（step-00 执行卡）、`project/tools/`（count-words.js、check-script.js）。
+- 已有：`向北-项目计划书.md`（唯一权威计划）、`docs/`（story-bible / sources / codex / script×8 / style-guide / state-schema / minigame-tuning / ui-layout / test-cases / demo-script / quality-bar / credits）、`step/`（step-00、step-01 执行卡）、`project/`（index.html / style.css / engine.js / story.js / art.js / minigames.js + tools/ 五个脚本）、`docs/evidence/step-01/`（浏览器证据与实测脚本，gitignored）。
 - 步骤零：✅ 完成（2026-11-01）。七章剧本 4108 字 / 229 beat / 12 抉择点 / 26 选项 / 9 限时；口播 A 口径 11:22，整章合计 19:44；7 张史实注（120–220 字，含 4 项争议口径）；红线 10/10；T0.0–T0.9 逐卡记录见 `step/step-00-定题史料与剧本.md` §11.1；tag `step-0-done`。
-- 步骤一至八：⬜ 未开始。
+- 步骤一：✅ 完成（2026-11-01，tag `step-1-done`）。固定 1280×720 舞台等比缩放；title/map/vn 三场景 + 暂停遮罩；`XB.core` 纯状态层 + `XB.engine`；`xiangbei.save.v1` 每 beat 存档、坏档备份 `.bad`/`.bak` 后回标题；序章 p001–p020（20 句逐字）+ p900 临时章末；工具 redlines / check-build（9 项）/ smoke（14 项）；浏览器实测 12 项全绿（Edge 156 + Playwright，file:// 与本地 http）。记录见 `step/step-01-工程骨架.md` §11。
+- 步骤二至八：⬜ 未开始。
 - 已知风险：整章时长 19:44，仅余 16 秒；上限情形 22:30。裁剪顺序按红线 13（草地 → 金沙江 → 遵义改纯对话）。终章 820 字超 §5.6.3 的 660 字预算（+24%），已记录不隐藏，步骤七实测超时再裁。
-- 已知欠账：①真人外读（同学）未执行——2026-11-01 用无上下文的 AI 读者替代，记录在 step-00 §11.4，真人外读顺延到步骤七测试前补；②本机 pwsh 与子进程创建全挂（0xC0000142），commit/tag 由手工写 git 对象完成，真 shell 恢复后需跑一次 `git fsck` + `git status` 复核。
-- 建议下一步：步骤一工程骨架——在 `project/` 下建 index.html / style.css / engine.js / art.js / minigames.js 与 story.js 誊写七章。
+- 已知欠账：①真人外读（同学）未执行——2026-11-01 用无上下文的 AI 读者替代，记录在 step-00 §11.4，真人外读顺延到步骤七测试前补；②本机 pwsh 与子进程创建全挂（0xC0000142），commit/tag 由手工写 git 对象完成，真 shell 恢复后需跑一次 `git fsck` + `git status` 复核；③步骤一欠账：只有 Edge 实测，Chrome/Safari、真机触摸、隐私模式 localStorage 未测，留步骤七补。
+- 建议下一步：步骤二视觉系统——CSS 变量与版画 UI（标题画面 + 一套组件）、art.js 程序化版画/剪影/纸纹、三档分辨率不出界、字体回退可用。
 
 ## 关键约束与红线
 
@@ -151,17 +152,20 @@
 cd "D:\deepseek harness\新建文件夹"
 
 # 直接打开（剧情内联，file:// 可跑；存档能力需实测）
-Start-Process ".\index.html"
+Start-Process ".\project\index.html"
 
-# 或本地静态服务（更接近线上）
-python -m http.server 8080
+# 或本地静态服务（更接近线上；--directory 指向 project）
+python -m http.server 8080 --directory project
 # 浏览器打开 http://localhost:8080
 
-# 可选：有 Node 时做语法检查
-node --check engine.js
-node --check story.js
-node --check minigames.js
-node --check art.js
+# 语法与构建自检（开发期脚本，不进运行时）
+node --check project/engine.js
+node --check project/story.js
+node --check project/minigames.js
+node --check project/art.js
+node project/tools/check-build.js
+node project/tools/smoke.js
+node project/tools/check-script.js docs/script
 
 # 部署：Cloudflare Pages 选择静态站点，构建命令留空，输出目录为根目录；
 # 也可用 Git 集成或控制台拖拽上传。不要把密钥写进仓库。
