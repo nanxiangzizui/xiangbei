@@ -872,7 +872,7 @@ T4.0 25 → T4.1 40 → T4.2 42 → T4.3 45 → T4.4 48 → T4.5 42 → T4.6 35 
 | E11 | 通过 | check-build 23/23、smoke 33/33、N1–N4 | 四负例均报红，恢复后 23/23 |
 | E12 | 部分通过 | B19–B30、run-log | Edge 156 全绿；Chrome/Safari/真机未测（步骤七） |
 | E13 | 通过 | C22、run-log | tuning/schema/ui/test/quality/script 与代码一致 |
-| E14 | 待提交回填 | 本卡 §11.5 | 文档回填完成；commit/tag 见 §11.5 |
+| E14 | 通过 | 本卡 §11.5 | 主提交 9a1cdc3；回填提交与 tag `step-4-done` 见 git log |
 | E15 | 通过 | tuning 台账 | 目标 45+50+60+50+4×20=285s；上限 75/80/90/75 |
 
 ### 11.3 B19–B30 结果
@@ -909,7 +909,7 @@ T4.0 25 → T4.1 40 → T4.2 42 → T4.3 45 → T4.4 48 → T4.5 42 → T4.6 35 
 ### 11.5 状态更新与提交
 
 - 2026-11-02 更新 `.claude/CLAUDE.md` 步骤表与“当前进度”；提交范围：`project/`、`docs/`（含 minigame-system/run-log 证据）、`step/step-04-核心小游戏.md`。
-- commit/tag：提交后回填短 hash 与 `step-4-done`。证据截图在 `docs/evidence/step-04/`，按项目规则 gitignored，不入库。
+- commit/tag：主提交 `9a1cdc3`（步骤四代码与文档）；回填本卡后另提交一次并打 tag `step-4-done`。证据截图在 `docs/evidence/step-04/`，按项目规则 gitignored，不入库。
 - 提交前检查：`git status` 只含本步预期文件；无字体/zip/大图入库；检查脚本 23/23、33/33、check-script 全绿。
 
 ### 11.6 一句话交接
