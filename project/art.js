@@ -7,7 +7,12 @@
   var H = 720;
   var MAX_RENDER_SCALE = 2;
 
-  var SCENES = ["title", "map", "yudu_river", "yudu_night"];
+  var SCENES = [
+    "title", "map", "yudu_river", "yudu_night",
+    "xiangjiang_ford", "xiangjiang_dawn", "zunyi_hall", "zunyi_street",
+    "jinsha_river", "jinsha_night", "luding_bridge", "luding_after",
+    "grass_marsh", "grass_dawn", "wuqi_dawn", "wuqi_wall"
+  ];
 
   // 令牌缺失时才用：正常路径读 style.css 的 :root 变量
   var FALLBACK_PALETTE = {
@@ -179,6 +184,107 @@
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+
+
+  // 江面白线：同一场景内疏密、长短、透明度都取随机，避免“排线”感
+  function waterLines(ctx, random, opts) {
+    var count = opts.count;
+    ctx.save();
+    ctx.strokeStyle = opts.color;
+    ctx.lineWidth = 1.1;
+    for (var i = 0; i < count; i += 1) {
+      var y = opts.y0 + random() * (opts.y1 - opts.y0);
+      var x0 = random() * (W - 160);
+      var len = opts.minLen + random() * (opts.maxLen - opts.minLen);
+      ctx.globalAlpha = opts.alphaMin + random() * (opts.alphaMax - opts.alphaMin);
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.quadraticCurveTo(x0 + len * 0.5, y - 3, x0 + len, y + 1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function mistBand(ctx, random, opts) {
+    var count = opts.count || 3;
+    for (var k = 0; k < count; k += 1) {
+      ctx.save();
+      ctx.fillStyle = opts.color;
+      ctx.globalAlpha = (opts.alpha || 0.03) * (1 - k * 0.18);
+      ctx.beginPath();
+      ctx.ellipse(640 + (random() - 0.5) * 80, opts.y + k * 8, (opts.width || 620) - k * 80,
+        (opts.height || 46) - k * 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function fireDots(ctx, random, opts) {
+    for (var i = 0; i < opts.count; i += 1) {
+      var fx = opts.x0 + (opts.x1 - opts.x0) * (opts.count === 1 ? 0.5 : i / (opts.count - 1)) + (random() - 0.5) * 18;
+      var fy = opts.y + (random() - 0.5) * 10;
+      ctx.save();
+      ctx.fillStyle = opts.color;
+      ctx.globalAlpha = 0.12;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 18 + random() * 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - 10 - random() * 4);
+      ctx.quadraticCurveTo(fx + 5, fy - 2, fx, fy + 4);
+      ctx.quadraticCurveTo(fx - 5, fy - 2, fx, fy - 10 - random() * 4);
+      ctx.fill();
+      ctx.globalAlpha = 0.14;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + 24, 3, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function chainLines(ctx, random, opts) {
+    var count = opts.count;
+    ctx.save();
+    ctx.strokeStyle = opts.color;
+    ctx.lineWidth = opts.width || 1.2;
+    for (var i = 0; i < count; i += 1) {
+      var y = opts.y + i * opts.gap;
+      var sag = opts.sag + random() * 10;
+      ctx.globalAlpha = opts.alpha * (0.85 + random() * 0.3);
+      ctx.beginPath();
+      ctx.moveTo(opts.x0, y);
+      ctx.quadraticCurveTo((opts.x0 + opts.x1) / 2, y + sag, opts.x1, y);
+      ctx.stroke();
+      // 吊索：每 90–120px 一根，长短不齐更像真的铁索桥
+      for (var x = opts.x0 + 60; x < opts.x1 - 30; x += 96 + random() * 24) {
+        var t = (x - opts.x0) / (opts.x1 - opts.x0);
+        var lineY = y + sag * 4 * t * (1 - t);
+        ctx.globalAlpha = 0.18 + random() * 0.12;
+        ctx.beginPath();
+        ctx.moveTo(x, lineY);
+        ctx.lineTo(x, lineY + 8 + random() * 6);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function loessWall(ctx, random, p, opts) {
+    fillRect(ctx, opts.x, opts.y, opts.w, opts.h, p.paperLo, opts.alpha || 0.9);
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    for (var i = 0; i < 12; i += 1) {
+      ctx.globalAlpha = 0.04 + random() * 0.05;
+      ctx.lineWidth = 1;
+      var y = opts.y + 12 + random() * (opts.h - 20);
+      ctx.beginPath();
+      ctx.moveTo(opts.x + 6, y);
+      ctx.lineTo(opts.x + opts.w - 8, y + (random() - 0.5) * 6);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -501,11 +607,975 @@
     fillRect(ctx, 0, 0, W, 90, p.night, 0.55);
   }
 
+
+  // ---------- 场景：湘江（夜渡 / 拂晓） ----------
+
+  function paintXiangjiangFord(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 520);
+    sky.addColorStop(0, p.nightDeep);
+    sky.addColorStop(1, p.night);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 466, bottomY: 466, steps: 9, low: 400, high: 448, color: p.ink, alpha: 0.55 });
+    fillRect(ctx, 0, 466, W, 254, p.nightDeep, 0.88);
+    waterLines(ctx, random, { y0: 520, y1: 706, count: 30, color: p.paper, alphaMin: 0.08, alphaMax: 0.2, minLen: 50, maxLen: 200 });
+
+    // 浮桥：门板横铺，桥面比水面亮一档，远看是一条能走人的线
+    fillRect(ctx, 0, 466, W, 14, p.ink, 0.95);
+    fillRect(ctx, 0, 468, W, 2, p.paper, 0.22);
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    for (var seam = 20; seam < W; seam += 48 + random() * 38) {
+      ctx.beginPath();
+      ctx.moveTo(seam, 466);
+      ctx.lineTo(seam, 480);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.55;
+    var postX = 10;
+    while (postX < W) {
+      postX += 30 + random() * 26;
+      ctx.beginPath();
+      ctx.moveTo(postX, 480);
+      ctx.lineTo(postX + (random() - 0.5) * 4, 520);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 桥上的人：只画头肩，前后错落；不画脸
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    for (var i = 0; i < 64; i += 1) {
+      var fx = 12 + i * 19.6 + (random() - 0.5) * 10;
+      var fy = 452 + random() * 8;
+      var hh = 12 + random() * 8;
+      ctx.globalAlpha = 0.55 + random() * 0.25;
+      ctx.beginPath();
+      ctx.arc(fx, fy - hh, 3.2 + random() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(fx - 5, fy - hh + 2);
+      ctx.lineTo(fx + 5, fy - hh + 2);
+      ctx.lineTo(fx + 4, fy + 5);
+      ctx.lineTo(fx - 4, fy + 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    fireDots(ctx, random, { count: 5, x0: 140, x1: 1140, y: 452, color: p.ember });
+    mistBand(ctx, random, { y: 510, width: 660, height: 48, alpha: 0.035, color: p.paper });
+    mistBand(ctx, random, { y: 580, width: 760, height: 60, alpha: 0.025, color: p.paper });
+    fillRect(ctx, 0, 0, W, 92, p.nightDeep, 0.5);
+  }
+
+  function paintXiangjiangDawn(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 470);
+    sky.addColorStop(0, p.paperLo);
+    sky.addColorStop(1, p.paperHi);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 460, W, 260, p.inkMuted, 0.16);
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 462, bottomY: 462, steps: 10, low: 410, high: 448, color: p.ink, alpha: 0.3 });
+    waterLines(ctx, random, { y0: 486, y1: 700, count: 34, color: p.inkMuted, alphaMin: 0.12, alphaMax: 0.3, minLen: 60, maxLen: 230 });
+
+    // 断桥：两截桥面探进江心，断口参差
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.72;
+    ctx.fillRect(0, 468, 392, 12);
+    ctx.fillRect(906, 468, W - 906, 12);
+    ctx.beginPath();
+    ctx.moveTo(392, 468);
+    ctx.lineTo(356, 476);
+    ctx.lineTo(392, 480);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(906, 468);
+    ctx.lineTo(942, 476);
+    ctx.lineTo(906, 480);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 2;
+    [70, 150, 238, 316, 988, 1070, 1160, 1232].forEach(function (x) {
+      ctx.beginPath();
+      ctx.moveTo(x, 480);
+      ctx.lineTo(x + (random() - 0.5) * 5, 526 + random() * 12);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 江面漂物：断板、木箱、斗笠，都是一小截暗色
+    ctx.save();
+    for (var i = 0; i < 24; i += 1) {
+      var dx = random() * W;
+      var dy = 520 + random() * 170;
+      ctx.globalAlpha = 0.3 + random() * 0.3;
+      ctx.fillStyle = p.ink;
+      ctx.fillRect(dx, dy, 8 + random() * 26, 2 + random() * 4);
+    }
+    ctx.restore();
+    mistBand(ctx, random, { y: 470, width: 700, height: 52, alpha: 0.05, color: p.paperHi });
+    mistBand(ctx, random, { y: 590, width: 820, height: 46, alpha: 0.035, color: p.paperHi });
+  }
+
+  // ---------- 场景：遵义（会场 / 街） ----------
+
+  function paintZunyiHall(ctx, random, p) {
+    ctx.fillStyle = p.paperLo;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 0, W, 130, p.ink, 0.14);
+
+    // 屋檐与瓦：一条压得很低的横线，门在下面显得更沉
+    fillRect(ctx, 0, 132, W, 34, p.ink, 0.82);
+    ctx.save();
+    ctx.strokeStyle = p.paper;
+    ctx.globalAlpha = 0.14;
+    ctx.lineWidth = 1;
+    for (var tile = 0; tile < W; tile += 18) {
+      ctx.beginPath();
+      ctx.arc(tile + 9, 132, 9, 0, Math.PI);
+      ctx.stroke();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 166, W, 10, p.paperHi, 0.35);
+
+    // 门：两扇，中间只留一道缝
+    fillRect(ctx, 440, 196, 400, 384, p.ink, 0.92);
+    fillRect(ctx, 636, 196, 8, 384, p.nightDeep, 1);
+    ctx.save();
+    ctx.strokeStyle = p.paper;
+    ctx.globalAlpha = 0.1;
+    ctx.lineWidth = 1;
+    for (var plank = 456; plank < 840; plank += 26) {
+      ctx.beginPath();
+      ctx.moveTo(plank, 202);
+      ctx.lineTo(plank + (random() - 0.5) * 4, 574);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(442, 198, 396, 380);
+    ctx.restore();
+
+    // 门缝里的灯：一点暖光，不照亮整扇门
+    ctx.save();
+    ctx.fillStyle = p.ember;
+    ctx.globalAlpha = 0.14;
+    ctx.beginPath();
+    ctx.ellipse(640, 390, 26, 190, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(639, 206, 2, 366);
+    ctx.restore();
+
+    // 冰凌：挂在檐口，长短不一
+    ctx.save();
+    ctx.fillStyle = p.paperHi;
+    for (var ice = 8; ice < W; ice += 26 + random() * 26) {
+      var len = 8 + random() * 36;
+      ctx.globalAlpha = 0.4 + random() * 0.25;
+      ctx.beginPath();
+      ctx.moveTo(ice, 166);
+      ctx.lineTo(ice + 3, 166 + len);
+      ctx.lineTo(ice + 6, 166);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 台阶
+    fillRect(ctx, 380, 580, 520, 12, p.ink, 0.55);
+    fillRect(ctx, 350, 592, 580, 10, p.ink, 0.42);
+    fillRect(ctx, 320, 602, 640, 8, p.ink, 0.3);
+
+    // 雪：细点，不铺满
+    ctx.save();
+    ctx.fillStyle = p.paperHi;
+    for (var snow = 0; snow < 90; snow += 1) {
+      ctx.globalAlpha = 0.25 + random() * 0.4;
+      ctx.beginPath();
+      ctx.arc(random() * W, random() * 620, 0.9 + random() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 86, p.ink, 0.16);
+  }
+
+  function paintZunyiStreet(ctx, random, p) {
+    ctx.fillStyle = p.paperHi;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 0, W, 210, p.paperLo, 0.8);
+
+    // 街面：从两侧收向中间，石板横缝越远越密
+    ctx.save();
+    ctx.fillStyle = p.paperLo;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(0, 720);
+    ctx.lineTo(1280, 720);
+    ctx.lineTo(792, 420);
+    ctx.lineTo(488, 420);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 1;
+    for (var row = 0; row < 9; row += 1) {
+      var ry = 456 + row * 30 + row * row * 2.2;
+      var half = 46 + (ry - 456) * 1.55;
+      ctx.beginPath();
+      ctx.moveTo(640 - half, ry);
+      ctx.lineTo(640 + half, ry);
+      ctx.stroke();
+    }
+    for (var col = -4; col <= 4; col += 1) {
+      ctx.beginPath();
+      ctx.moveTo(640 + col * 24, 430);
+      ctx.lineTo(640 + col * 86, 720);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 两侧低屋：只取屋檐、墙、门洞
+    function house(side) {
+      var x0 = side === "left" ? 0 : 820;
+      var x1 = side === "left" ? 360 : 1280;
+      fillRect(ctx, x0, 250, x1 - x0, 300, p.ink, 0.78);
+      fillRect(ctx, x0, 250, x1 - x0, 18, p.paperLo, 0.5);
+      ctx.save();
+      ctx.fillStyle = p.ink;
+      ctx.beginPath();
+      if (side === "left") {
+        ctx.moveTo(-40, 250);
+        ctx.lineTo(400, 250);
+        ctx.lineTo(320, 196);
+        ctx.lineTo(-40, 196);
+      } else {
+        ctx.moveTo(880, 250);
+        ctx.lineTo(1320, 250);
+        ctx.lineTo(1320, 196);
+        ctx.lineTo(960, 196);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // 门洞 / 窗
+      ctx.save();
+      ctx.fillStyle = p.nightDeep;
+      ctx.globalAlpha = 0.85;
+      if (side === "left") {
+        ctx.fillRect(120, 330, 56, 150);
+        ctx.fillRect(236, 340, 44, 60);
+      } else {
+        ctx.fillRect(1040, 330, 56, 150);
+        ctx.fillRect(1160, 340, 44, 60);
+      }
+      ctx.restore();
+    }
+    house("left");
+    house("right");
+
+    // 街尾的门楼：一个更小的暗块，给纵深一个落点
+    fillRect(ctx, 560, 366, 160, 66, p.ink, 0.72);
+    fillRect(ctx, 548, 350, 184, 12, p.ink, 0.82);
+    fillRect(ctx, 636, 384, 8, 48, p.paperLo, 0.35);
+
+    // 灯笼：四盏，暖光只照檐下一小块
+    [150, 372, 912, 1136].forEach(function (lx, index) {
+      var ly = 286 + (index % 2) * 8;
+      ctx.save();
+      ctx.strokeStyle = p.ink;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(lx, 266);
+      ctx.lineTo(lx, ly - 10);
+      ctx.stroke();
+      ctx.fillStyle = p.ember;
+      ctx.globalAlpha = 0.1;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 10, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // 墙上的纸：只画纸形与朱砂边，不写字
+    [296, 352].forEach(function (py, index) {
+      fillRect(ctx, 986, py, 58, 42, p.paperHi, 0.85);
+      ctx.save();
+      ctx.strokeStyle = p.cinnabar;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(986, py, 58, 42);
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = p.ink;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1;
+      for (var line = 0; line < 2; line += 1) {
+        ctx.beginPath();
+        ctx.moveTo(994, py + 14 + line * 10);
+        ctx.lineTo(1036 - index * 4, py + 14 + line * 10);
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+
+    // 远处两个人影
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.55;
+    [[600, 382], [666, 390]].forEach(function (pt) {
+      ctx.beginPath();
+      ctx.arc(pt[0], pt[1] - 16, 3.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(pt[0] - 4, pt[1] - 13, 8, 18);
+    });
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 82, p.paperLo, 0.32);
+  }
+
+  // ---------- 场景：金沙江（白天 / 夜） ----------
+
+  function paintJinshaRiver(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 360);
+    sky.addColorStop(0, p.paperHi);
+    sky.addColorStop(1, p.paperLo);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // 峡谷两壁：越靠边越黑，江面留出中间一条亮带
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.78;
+    ctx.beginPath();
+    ctx.moveTo(0, 70);
+    ctx.lineTo(250, 150);
+    ctx.lineTo(360, 360);
+    ctx.lineTo(320, 720);
+    ctx.lineTo(0, 720);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(1280, 50);
+    ctx.lineTo(1030, 140);
+    ctx.lineTo(920, 360);
+    ctx.lineTo(960, 720);
+    ctx.lineTo(1280, 720);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ridge(ctx, random, { startX: 200, endX: 1080, baseY: 372, bottomY: 372, steps: 7, low: 300, high: 348, color: p.ink, alpha: 0.28 });
+
+    fillRect(ctx, 0, 360, W, 360, p.inkMuted, 0.12);
+    waterLines(ctx, random, { y0: 378, y1: 700, count: 44, color: p.paperHi, alphaMin: 0.22, alphaMax: 0.5, minLen: 50, maxLen: 190 });
+    // 急流：短而密的斜线
+    ctx.save();
+    ctx.strokeStyle = p.inkMuted;
+    ctx.lineWidth = 1;
+    for (var flow = 0; flow < 46; flow += 1) {
+      var fx = random() * W;
+      var fy = 400 + random() * 280;
+      ctx.globalAlpha = 0.1 + random() * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + 16 + random() * 30, fy + (random() - 0.5) * 5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 礁石：暗块 + 一线白水
+    for (var r = 0; r < 8; r += 1) {
+      var rx = 80 + random() * 1120;
+      var ry = 420 + random() * 200;
+      var rw = 20 + random() * 46;
+      ctx.save();
+      ctx.fillStyle = p.ink;
+      ctx.globalAlpha = 0.5 + random() * 0.25;
+      ctx.beginPath();
+      ctx.moveTo(rx - rw / 2, ry);
+      ctx.lineTo(rx - rw * 0.2, ry - 12 - random() * 10);
+      ctx.lineTo(rx + rw * 0.3, ry - 6);
+      ctx.lineTo(rx + rw / 2, ry + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = p.paperHi;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rx - rw / 2, ry + 8);
+      ctx.quadraticCurveTo(rx, ry + 14, rx + rw / 2, ry + 7);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 六条船：船身、船工、桨
+    var boats = [[150, 470], [360, 520], [560, 478], [760, 540], [960, 492], [1140, 556]];
+    boats.forEach(function (boat) {
+      var bx = boat[0];
+      var by = boat[1];
+      ctx.save();
+      ctx.fillStyle = p.ink;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(bx - 44, by);
+      ctx.quadraticCurveTo(bx, by + 24, bx + 44, by);
+      ctx.lineTo(bx + 34, by - 6);
+      ctx.lineTo(bx - 34, by - 6);
+      ctx.closePath();
+      ctx.fill();
+      // 人：八個頭，兩排
+      for (var head = 0; head < 8; head += 1) {
+        var hx = bx - 28 + head * 8;
+        var hy = by - 12 - (head % 2) * 4;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 桨
+      ctx.strokeStyle = p.ink;
+      ctx.lineWidth = 1.4;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(bx + 34, by - 4);
+      ctx.lineTo(bx + 58, by + 12);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    mistBand(ctx, random, { y: 600, width: 760, height: 54, alpha: 0.05, color: p.paperHi });
+    fillRect(ctx, 0, 0, W, 80, p.paperHi, 0.28);
+  }
+
+  function paintJinshaNight(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 560);
+    sky.addColorStop(0, p.nightDeep);
+    sky.addColorStop(1, p.night);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.fillStyle = p.paper;
+    for (var star = 0; star < 20; star += 1) {
+      ctx.globalAlpha = 0.25 + random() * 0.4;
+      ctx.beginPath();
+      ctx.arc(random() * W, 40 + random() * 220, 0.8 + random() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 月亮：倒影不是一条直线，而是一列碎光
+    ctx.save();
+    ctx.fillStyle = p.paper;
+    ctx.globalAlpha = 0.12;
+    ctx.beginPath();
+    ctx.arc(1016, 118, 52, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(1016, 118, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 548, bottomY: 548, steps: 8, low: 470, high: 528, color: p.ink, alpha: 0.85 });
+    fillRect(ctx, 0, 548, W, 172, p.nightDeep, 0.9);
+    ctx.save();
+    for (var refl = 0; refl < 26; refl += 1) {
+      var ry = 556 + refl * 6;
+      var spread = 6 + refl * 1.4;
+      ctx.fillStyle = p.paper;
+      ctx.globalAlpha = 0.16 - refl * 0.004;
+      ctx.fillRect(1016 - spread, ry, spread * 2, 1.6);
+    }
+    ctx.restore();
+
+    fireDots(ctx, random, { count: 4, x0: 220, x1: 660, y: 540, color: p.ember });
+    // 两条船影
+    [[780, 580], [900, 606]].forEach(function (boat) {
+      ctx.save();
+      ctx.fillStyle = p.ink;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(boat[0] - 34, boat[1]);
+      ctx.quadraticCurveTo(boat[0], boat[1] + 16, boat[0] + 34, boat[1]);
+      ctx.lineTo(boat[0] + 26, boat[1] - 5);
+      ctx.lineTo(boat[0] - 26, boat[1] - 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+    mistBand(ctx, random, { y: 560, width: 680, height: 40, alpha: 0.025, color: p.paper });
+    fillRect(ctx, 0, 0, W, 84, p.nightDeep, 0.45);
+  }
+
+  // ---------- 场景：泸定（桥 / 桥后） ----------
+
+  function paintLudingBridge(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 420);
+    sky.addColorStop(0, p.night);
+    sky.addColorStop(1, p.nightDeep);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // 深谷两壁
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.moveTo(0, 110);
+    ctx.lineTo(236, 168);
+    ctx.lineTo(330, 420);
+    ctx.lineTo(286, 720);
+    ctx.lineTo(0, 720);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(1280, 96);
+    ctx.lineTo(1044, 158);
+    ctx.lineTo(950, 420);
+    ctx.lineTo(994, 720);
+    ctx.lineTo(1280, 720);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 谷底水线：从缝里透出一点白
+    waterLines(ctx, random, { y0: 620, y1: 706, count: 18, color: p.paper, alphaMin: 0.05, alphaMax: 0.12, minLen: 40, maxLen: 130 });
+
+    // 桥头木桩
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.95;
+    [270, 1008].forEach(function (px) {
+      ctx.fillRect(px - 9, 250, 18, 210);
+      ctx.fillRect(px - 42, 246, 84, 12);
+    });
+    ctx.restore();
+    fillRect(ctx, 250, 262, 22, 4, p.paper, 0.18);
+    fillRect(ctx, 998, 262, 22, 4, p.paper, 0.18);
+
+    // 十三根铁索：九根桥面 + 四根扶手，全部有垂度
+    chainLines(ctx, random, { x0: 282, x1: 996, y: 300, gap: 12, count: 9, sag: 34, alpha: 0.3, color: p.paper, width: 1.2 });
+    chainLines(ctx, random, { x0: 282, x1: 996, y: 262, gap: 10, count: 4, sag: 22, alpha: 0.22, color: p.paper, width: 1 });
+    // 桥面木板：几块稀稀落落地挂在索上
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.9;
+    for (var board = 0; board < 15; board += 1) {
+      var bx = 300 + board * 46 + random() * 10;
+      var t = (bx - 282) / 714;
+      var by = 300 + 34 * 4 * t * (1 - t) + 40;
+      if (random() < 0.35) continue;
+      ctx.fillRect(bx, by, 24 + random() * 10, 4);
+    }
+    ctx.restore();
+
+    mistBand(ctx, random, { y: 500, width: 520, height: 48, alpha: 0.04, color: p.paperHi });
+    mistBand(ctx, random, { y: 610, width: 700, height: 60, alpha: 0.03, color: p.paperHi });
+    fillRect(ctx, 0, 0, W, 80, p.nightDeep, 0.5);
+  }
+
+  function paintLudingAfter(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 520);
+    sky.addColorStop(0, p.night);
+    sky.addColorStop(0.72, p.nightDeep);
+    sky.addColorStop(1, p.ink);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.fillStyle = p.ember;
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.ellipse(700, 520, 560, 120, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 身后的桥：缩小成远处一个黑框
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(138, 350, 12, 170);
+    ctx.fillRect(372, 350, 12, 170);
+    ctx.beginPath();
+    ctx.moveTo(138, 356);
+    ctx.quadraticCurveTo(255, 392, 372, 356);
+    ctx.stroke();
+    for (var cable = 0; cable < 5; cable += 1) {
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.moveTo(144, 366 + cable * 8);
+      ctx.quadraticCurveTo(255, 398 + cable * 8, 366, 366 + cable * 8);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 烟：三柱，右高左低
+    ctx.save();
+    ctx.strokeStyle = p.inkMuted;
+    for (var smoke = 0; smoke < 3; smoke += 1) {
+      var sx = 840 + smoke * 120;
+      ctx.globalAlpha = 0.13;
+      ctx.lineWidth = 12 + smoke * 4;
+      ctx.beginPath();
+      ctx.moveTo(sx, 560);
+      ctx.bezierCurveTo(sx - 30, 480, sx + 46, 420, sx + 8, 320);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 600, bottomY: 720, steps: 7, low: 520, high: 580, color: p.ink, alpha: 0.85 });
+    fillRect(ctx, 0, 600, W, 120, p.nightDeep, 0.8);
+
+    // 吹号的人：剪影，不画脸
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.arc(1030, 498, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(1020, 508);
+    ctx.lineTo(1040, 508);
+    ctx.lineTo(1046, 566);
+    ctx.lineTo(1016, 566);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(1036, 512);
+    ctx.quadraticCurveTo(1062, 500, 1088, 486);
+    ctx.stroke();
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(1084, 488);
+    ctx.lineTo(1096, 480);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    for (var bird = 0; bird < 5; bird += 1) {
+      var bx = 500 + random() * 300;
+      var by = 200 + random() * 90;
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.arc(bx, by, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 80, p.nightDeep, 0.4);
+  }
+
+  // ---------- 场景：草地（雨中 / 黎明） ----------
+
+  function paintGrassMarsh(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 430);
+    sky.addColorStop(0, p.paperLo);
+    sky.addColorStop(1, p.paper);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // 低云：横着压过来，不画太阳
+    ctx.save();
+    ctx.fillStyle = p.inkMuted;
+    for (var cloud = 0; cloud < 6; cloud += 1) {
+      ctx.globalAlpha = 0.1 + random() * 0.06;
+      ctx.beginPath();
+      ctx.ellipse(200 + cloud * 220, 120 + random() * 120, 240 + random() * 90, 26 + random() * 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    fillRect(ctx, 0, 402, W, 318, p.inkMuted, 0.3);
+    fillRect(ctx, 0, 470, W, 250, p.ink, 0.08);
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 410, bottomY: 410, steps: 12, low: 386, high: 404, color: p.ink, alpha: 0.22 });
+
+    // 水洼：泥里反出一点天光，边缘压暗
+    for (var pool = 0; pool < 16; pool += 1) {
+      var px = random() * W;
+      var py = 440 + random() * 240;
+      var pw = 30 + random() * 90;
+      ctx.save();
+      ctx.fillStyle = p.inkMuted;
+      ctx.globalAlpha = 0.28;
+      ctx.beginPath();
+      ctx.ellipse(px, py, pw, 7 + random() * 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = p.ink;
+      ctx.globalAlpha = 0.32;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 草：只画短簇，不画树
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 1;
+    for (var tuft = 0; tuft < 170; tuft += 1) {
+      var tx = random() * W;
+      var ty = 420 + random() * 280;
+      ctx.globalAlpha = 0.28 + random() * 0.28;
+      for (var blade = 0; blade < 3; blade += 1) {
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + (random() - 0.5) * 12, ty - 8 - random() * 16);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // 雨丝
+    ctx.save();
+    ctx.strokeStyle = p.paperHi;
+    ctx.lineWidth = 1;
+    for (var rain = 0; rain < 130; rain += 1) {
+      var rx = random() * W;
+      var ry = random() * H;
+      ctx.globalAlpha = 0.16 + random() * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx - 3, ry + 14 + random() * 10);
+      ctx.stroke();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 80, p.paper, 0.3);
+  }
+
+  function paintGrassDawn(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 460);
+    sky.addColorStop(0, p.paperHi);
+    sky.addColorStop(1, p.paper);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 450, W, 270, p.paperLo, 0.55);
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 456, bottomY: 456, steps: 11, low: 424, high: 448, color: p.ink, alpha: 0.18 });
+
+    // 远处屋影：草地尽头有人家
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    ctx.globalAlpha = 0.45;
+    ctx.fillRect(930, 404, 78, 44);
+    ctx.beginPath();
+    ctx.moveTo(916, 406);
+    ctx.lineTo(970, 378);
+    ctx.lineTo(1022, 406);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // 水面反光
+    for (var pool = 0; pool < 12; pool += 1) {
+      var px = random() * W;
+      var py = 486 + random() * 200;
+      ctx.save();
+      ctx.fillStyle = p.paperHi;
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 24 + random() * 70, 5 + random() * 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    mistBand(ctx, random, { y: 452, width: 760, height: 44, alpha: 0.06, color: p.paperHi });
+
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 1;
+    for (var tuft = 0; tuft < 80; tuft += 1) {
+      var tx = random() * W;
+      var ty = 470 + random() * 230;
+      ctx.globalAlpha = 0.12 + random() * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx + (random() - 0.5) * 10, ty - 7 - random() * 12);
+      ctx.stroke();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 80, p.paperHi, 0.3);
+  }
+
+  // ---------- 场景：吴起（镇口 / 土墙） ----------
+
+  function paintWuqiDawn(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 360);
+    sky.addColorStop(0, p.paperHi);
+    sky.addColorStop(1, p.paperLo);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 330, W, 390, p.paperLo, 0.9);
+    ridge(ctx, random, { startX: 0, endX: W, baseY: 372, bottomY: 372, steps: 8, low: 320, high: 356, color: p.ink, alpha: 0.12 });
+
+    // 黄土崖面：横向水蚀纹
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    for (var line = 0; line < 16; line += 1) {
+      ctx.globalAlpha = 0.04 + random() * 0.05;
+      ctx.lineWidth = 1;
+      var ly = 386 + line * 18 + random() * 6;
+      ctx.beginPath();
+      ctx.moveTo(0, ly);
+      ctx.lineTo(W, ly + (random() - 0.5) * 8);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 窑洞：三孔拱门，门洞全黑
+    [120, 470, 820].forEach(function (cx) {
+      ctx.save();
+      ctx.fillStyle = p.ink;
+      ctx.globalAlpha = 0.82;
+      ctx.beginPath();
+      ctx.moveTo(cx - 54, 520);
+      ctx.lineTo(cx - 54, 444);
+      ctx.quadraticCurveTo(cx, 396, cx + 54, 444);
+      ctx.lineTo(cx + 54, 520);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = p.paperHi;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 58, 520);
+      ctx.lineTo(cx - 58, 444);
+      ctx.quadraticCurveTo(cx, 392, cx + 58, 444);
+      ctx.lineTo(cx + 58, 520);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    // 镇口门洞：在右侧，给“到了”一个可走的入口
+    fillRect(ctx, 1030, 430, 150, 210, p.ink, 0.8);
+    fillRect(ctx, 1010, 414, 190, 18, p.ink, 0.9);
+    fillRect(ctx, 1084, 452, 42, 188, p.paperLo, 0.35);
+
+    // 高天的鸟
+    ctx.save();
+    ctx.fillStyle = p.ink;
+    for (var bird = 0; bird < 7; bird += 1) {
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(320 + random() * 520, 100 + random() * 130, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = p.ember;
+    ctx.globalAlpha = 0.1;
+    ctx.beginPath();
+    ctx.ellipse(900, 360, 260, 80, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    fillRect(ctx, 0, 0, W, 78, p.paperHi, 0.35);
+  }
+
+  function paintWuqiWall(ctx, random, p) {
+    var sky = ctx.createLinearGradient(0, 0, 0, 240);
+    sky.addColorStop(0, p.paperHi);
+    sky.addColorStop(1, p.paperLo);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    fillRect(ctx, 0, 224, W, 496, p.paperLo, 0.95);
+    loessWall(ctx, random, p, { x: 0, y: 224, w: W, h: 496, alpha: 0.55 });
+
+    // 标语区：只留纸形与朱砂笔痕，不写具体的字
+    fillRect(ctx, 150, 288, 470, 166, p.paperHi, 0.72);
+    ctx.save();
+    ctx.strokeStyle = p.cinnabar;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(150, 288, 470, 166);
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 9;
+    ctx.lineCap = "round";
+    [[182, 330, 350], [182, 374, 402], [182, 418, 300]].forEach(function (stroke) {
+      ctx.beginPath();
+      ctx.moveTo(stroke[0], stroke[1]);
+      ctx.quadraticCurveTo(stroke[0] + stroke[2] * 0.55, stroke[1] - 8, stroke[0] + stroke[2], stroke[1] + 2);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 门板：斜靠在墙上
+    ctx.save();
+    ctx.translate(872, 420);
+    ctx.rotate((2.2 * Math.PI) / 180);
+    ctx.fillStyle = p.paperHi;
+    ctx.globalAlpha = 0.96;
+    ctx.fillRect(-76, -190, 152, 380);
+    ctx.strokeStyle = p.ink;
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-76, -190, 152, 380);
+    ctx.globalAlpha = 0.2;
+    for (var wood = -62; wood < 76; wood += 18) {
+      ctx.beginPath();
+      ctx.moveTo(wood, -184);
+      ctx.lineTo(wood + (random() - 0.5) * 6, 184);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 名册影：墙上钉着一张纸，一排排名字只用短线表示
+    fillRect(ctx, 76, 304, 56, 150, p.paperHi, 0.7);
+    ctx.save();
+    ctx.strokeStyle = p.ink;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
+    for (var row = 0; row < 8; row += 1) {
+      ctx.beginPath();
+      ctx.moveTo(84, 320 + row * 16);
+      ctx.lineTo(120, 320 + row * 16);
+      ctx.stroke();
+    }
+    ctx.restore();
+    fillRect(ctx, 0, 690, W, 30, p.ink, 0.25);
+  }
+
   var PAINTERS = {
     title: paintTitle,
     map: paintMap,
     yudu_river: paintRiver,
-    yudu_night: paintNight
+    yudu_night: paintNight,
+    xiangjiang_ford: paintXiangjiangFord,
+    xiangjiang_dawn: paintXiangjiangDawn,
+    zunyi_hall: paintZunyiHall,
+    zunyi_street: paintZunyiStreet,
+    jinsha_river: paintJinshaRiver,
+    jinsha_night: paintJinshaNight,
+    luding_bridge: paintLudingBridge,
+    luding_after: paintLudingAfter,
+    grass_marsh: paintGrassMarsh,
+    grass_dawn: paintGrassDawn,
+    wuqi_dawn: paintWuqiDawn,
+    wuqi_wall: paintWuqiWall
   };
 
   XB.art = {

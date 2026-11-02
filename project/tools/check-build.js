@@ -14,16 +14,21 @@ const JS_FILES = ["art.js", "story.js", "minigames.js", "engine.js"];
 const SCRIPT_ORDER = ["art.js", "story.js", "minigames.js", "engine.js"];
 // 与 engine.js 的 REQUIRED_IDS 对齐：缺一个引擎就抛错，所以列表必须逐字一致
 const REQUIRED_IDS = [
-  "stage", "stage-art", "scene-title", "scene-map", "scene-vn",
+  "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending",
+  "ending-title", "ending-date", "ending-lede", "ending-names", "ending-stats", "ending-cards",
+  "ending-disclaimer", "ending-home", "ending-codex",
   "pause", "pause-menu", "toast", "debug", "orientation",
   "title-menu", "map-stations", "map-route",
   "vn-chapter", "vn-toolbar", "vn-auto", "vn-skip", "vn-dialogue", "vn-name", "vn-text", "vn-next",
   "vn-choice-prompt", "vn-choices", "vn-minigame", "vn-result",
   "minigame-canvas", "minigame-hud", "minigame-help", "minigame-live", "minigame-pause", "minigame-fallback",
+  "vn-interact", "interact-kicker", "interact-name", "interact-status", "interact-progress",
+  "interact-names", "interact-answer", "interact-live",
   "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-measure",
   "vn-settings", "set-speed", "set-speed-value", "set-scale", "set-volume", "set-volume-value",
   "set-muted", "set-motion", "set-skip",
-  "codex", "codex-title", "codex-badges", "codex-body", "codex-note", "codex-source", "codex-close"
+  "codex", "codex-title", "codex-badges", "codex-body", "codex-note", "codex-source", "codex-close",
+  "codex-gallery", "gallery-close", "gallery-title", "gallery-count", "gallery-grid"
 ];
 
 const PREVIEW_UI = [
@@ -38,7 +43,7 @@ const REQUIRED_TOKENS = [
   "--focus-color", "--focus-gap", "--paper-texture",
   "--font-title", "--font-body", "--font-num",
   "--fs-title", "--fs-body", "--fs-small",
-  "--z-art", "--z-scene", "--z-dialogue", "--z-pause", "--z-toast", "--z-orientation",
+  "--z-art", "--z-scene", "--z-dialogue", "--z-pause", "--z-gallery", "--z-codex", "--z-toast", "--z-orientation",
   "--dur-fast", "--dur-med", "--ease-out",
   "--stage-w", "--stage-h", "--scale"
 ];
@@ -319,7 +324,12 @@ function checkArtScenes() {
     fail("C11", "XB.art.SCENES 不是数组");
     return;
   }
-  ["title", "map", "yudu_river", "yudu_night"].forEach(function (id) {
+  var expectedScenes = ["title", "map", "yudu_river", "yudu_night",
+    "xiangjiang_ford", "xiangjiang_dawn", "zunyi_hall", "zunyi_street",
+    "jinsha_river", "jinsha_night", "luding_bridge", "luding_after",
+    "grass_marsh", "grass_dawn", "wuqi_dawn", "wuqi_wall"];
+  if (art.SCENES.length !== expectedScenes.length) fail("C11", "SCENES 应为 16 个，实际 " + art.SCENES.length);
+  expectedScenes.forEach(function (id) {
     if (art.SCENES.indexOf(id) === -1) fail("C11", "SCENES 缺 " + id);
   });
   var chapterList = (sandbox.XB.story && sandbox.XB.story.chapters) || [];
@@ -388,8 +398,8 @@ function checkPrologueGraph() {
   nodes.forEach(function (node) {
     counts[node.type] = (counts[node.type] || 0) + 1;
   });
-  var expected = { line: 41, choice: 2, minigame: 1, result: 1, title: 1, codex: 1, end: 1 };
-  if (nodes.length !== 48) fail("C13", "序章节点应为 48，实际 " + nodes.length);
+  var expected = { line: 42, choice: 2, minigame: 1, result: 1, title: 1, codex: 1, end: 1 };
+  if (nodes.length !== 49) fail("C13", "序章节点应为 49，实际 " + nodes.length);
   Object.keys(expected).forEach(function (type) {
     if ((counts[type] || 0) !== expected[type]) {
       fail("C13", type + " 节点应为 " + expected[type] + "，实际 " + (counts[type] || 0));
@@ -403,10 +413,11 @@ function checkPrologueGraph() {
     if (ids[i] !== expectedId) fail("C13", "第 " + (i + 1) + " 个节点应为 " + expectedId + "，实际 " + ids[i]);
   }
   if (new Set(ids).size !== ids.length) fail("C13", "节点 id 有重复");
+  if (!ids.includes("p039a") || !ids.includes("p039b")) fail("C13", "缺 p039a/p039b 门板分支");
   var last = nodes[nodes.length - 1];
   if (last.id !== "p900") fail("C13", "末节点应为 p900，实际 " + last.id);
   if (last.next !== "xiangjiang") fail("C13", "p900.next 应为 xiangjiang，实际 " + last.next);
-  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 41 / choice 2 / minigame 1 / result 1 / title 1 / codex 1 / end 1）");
+  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 42 / choice 2 / minigame 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
 }
 
 var SET_KEY_EXACT = ["item.door", "item.pot", "load", "trust", "fire", "lights_lost"];
@@ -417,43 +428,50 @@ function isAllowedSetKey(key) {
   );
 }
 
-// C14：选项契约——两个限时选项、字段齐全、文本与代价长度受控、set 只写白名单
+// C14：全章选项契约——2–3 项、key 连续、文本/代价长度受控、timeout 可选、set 白名单
 function checkChoiceRules() {
   var XB = loadGame();
-  var nodes = XB.core.chapterById("prologue").nodes;
-  var choices = nodes.filter(function (node) {
-    return node.type === "choice";
-  });
-  if (choices.length !== 2) fail("C14", "序章应有 2 个选择节点，实际 " + choices.length);
+  var total = 0;
   var records = [];
-  choices.forEach(function (node) {
-    if (typeof node.record !== "string" || node.record.indexOf("choice.") !== 0) {
-      fail("C14", node.id + " record 应是 choice.* 旗标名");
-    }
-    if (!(node.timeout >= 1 && node.timeout <= 30)) fail("C14", node.id + " timeout 应在 1–30 秒");
-    if (!node.prompt) fail("C14", node.id + " 缺 prompt");
-    if (!Array.isArray(node.options) || node.options.length !== 2) fail("C14", node.id + " 应有 2 个选项");
-    var keys = (node.options || []).map(function (option) {
-      return option.key;
-    });
-    if (keys.join(",") !== "A,B") fail("C14", node.id + " 选项 key 应为 A,B，实际 " + keys.join(","));
-    if (keys.indexOf(node.defaultOption) === -1) fail("C14", node.id + " defaultOption 不在选项里");
-    (node.options || []).forEach(function (option) {
-      if (!option.text) fail("C14", node.id + option.key + " 缺 text");
-      else if (Array.from(option.text).length > 14) fail("C14", node.id + option.key + " 文案超过 14 字");
-      if (!option.cost) fail("C14", node.id + option.key + " 缺 cost（超时要有代价可说）");
-      else if (Array.from(option.cost).length > 22) fail("C14", node.id + option.key + " 代价超过 22 字");
-      if (option.value === undefined) fail("C14", node.id + option.key + " 缺 value");
-      Object.keys(option.set || {}).forEach(function (key) {
-        if (!isAllowedSetKey(key)) fail("C14", node.id + option.key + " 写了未登记旗标 " + key);
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).filter(function (node) {
+      return node.type === "choice";
+    }).forEach(function (node) {
+      total += 1;
+      var timed = node.timeout !== undefined;
+      if (timed && !(node.timeout >= 1 && node.timeout <= 30)) fail("C14", node.id + " timeout 应在 1–30 秒");
+      if (timed && !node.defaultOption) fail("C14", node.id + " 限时但缺 defaultOption");
+      if (!timed && node.defaultOption) fail("C14", node.id + " 不计时却写了 defaultOption");
+      if (!node.prompt) fail("C14", node.id + " 缺 prompt");
+      if (node.record !== undefined) {
+        if (typeof node.record !== "string" || node.record.indexOf("choice.") !== 0) fail("C14", node.id + " record 应是 choice.* 旗标名");
+        var duplicate = records.filter(function (entry) { return entry.record === node.record; })[0];
+        if (duplicate && (!node.when || !duplicate.when)) fail("C14", node.id + " record 重复：" + node.record);
+        records.push({ record: node.record, when: !!node.when });
+      }
+      if (!Array.isArray(node.options) || node.options.length < 2 || node.options.length > 3) {
+        fail("C14", node.id + " 应有 2–3 个选项");
+        return;
+      }
+      var keys = node.options.map(function (option) { return option.key; });
+      var expectedKeys = node.options.length === 2 ? ["A", "B"] : ["A", "B", "C"];
+      if (keys.join(",") !== expectedKeys.join(",")) fail("C14", node.id + " 选项 key 应为 " + expectedKeys.join(",") + "，实际 " + keys.join(","));
+      if (node.defaultOption && keys.indexOf(node.defaultOption) === -1) fail("C14", node.id + " defaultOption 不在选项里");
+      node.options.forEach(function (option) {
+        if (!option.text) fail("C14", node.id + option.key + " 缺 text");
+        else if (Array.from(option.text).length > 14) fail("C14", node.id + option.key + " 文案超过 14 字");
+        if (!option.cost) fail("C14", node.id + option.key + " 缺 cost（超时要有代价可说）");
+        else if (Array.from(option.cost).length > 22) fail("C14", node.id + option.key + " 代价超过 22 字");
+        if (option.value === undefined) fail("C14", node.id + option.key + " 缺 value");
+        if (option.when !== undefined) fail("C14", node.id + option.key + " 不允许 option.when（只用节点级 when）");
+        Object.keys(option.set || {}).forEach(function (key) {
+          if (!isAllowedSetKey(key)) fail("C14", node.id + option.key + " 写了未登记旗标 " + key);
+        });
       });
     });
-    records.push(node.record);
   });
-  if (records.join("|") !== "choice.prologue.door|choice.prologue.lookback") {
-    fail("C14", "两个选择的 record 应是 door / lookback，实际 " + records.join("|"));
-  }
-  notes.push("C14 OK 2 个限时选择：字段齐全、A/B 默认项合法、set 只在白名单内");
+  if (total !== 13) fail("C14", "全章 choice 应为 13 个，实际 " + total);
+  notes.push("C14 OK 全章 " + total + " 个选择：2–3 项、key 连续、文案/代价受控、timeout 与 defaultOption 配对、set 白名单");
 }
 
 // C15：阅读层容器、标题版本行、量具不能 display:none
@@ -475,7 +493,16 @@ function checkReadingDom() {
 // C16：when/set 白名单，以及 item.door → inventory.door 镜像确实生效
 function checkConditionWhitelist() {
   var XB = loadGame();
-  var allowedWhen = ["item.door", "item.pot", "choice.prologue.door", "choice.prologue.lookback"];
+  var allowedWhen = Object.keys(XB.core.FLAG_DEFAULTS)
+    .concat(XB.core.WUQI_MEMORY)
+    .concat(Object.keys(XB.core.CHAPTER_MEMORY).map(function (chapterId) { return XB.core.CHAPTER_MEMORY[chapterId]; }))
+    .concat(["memory.zhang", "memory.door", "memory.luding_unknown", "memory.rollcall_missed_any"]);
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.type === "choice" && node.record) allowedWhen.push(node.record);
+    });
+  });
+  allowedWhen = allowedWhen.filter(function (key, index) { return allowedWhen.indexOf(key) === index; });
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
       if (!node.when) return;
@@ -530,8 +557,8 @@ function checkSaveAndCodex() {
   }
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
-      if (node.type === "end" && node.next && !XB.core.chapterById(node.next)) {
-        fail("C17", node.id + " 的 next 指向不存在的章节 " + node.next);
+      if (node.type === "end" && node.next && node.next !== "ending" && node.next !== "map" && !XB.core.chapterById(node.next)) {
+        fail("C17", node.id + " 的 next 指向不存在的章节/ending：" + node.next);
       }
     });
   });
@@ -553,7 +580,7 @@ function checkSaveAndCodex() {
   var story = stripComments(readProject("story.js"));
   if (/fetch\s*\(|XMLHttpRequest|import\s*\(/.test(story)) fail("C17", "story.js 含外部加载");
   if (/https?:\/\//.test(story)) fail("C17", "story.js 含外部 URL");
-  notes.push("C17 OK 7 张图鉴齐全、存档 11 键冻结、p001→p900 可走通、剧情内联");
+  notes.push("C17 OK 7 张图鉴齐全、存档 11 键冻结、p001→p900 可走通、end.next 允许章节/ending/map、剧情内联");
 }
 
 // C18：四关 API、冻结的数值/物品表、纯函数契约
@@ -670,6 +697,227 @@ function checkMinigameWords() {
   notes.push("C23 OK 无 X 光机/牺牲/Game Over/成功失败大字");
 }
 
+
+// C24：七章表、节点数、id 前缀/唯一、end、title/codex 位置与文档表一致
+function checkChapterTable() {
+  var XB = loadGame();
+  var expected = [
+    { id: "prologue", prefix: "p", count: 49, next: "xiangjiang" },
+    { id: "xiangjiang", prefix: "x", count: 43, next: "zunyi" },
+    { id: "zunyi", prefix: "z", count: 33, next: "jinsha" },
+    { id: "jinsha", prefix: "j", count: 35, next: "luding" },
+    { id: "luding", prefix: "l", count: 36, next: "grass" },
+    { id: "grass", prefix: "g", count: 32, next: "wuqi" },
+    { id: "wuqi", prefix: "w", count: 49, next: "ending" }
+  ];
+  var doc = readRoot("docs/chapter-integration.md");
+  var docCounts = {};
+  (doc.split(/\r?\n/)).forEach(function (line) {
+    var row = /^\|\s*(\d+)\s*\|\s*`?([a-z]+)`?\s*\|\s*([a-z])\s*\|\s*(\d+)\s*\|/.exec(line);
+    if (row) docCounts[row[2]] = Number(row[4]);
+  });
+  var allIds = {};
+  expected.forEach(function (item, index) {
+    var chapter = XB.core.chapterById(item.id);
+    if (!chapter) {
+      fail("C24", "缺章节 " + item.id);
+      return;
+    }
+    if (chapter.order !== index + 1) fail("C24", item.id + " order 应为 " + (index + 1));
+    if (chapter.playable !== true) fail("C24", item.id + " 未设 playable");
+    if (chapter.nodes.length !== item.count) fail("C24", item.id + " 节点应为 " + item.count + "，实际 " + chapter.nodes.length);
+    if (docCounts[item.id] !== item.count) fail("C24", "chapter-integration 表 " + item.id + " 应为 " + item.count + "，实际 " + docCounts[item.id]);
+    var nodes = chapter.nodes;
+    if (nodes[0].id !== item.prefix + "001") fail("C24", item.id + " 首节点应为 " + item.prefix + "001");
+    if (nodes[nodes.length - 1].id !== item.prefix + "900") fail("C24", item.id + " 末节点应为 " + item.prefix + "900");
+    if (nodes[nodes.length - 2].type !== "codex") fail("C24", item.id + " 倒数第二节点应为 codex");
+    if (item.id === "wuqi") {
+      if (nodes[nodes.length - 3].type === "title") fail("C24", "吴起不应有标题卡");
+    } else if (nodes[nodes.length - 3].type !== "title") {
+      fail("C24", item.id + " 倒数第三节点应为 title");
+    }
+    var end = nodes[nodes.length - 1];
+    if (end.type !== "end" || end.next !== item.next) fail("C24", item.id + " end.next 应为 " + item.next);
+    nodes.forEach(function (node) {
+      if (!(new RegExp("^" + item.prefix + "\\d{3}[abc]?$")).test(node.id)) fail("C24", item.id + " 节点 id 不合规则：" + node.id);
+      if (allIds[node.id]) fail("C24", "节点 id 重复：" + node.id);
+      allIds[node.id] = true;
+    });
+  });
+  notes.push("C24 OK 七章 49/43/33/35/36/32/49 共 277 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+}
+
+// C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
+function checkCodexNodes() {
+  var XB = loadGame();
+  var codexNodes = [];
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.type === "codex") codexNodes.push({ chapter: chapter.id, node: node });
+    });
+  });
+  if (codexNodes.length !== 7) fail("C25", "codex 节点应为 7 个，实际 " + codexNodes.length);
+  var storyIds = XB.story.codex.map(function (card) { return card.id; });
+  if (storyIds.join(",") !== "yudu,xiangjiang,zunyi,jinsha,luding,grass,wuqi") fail("C25", "story.codex 顺序/数量不对：" + storyIds.join(","));
+  var seen = {};
+  codexNodes.forEach(function (entry) {
+    if (!entry.node.codexId) fail("C25", entry.node.id + " 缺 codexId");
+    else if (storyIds.indexOf(entry.node.codexId) === -1) fail("C25", entry.node.id + " 的 codexId 不在 story.codex");
+    else if (seen[entry.node.codexId]) fail("C25", "codex 节点重复：" + entry.node.codexId);
+    else seen[entry.node.codexId] = true;
+  });
+  var engine = stripComments(readProject("engine.js"));
+  ["XB.story.codex", "renderGallery", "gallery-card"].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C25", "图鉴未从 story.codex 单一数据源生成，缺 " + needle);
+  });
+  notes.push("C25 OK 7 个 codex 节点一一对应 story.codex；图鉴单源");
+}
+
+// C26：ending 数据、w900→ending、SCENES 含 ending、五卡/七名/数字
+function checkEndingData() {
+  var XB = loadGame();
+  var ending = XB.story.ending;
+  if (!ending) {
+    fail("C26", "story.ending 缺失");
+    return;
+  }
+  ["title", "date", "lede", "disclaimer"].forEach(function (field) {
+    if (!ending[field]) fail("C26", "story.ending 缺 " + field);
+  });
+  var cards = ending.cards || [];
+  if (cards.length !== 5) fail("C26", "五卡应为 5 项，实际 " + cards.length);
+  if (cards.map(function (card) { return card.id; }).join(",") !== "ideal,sacrifice,truth,overall,people") fail("C26", "五卡 id 顺序不对");
+  cards.forEach(function (card) {
+    ["title", "litLine", "unlitLine"].forEach(function (field) {
+      if (!card[field]) fail("C26", card.id + " 缺 " + field);
+    });
+  });
+  var w900 = XB.core.locate("wuqi", "w900").node;
+  if (!w900 || w900.type !== "end" || w900.next !== "ending") fail("C26", "w900.next 应为 ending");
+  if (XB.core.SCENES.indexOf("ending") === -1) fail("C26", "core SCENES 缺 ending");
+  var built = XB.core.buildEnding(XB.core.defaults());
+  var stats = built.stats;
+  if (!stats || stats.companyStart !== 104 || stats.companyEnd !== 19 || stats.redStart !== 86000 || stats.redEnd !== 7000) {
+    fail("C26", "ending stats 不是 104/19/86000/7000");
+  }
+  if (!built.cards || built.cards.length !== 5) fail("C26", "buildEnding 没产出五卡");
+  if (!built.names || built.names.length !== 7) fail("C26", "buildEnding 没产出七名");
+  if (!built.stats || built.stats.redStart !== 86000) fail("C26", "buildEnding 没带数字");
+  var cold = XB.core.defaults();
+  cold.flags.fire = 10;
+  var coldCards = XB.core.buildEnding(cold).cards;
+  if (coldCards.filter(function (card) { return card.id === "ideal"; })[0].lit !== false) fail("C26", "fire=10 时 ideal 不应亮");
+  if (/\bcard\./.test(stripComments(readProject("story.js")))) fail("C26", "story.js 写了 card.*");
+  notes.push("C26 OK ending 五卡/七名/四位数字；w900→ending；engine SCENES 含 ending");
+}
+
+// C27：吴起 1 个 rollcall interact（45s、7 名），不评分
+function checkRollcallData() {
+  var XB = loadGame();
+  var wuqi = XB.core.chapterById("wuqi");
+  var interacts = (wuqi.nodes || []).filter(function (node) { return node.type === "interact"; });
+  if (interacts.length !== 1) fail("C27", "吴起应有 1 个 interact，实际 " + interacts.length);
+  var node = interacts[0];
+  if (!node) return;
+  if (node.mode !== "rollcall") fail("C27", "点名 mode 应为 rollcall");
+  if (node.duration !== 45) fail("C27", "点名 duration 应为 45，实际 " + node.duration);
+  if (!Array.isArray(node.names) || node.names.length !== 7) fail("C27", "点名 names 应为 7 项");
+  var ids = {};
+  (node.names || []).forEach(function (entry) {
+    if (ids[entry.id]) fail("C27", "点名 id 重复：" + entry.id);
+    ids[entry.id] = true;
+    if (XB.core.NAME_STATUS.indexOf(entry.status) === -1 && entry.status !== "absent") fail("C27", entry.id + " 状态非法：" + entry.status);
+  });
+  var raw = JSON.stringify(node);
+  if (/\bsuccess\b|\bscore\b/i.test(raw)) fail("C27", "点名数据出现 success/score");
+  var html = readProject("index.html");
+  ["vn-interact", "interact-name", "interact-answer", "interact-progress"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C27", "index.html 缺 #" + id);
+  });
+  var css = readProject("style.css");
+  if (css.indexOf(".vn-interact") === -1) fail("C27", "style.css 缺 .vn-interact");
+  notes.push("C27 OK 吴起点名 1 个 interact / 45s / 7 名 / 无评分；DOM 与样式就位");
+}
+
+// C28：图鉴 DOM、两处入口、7 卡样式
+function checkGalleryDom() {
+  var html = readProject("index.html");
+  ["codex-gallery", "gallery-title", "gallery-count", "gallery-grid", "gallery-close"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C28", "index.html 缺 #" + id);
+  });
+  var entries = (html.match(/data-action="codex"/g) || []).length;
+  if (entries < 2) fail("C28", "图鉴入口应至少 2 处（标题/暂停），实际 " + entries);
+  if (html.indexOf('data-action="ending-codex"') === -1) fail("C28", "结局页缺图鉴入口");
+  var css = readProject("style.css");
+  [".xb-gallery", ".xb-gallery__grid", ".xb-gallery__card", ".xb-gallery__card.is-locked"].forEach(function (selector) {
+    if (css.indexOf(selector) === -1) fail("C28", "style.css 缺 " + selector);
+  });
+  var engine = stripComments(readProject("engine.js"));
+  ["openGallery", "closeGallery", "openGalleryCard", "galleryGateLabel"].forEach(function (name) {
+    if (engine.indexOf(name) === -1) fail("C28", "engine.js 缺 " + name);
+  });
+  notes.push("C28 OK 图鉴全屏遮罩、标题/暂停/结局入口、7 卡样式与交互函数就位");
+}
+
+// C29：章末记忆与进入吴起前置；只置 true，不覆盖
+function checkChapterMemory() {
+  var XB = loadGame();
+  var expected = {
+    xiangjiang: "memory.zhou",
+    zunyi: "memory.he",
+    luding: "memory.feimao",
+    grass: "memory.zaowang"
+  };
+  if (JSON.stringify(XB.core.CHAPTER_MEMORY) !== JSON.stringify(expected)) fail("C29", "CHAPTER_MEMORY 映射不对");
+  if (XB.core.WUQI_MEMORY.join(",") !== "memory.ximei,memory.dongsheng,memory.lin") fail("C29", "WUQI_MEMORY 不对");
+  var engine = stripComments(readProject("engine.js"));
+  if (engine.indexOf("if (state.flags[key] !== true)") === -1) fail("C29", "章末记忆没有“只置 true”保护");
+  if (engine.indexOf("WUQI_MEMORY.forEach") === -1) fail("C29", "进入吴起未写三条前置记忆");
+  Object.keys(expected).forEach(function (chapterId) {
+    if (!XB.core.chapterById(chapterId)) fail("C29", "章末记忆指向不存在的章节 " + chapterId);
+  });
+  notes.push("C29 OK 章末 4 条 + 吴起前置 3 条；只置 true；memory bool 走 setFlag");
+}
+
+// C30：ending 快照形状、11 键、ending 场景约束、4096B
+function checkEndingSnapshot() {
+  var XB = loadGame();
+  if (XB.core.PERSIST_KEYS.join(",") !== "version,scene,chapterId,nodeId,flags,inventory,choices,codex,settings,unlockedChapters,ending") {
+    fail("C30", "PERSIST_KEYS 应保持 11 键");
+  }
+  var state = XB.core.defaults();
+  state.scene = "ending";
+  state.chapterId = "wuqi";
+  state.nodeId = null;
+  state.ending = XB.core.buildEnding(state);
+  if (!XB.core.isFullEnding(state.ending)) fail("C30", "buildEnding 不是完整快照");
+  var save = JSON.parse(JSON.stringify(XB.core.serialize(state)));
+  var result = XB.core.normalize(save);
+  if (result.issue !== null || result.state.scene !== "ending") {
+    fail("C30", "完整 ending 存档 normalize 失败：" + result.issue);
+    return;
+  }
+  var a = result.state.ending;
+  var b = state.ending;
+  if (JSON.stringify(a.names) !== JSON.stringify(b.names) ||
+      JSON.stringify(a.cards) !== JSON.stringify(b.cards) ||
+      JSON.stringify(a.stats) !== JSON.stringify(b.stats) ||
+      a.answered !== b.answered || a.missed !== b.missed) fail("C30", "ending 快照 roundtrip 不等");
+  var tooMany = JSON.parse(JSON.stringify(save));
+  tooMany.ending.extra = true;
+  if (XB.core.normalize(tooMany).issue !== "ending") fail("C30", "ending 多键应判坏档");
+  var noCards = JSON.parse(JSON.stringify(save));
+  delete noCards.ending.cards;
+  if (XB.core.normalize(noCards).issue !== "ending") fail("C30", "ending 缺 cards 应判坏档");
+  var withNode = JSON.parse(JSON.stringify(save));
+  withNode.nodeId = "p001";
+  if (XB.core.normalize(withNode).issue !== "ending") fail("C30", "ending 带 nodeId 应判坏档");
+  var bytes = new TextEncoder().encode(JSON.stringify(save)).length;
+  if (bytes >= 4096) fail("C30", "ending 存档 " + bytes + "B 超过 4096");
+  if (save.ending && save.ending.cards && save.ending.cards.length !== 5) fail("C30", "存档五卡不是 5 项");
+  notes.push("C30 OK ending 快照 stats/names/cards/answered/missed 形状；11 键；" + bytes + "B < 4096");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -693,6 +941,13 @@ checkMinigameStoryContract();
 checkMinigameRebuild();
 checkMinigameTuning();
 checkMinigameWords();
+checkChapterTable();
+checkCodexNodes();
+checkEndingData();
+checkRollcallData();
+checkGalleryDom();
+checkChapterMemory();
+checkEndingSnapshot();
 
 notes.forEach(function (line) {
   console.log(line);
@@ -705,5 +960,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 23 项全绿");
+  console.log("OK：构建自检 30 项全绿");
 }

@@ -58,6 +58,19 @@
       <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
       <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
 
+      <!-- 点名 / 记名：DOM 覆盖层，不走小游戏画布 -->
+      <div id="vn-interact" class="vn-interact" role="group" aria-label="点名" hidden>
+        <div class="vn-interact__panel">
+          <p id="interact-kicker" class="vn-interact__kicker"></p>
+          <p id="interact-name" class="vn-interact__name"></p>
+          <p id="interact-status" class="vn-interact__status"></p>
+          <div class="vn-interact__bar"><i id="interact-progress"></i></div>
+          <div id="interact-names" class="vn-interact__names"></div>
+          <button type="button" id="interact-answer" class="xb-btn vn-interact__answer" data-action="interact-answer">替他答到</button>
+          <p id="interact-live" class="sr-only" aria-live="polite"></p>
+        </div>
+      </div>
+
       <!-- 小游戏覆盖层：单画布 + 可访问状态；结算只用 DOM，不把 canvas 当唯一信息源 -->
       <div id="vn-minigame" class="vn-minigame" role="group" aria-label="小游戏" hidden>
         <canvas id="minigame-canvas" class="minigame-canvas" width="1280" height="720" tabindex="0" role="application" aria-label="小游戏画面" aria-describedby="minigame-help"></canvas>
@@ -80,12 +93,38 @@
       <p id="vn-measure" class="vn-measure" aria-hidden="true"></p>
     </section>
 
+    <!-- 结局：点名 + 数字 + 五张精神卡（ui-layout §8） -->
+    <section id="scene-ending" class="scene" aria-label="结局" hidden>
+      <div id="ending-panel" class="xb-ending">
+        <h2 id="ending-title" class="xb-ending__title"></h2>
+        <p id="ending-date" class="xb-ending__date"></p>
+        <p id="ending-lede" class="xb-ending__lede"></p>
+        <div class="xb-ending__cols">
+          <div class="xb-ending__names-wrap">
+            <h3 class="xb-ending__label">点名</h3>
+            <ol id="ending-names" class="xb-ending__names"></ol>
+          </div>
+          <div class="xb-ending__stats-wrap">
+            <h3 class="xb-ending__label">数字</h3>
+            <p id="ending-stats" class="xb-ending__stats"></p>
+          </div>
+        </div>
+        <div id="ending-cards" class="xb-ending__cards" aria-label="五张精神卡"></div>
+        <p id="ending-disclaimer" class="xb-ending__disclaimer"></p>
+        <div class="xb-ending__actions">
+          <button type="button" id="ending-codex" class="xb-btn" data-action="ending-codex">史实图鉴</button>
+          <button type="button" id="ending-home" class="xb-btn xb-btn--primary" data-action="ending-home">回到标题</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 暂停遮罩：继续 / 设置 / 返回地图 / 回到标题（ui-layout §7） -->
     <div id="pause" class="overlay" hidden>
       <div id="pause-menu" class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
         <p class="pause-title">暂停</p>
         <button type="button" class="pause-button" data-action="resume">继续</button>
         <button type="button" class="pause-button" data-action="open-settings">设置</button>
+        <button type="button" class="pause-button" data-action="codex">史实图鉴</button>
         <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
         <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
       </div>
@@ -139,6 +178,17 @@
       <p id="codex-note" class="xb-codex__note" hidden></p>
       <p id="codex-source" class="xb-codex__source"></p>
       <p class="xb-codex__disclaimer">人物虚构，非史料人物。</p>
+    </div>
+
+    <!-- 史实图鉴：7 张，3+3+1；锁卡点击只提示 -->
+    <div id="codex-gallery" class="xb-gallery" role="dialog" aria-modal="true" aria-labelledby="gallery-title" hidden>
+      <div class="xb-gallery__panel">
+        <button type="button" id="gallery-close" class="xb-modal__close" data-action="gallery-close" aria-label="关闭图鉴">×</button>
+        <h2 id="gallery-title" class="xb-gallery__title">史实图鉴</h2>
+        <p id="gallery-count" class="xb-gallery__count"></p>
+        <div id="gallery-grid" class="xb-gallery__grid"></div>
+        <p class="xb-gallery__hint">已解锁的卡片可以打开；其余卡片在对应章节记入。</p>
+      </div>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>

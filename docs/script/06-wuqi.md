@@ -21,8 +21,8 @@
 【旁白】她先用粉笔打格子。一个字一格，写一个，退后两步看看，再写下一个。
 
 >> 选项｜限时 10s｜默认 A｜记录到 choice.wuqi.door
-A｜把门板留在吴起｜set: item.door=false, memory.door=1｜cost: 你从此没有那块板了
-B｜带回于都｜set: item.door=true, load=+1｜cost: 回家的路还很长
+A｜把门板留在吴起｜set: item.door=false, memory.door=true｜cost: 你从此没有那块板了
+B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回家的路还很长
 
 [[if:item.door]]
 【旁白】门板还绑在我背上。它比出发时轻，边上被磨圆了。

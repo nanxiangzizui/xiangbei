@@ -41,8 +41,8 @@ B｜抱着门板过桥｜set: load=+0｜cost: 你背上多三十斤，过桥慢�
 【冬生】我知道。他吹的时候，我在后面听。
 
 >> 选项｜限时 6s｜默认 A｜记录到 choice.luding.names
-A｜记下数字，不写名字｜set: memory.luding_unknown=0｜cost: 名册上多一行空白
-B｜留一页空白，等名字｜set: memory.luding_unknown=1｜cost: 那一页一直是空的
+A｜记下数字，不写名字｜set: memory.luding_unknown=false｜cost: 名册上多一行空白
+B｜留一页空白，等名字｜set: memory.luding_unknown=true｜cost: 那一页一直是空的
 
 [[if:memory.luding_unknown]]
 【旁白】我在名册最后留了一整页。

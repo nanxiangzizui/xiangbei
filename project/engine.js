@@ -14,8 +14,8 @@
 
   // 场景只用于“现在该显示哪一层”；剧情推进本身按 nodeId 定位，不用栈。
   // 小游戏/结算/选项都是 vn 视图内的分派，不再单独占 scene 值。
-  var SCENES = ["title", "map", "vn"];
-  var LEGACY_SCENES = ["choice", "minigame", "result", "codex", "ending"];
+  var SCENES = ["title", "map", "vn", "ending"];
+  var LEGACY_SCENES = ["choice", "minigame", "result", "codex"];
 
   // 存档字段固定 11 个：加字段先改 docs/state-schema.md 与工具 C17。
   var PERSIST_KEYS = [
@@ -41,7 +41,7 @@
     skipSeen: false
   };
 
-  // 九条基础旗标：缺省值即“还没做选择”的状态，normalize 会把旧档补齐。
+  // 十条基础旗标：缺省值即“还没做选择”的状态，normalize 会把旧档补齐。
   var FLAG_DEFAULTS = {
     "item.door": false,
     "item.pot": false,
@@ -51,6 +51,7 @@
     lights_lost: 0,
     "choice.xiangjiang.abandoned": [],
     "choice.zunyi.missed": 0,
+    "choice.zunyi.admit": 0,
     "choice.jinsha.trips": 0
   };
 
@@ -61,6 +62,7 @@
     load: [0, 99],
     lights_lost: [0, 22],
     "choice.zunyi.missed": [0, 1],
+    "choice.zunyi.admit": [0, 3],
     "choice.jinsha.trips": [0, 18]
   };
 
@@ -74,6 +76,7 @@
     "lights_lost",
     "choice.xiangjiang.abandoned",
     "choice.zunyi.missed",
+    "choice.zunyi.admit",
     "choice.jinsha.trips"
   ];
 
@@ -133,6 +136,159 @@
     return ((XB.story && XB.story.codex) || []).map(function (card) {
       return card.id;
     });
+  }
+
+  var CARD_IDS = ["ideal", "sacrifice", "truth", "overall", "people"];
+  var NAME_STATUS = ["self", "remote", "player", "missed"];
+  var ENDING_STATS = { companyStart: 104, companyEnd: 19, redStart: 86000, redEnd: 7000 };
+  // 章末记忆：只置 true，不覆盖已有的 true；金沙江记名与吴起门板另有交互写。
+  var CHAPTER_MEMORY = {
+    xiangjiang: "memory.zhou",
+    zunyi: "memory.he",
+    luding: "memory.feimao",
+    grass: "memory.zaowang"
+  };
+  var WUQI_MEMORY = ["memory.ximei", "memory.dongsheng", "memory.lin"];
+
+  function validEndingNames(names) {
+    if (!Array.isArray(names) || names.length !== 7) return false;
+    var seen = {};
+    return names.every(function (entry) {
+      if (!isPlainObject(entry)) return false;
+      if (typeof entry.id !== "string" || !entry.id || seen[entry.id]) return false;
+      if (typeof entry.name !== "string" || !entry.name) return false;
+      if (NAME_STATUS.indexOf(entry.status) === -1) return false;
+      seen[entry.id] = true;
+      return true;
+    });
+  }
+
+  function validEndingCards(cards) {
+    if (!Array.isArray(cards) || cards.length !== CARD_IDS.length) return false;
+    var seen = {};
+    return cards.every(function (entry) {
+      if (!isPlainObject(entry)) return false;
+      if (CARD_IDS.indexOf(entry.id) === -1 || seen[entry.id]) return false;
+      if (typeof entry.lit !== "boolean" || typeof entry.line !== "string") return false;
+      seen[entry.id] = true;
+      return true;
+    });
+  }
+
+  function validEndingStats(stats) {
+    if (!isPlainObject(stats)) return false;
+    var keys = Object.keys(stats);
+    if (keys.length !== 4 || keys.some(function (key) { return !(key in ENDING_STATS); })) return false;
+    return Object.keys(ENDING_STATS).every(function (key) {
+      return isFiniteNumber(stats[key]) && stats[key] >= 0;
+    });
+  }
+
+  // 点名结束会先写 names/answered/missed，结尾再补 stats/cards；两种形状都收，但键必须干净。
+  function normalizeEnding(value) {
+    if (!isPlainObject(value)) return null;
+    var allowed = ["stats", "names", "answered", "missed", "cards"];
+    var keys = Object.keys(value);
+    if (keys.some(function (key) { return allowed.indexOf(key) === -1; })) return null;
+    var clean = {};
+    if (value.names !== undefined) {
+      if (!validEndingNames(value.names)) return null;
+      clean.names = value.names.map(function (entry) {
+        return { id: entry.id, name: entry.name, status: entry.status };
+      });
+    }
+    if (value.answered !== undefined) {
+      if (!isFiniteNumber(value.answered) || value.answered < 0 || value.answered > 3) return null;
+      clean.answered = Math.round(value.answered);
+    }
+    if (value.missed !== undefined) {
+      if (!isFiniteNumber(value.missed) || value.missed < 0 || value.missed > 3) return null;
+      clean.missed = Math.round(value.missed);
+    }
+    if (value.cards !== undefined) {
+      if (!validEndingCards(value.cards)) return null;
+      clean.cards = value.cards.map(function (entry) {
+        return { id: entry.id, lit: entry.lit, line: entry.line };
+      });
+    }
+    if (value.stats !== undefined) {
+      if (!validEndingStats(value.stats)) return null;
+      clean.stats = {
+        companyStart: value.stats.companyStart,
+        companyEnd: value.stats.companyEnd,
+        redStart: value.stats.redStart,
+        redEnd: value.stats.redEnd
+      };
+    }
+    return clean;
+  }
+
+  function isFullEnding(ending) {
+    return !!(ending && ending.stats && ending.names && ending.cards &&
+      isFiniteNumber(ending.answered) && isFiniteNumber(ending.missed));
+  }
+
+  function rollcallEntries() {
+    var chapter = chapterById("wuqi");
+    var node = null;
+    ((chapter && chapter.nodes) || []).some(function (item) {
+      if (item.type === "interact" && item.mode === "rollcall") {
+        node = item;
+        return true;
+      }
+      return false;
+    });
+    return (node && node.names) || [];
+  }
+
+  // 没走到点名就进结局（调试/异常档）时的默认：不在场的人按“没应”算，不伪造替答。
+  function defaultEndingNames() {
+    var answered = 0;
+    var missed = 0;
+    var names = rollcallEntries().map(function (entry) {
+      var status = entry.status === "absent" ? "missed" : entry.status;
+      if (status === "missed") missed += 1;
+      if (status === "player") answered += 1;
+      return { id: entry.id, name: entry.name, status: status };
+    });
+    return { names: names, answered: answered, missed: missed };
+  }
+
+  // 五卡只算一次：finishChapter 调 buildEnding 落成快照，重进结局直接读快照。
+  function buildEnding(state) {
+    var storyEnding = (XB.story && XB.story.ending) || {};
+    var flags = state.flags || {};
+    var previous = normalizeEnding(state.ending) || {};
+    var fallback = defaultEndingNames();
+    var names = previous.names || fallback.names;
+    var answered = previous.answered !== undefined ? previous.answered : fallback.answered;
+    var missed = previous.missed !== undefined ? previous.missed : fallback.missed;
+
+    var conditions = {
+      ideal: isFiniteNumber(flags.fire) && flags.fire >= 20,
+      sacrifice: flags["choice.xiangjiang.hold"] === true,
+      truth: Number(flags["choice.zunyi.admit"] || 0) >= 2,
+      overall: flags["choice.jinsha.priority"] === "main",
+      people: Number(flags.trust || 0) >= 3 && flags["memory.zhang"] === true
+    };
+
+    var cards = ((storyEnding.cards) || []).map(function (card) {
+      var lit = conditions[card.id] === true;
+      return { id: card.id, lit: lit, line: lit ? card.litLine : card.unlitLine };
+    });
+
+    return {
+      stats: {
+        companyStart: ENDING_STATS.companyStart,
+        companyEnd: ENDING_STATS.companyEnd,
+        redStart: ENDING_STATS.redStart,
+        redEnd: ENDING_STATS.redEnd
+      },
+      names: names,
+      answered: answered,
+      missed: missed,
+      cards: cards
+    };
   }
 
   function defaults() {
@@ -259,12 +415,22 @@
     if (unlocked.indexOf("prologue") === -1) unlocked.unshift("prologue");
     state.unlockedChapters = unlocked;
 
-    state.ending = isPlainObject(save.ending) ? save.ending : null;
+    state.ending = normalizeEnding(save.ending);
 
     if (save.nodeId !== null && save.nodeId !== undefined && typeof save.nodeId !== "string") {
       return { issue: "node", state: defaults() };
     }
     state.nodeId = save.nodeId === undefined ? null : save.nodeId;
+
+    if (state.scene === "ending") {
+      // 结局是只读快照：缺一块、带了节点、或不在吴起章，都回地图并报告，不半截显示。
+      if (state.chapterId !== "wuqi" || state.nodeId !== null || !isFullEnding(state.ending)) {
+        var fallback = defaults();
+        fallback.scene = "map";
+        return { issue: "ending", state: fallback };
+      }
+      return { issue: null, state: state };
+    }
 
     if (state.nodeId !== null) {
       var found = locate(state.chapterId, state.nodeId);
@@ -474,8 +640,14 @@
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
     FLAG_DEFAULTS: FLAG_DEFAULTS,
     FLAG_LIMITS: FLAG_LIMITS,
+    CARD_IDS: CARD_IDS,
+    NAME_STATUS: NAME_STATUS,
+    CHAPTER_MEMORY: CHAPTER_MEMORY,
+    WUQI_MEMORY: WUQI_MEMORY,
     defaults: defaults,
     normalize: normalize,
+    buildEnding: buildEnding,
+    isFullEnding: isFullEnding,
     chapterById: chapterById,
     codexById: codexById,
     locate: locate,
@@ -527,6 +699,16 @@
     "scene-title",
     "scene-map",
     "scene-vn",
+    "scene-ending",
+    "ending-title",
+    "ending-date",
+    "ending-lede",
+    "ending-names",
+    "ending-stats",
+    "ending-cards",
+    "ending-disclaimer",
+    "ending-home",
+    "ending-codex",
     "pause",
     "pause-menu",
     "toast",
@@ -553,6 +735,14 @@
     "minigame-pause",
     "minigame-fallback",
     "vn-result",
+    "vn-interact",
+    "interact-kicker",
+    "interact-name",
+    "interact-status",
+    "interact-progress",
+    "interact-names",
+    "interact-answer",
+    "interact-live",
     "vn-title-card",
     "vn-title-chapter",
     "vn-title-sub",
@@ -572,7 +762,12 @@
     "codex-body",
     "codex-note",
     "codex-source",
-    "codex-close"
+    "codex-close",
+    "codex-gallery",
+    "gallery-close",
+    "gallery-title",
+    "gallery-count",
+    "gallery-grid"
   ];
 
   var state = null;
@@ -620,6 +815,27 @@
 
   var titleCardState = { open: false, timer: 0, onClose: null };
   var codexState = { open: false, id: null, unlock: false, onClose: null, previousFocus: null };
+  var galleryState = { open: false, previousFocus: null };
+
+  // 点名/记名交互：只活在本次页面；点名结果在结束时落进 ending 快照。
+  var interactRun = {
+    active: false,
+    mode: "",
+    node: null,
+    entries: [],
+    cursor: 0,
+    phase: "",
+    phaseRemaining: 0,
+    total: 0,
+    remaining: 0,
+    lastTs: 0,
+    lastSecond: -1,
+    rafId: 0,
+    answered: 0,
+    missed: 0,
+    finished: false
+  };
+  var lastInteractResult = null;
 
   // 小游戏运行时：lastMinigameResult 只活在本页；刷新后由 p025 从 flags/inventory 重建。
   var lastMinigameResult = null;
@@ -684,6 +900,12 @@
     if (soloGame) {
       startSolo(soloGame, readSoloOptions(params));
       return;
+    }
+
+    // 调试跳章：?chapter=xiangjiang&node=x001；只定位，不补记忆、不跳章末。
+    var debugChapter = params.get("chapter");
+    if (debugChapter && chapterById(debugChapter)) {
+      if (startChapter(state, debugChapter, params.get("node"))) saveExists = true;
     }
 
     applySettings();
@@ -774,7 +996,7 @@
 
   // 刷新后的落点：vn 就回到原句，title/map 保持原样；定位不到的档已在 normalize 里回默认。
   function applyStartScene() {
-    if (state.scene === "title" || state.scene === "map") return;
+    if (state.scene === "title" || state.scene === "map" || state.scene === "ending") return;
     if (state.scene !== "vn") {
       state.scene = "map";
       return;
@@ -850,6 +1072,7 @@
       "chapter " + state.chapterId,
       "node    " + (state.nodeId || "—") + (node ? " (" + node.type + ")" : ""),
       "door    " + state.flags["item.door"] + "  fire=" + state.flags.fire + "  load=" + state.flags.load,
+      "ending  " + (state.ending ? (state.ending.cards ? "snapshot" : "partial") : "—"),
       "choice  " + describeFlag("choice.prologue.door") + " / lookback=" + describeFlag("choice.prologue.lookback"),
       "log     " + state.choices.length,
       "canvas  " + els.stageArt.width + "×" + els.stageArt.height
@@ -869,6 +1092,7 @@
     els.sceneTitle.hidden = name !== "title";
     els.sceneMap.hidden = name !== "map";
     els.sceneVn.hidden = name !== "vn";
+    els.sceneEnding.hidden = name !== "ending";
   }
 
   function render() {
@@ -876,11 +1100,13 @@
     if (state.scene !== "vn") {
       cancelTyping();
       cancelChoiceTimer();
+      stopInteract();
     }
     showScene(state.scene);
     if (state.scene === "title") renderTitle();
     else if (state.scene === "map") renderMap();
     else if (state.scene === "vn") renderVn(currentNode(state));
+    else if (state.scene === "ending") renderEnding();
     updateDebug();
   }
 
@@ -948,6 +1174,7 @@
     els.vnChoicePrompt.hidden = true;
     els.vnMinigame.hidden = true;
     els.vnResult.hidden = true;
+    els.vnInteract.hidden = true;
     els.vnToolbar.hidden = true;
   }
 
@@ -982,6 +1209,9 @@
         break;
       case "result":
         renderResult(found.node);
+        break;
+      case "interact":
+        startInteract(found.node);
         break;
       case "title":
         showTitleCard(found.node.text, found.node.sub, advanceVn);
@@ -1485,8 +1715,36 @@
     }
   }
 
+  function buildZunyiCard(node) {
+    var recent = state.choices.filter(function (entry) {
+      return entry.chapter === "zunyi";
+    }).slice(-3);
+    var admit = Math.max(0, Math.min(3, Number(state.flags["choice.zunyi.admit"]) || 0));
+    var view = {
+      title: node.title || "错误卡",
+      note: node.note || "",
+      stats: "",
+      lists: []
+    };
+    if (recent.length < 3) {
+      // 调试跳章时没有完整日志；宁可说记录不全，也不替玩家补答案。
+      view.stats = "记录不全";
+      view.lists.push({ heading: "记录不全", items: ["只找到 " + recent.length + " 条遵义记录。"] });
+      return view;
+    }
+    view.stats = (node.conclusions && node.conclusions[admit]) || "";
+    recent.forEach(function (entry, index) {
+      view.lists.push({
+        heading: (node.questions && node.questions[index]) || "第 " + (index + 1) + " 条",
+        items: [entry.text]
+      });
+    });
+    return view;
+  }
+
   function buildResultView(node) {
     var gameId = node.game || (lastMinigameResult && lastMinigameResult.gameId) || null;
+    if (node.source === "zunyi") return buildZunyiCard(node);
     var runtime = lastMinigameResult && (!gameId || lastMinigameResult.gameId === gameId) ? lastMinigameResult : null;
     var view = {
       title: node.title || "结算",
@@ -1494,6 +1752,20 @@
       stats: "",
       lists: []
     };
+
+    if (node.source === "interact") {
+      var picked = lastInteractResult;
+      var count = picked ? picked.count : (state.flags["memory.zhang"] === true ? 1 : 0);
+      view.stats = count ? "抄下 " + count + " 个名字" : "一个没抄";
+      if (picked && picked.count && picked.name) {
+        view.lists.push({ heading: "抄下的名字", items: [picked.name] });
+      }
+      (node.lists || []).forEach(function (list) {
+        if (!evalWhen(state, list.when)) return;
+        view.lists.push({ heading: list.heading, items: (list.items || []).slice() });
+      });
+      return view;
+    }
 
     if (node.source !== "minigame" || !gameId) {
       (node.lists || []).forEach(function (list) {
@@ -1614,6 +1886,296 @@
     els.vnResult.focus({ preventScroll: true });
   }
 
+  /* ---------------- 结局 ---------------- */
+
+  var ENDING_STATUS_TEXT = {
+    self: "答到",
+    remote: "在别的连答到",
+    player: "替他答到",
+    missed: "未应"
+  };
+
+  function renderEnding() {
+    var storyEnding = (XB.story && XB.story.ending) || {};
+    if (!isFullEnding(state.ending)) {
+      state.ending = buildEnding(state);
+      saveNow();
+    }
+    paintStage("wuqi_wall");
+    els.endingTitle.textContent = storyEnding.title || "向北";
+    els.endingDate.textContent = (storyEnding.date || "") + " · 吴起镇";
+    els.endingLede.textContent = storyEnding.lede || "";
+
+    els.endingNames.textContent = "";
+    state.ending.names.forEach(function (entry) {
+      var row = document.createElement("li");
+      row.className = "xb-ending__name is-" + entry.status;
+      var name = document.createElement("span");
+      name.className = "xb-ending__name-text";
+      name.textContent = entry.name;
+      var status = document.createElement("span");
+      status.className = "xb-ending__name-status";
+      status.textContent = ENDING_STATUS_TEXT[entry.status] || entry.status;
+      row.append(name, status);
+      els.endingNames.append(row);
+    });
+
+    var statsData = state.ending.stats;
+    els.endingStats.textContent =
+      "全连：出发 " + statsData.companyStart + " 人，到吴起 " + statsData.companyEnd + " 人（虚构连队，非史料统计）\n" +
+      "中央红军：出发 " + statsData.redStart.toLocaleString("en-US") + " 余人，到陕北 " + statsData.redEnd.toLocaleString("en-US") + " 余人（史实）";
+
+    var byId = {};
+    state.ending.cards.forEach(function (card) {
+      byId[card.id] = card;
+    });
+    els.endingCards.textContent = "";
+    (storyEnding.cards || []).forEach(function (def) {
+      var snapshot = byId[def.id];
+      if (!snapshot) return;
+      var card = document.createElement("article");
+      card.className = "xb-ending__card " + (snapshot.lit ? "is-lit" : "is-unlit");
+      var title = document.createElement("h3");
+      title.textContent = def.title;
+      var line = document.createElement("p");
+      line.textContent = snapshot.line;
+      card.append(title, line);
+      els.endingCards.append(card);
+    });
+
+    els.endingDisclaimer.textContent = storyEnding.disclaimer || "本作人物与连队均为虚构，非史料人物。";
+    els.endingHome.focus({ preventScroll: true });
+  }
+
+  /* ---------------- 点名 / 记名 ---------------- */
+
+  function startInteract(node) {
+    stopInteract();
+    hidePanels();
+    els.vnInteract.hidden = false;
+    els.sceneVn.classList.add("is-interacting");
+    els.vnToolbar.hidden = true;
+    interactRun.active = true;
+    interactRun.mode = node.mode;
+    interactRun.node = node;
+    interactRun.finished = false;
+    interactRun.answered = 0;
+    interactRun.missed = 0;
+    interactRun.cursor = -1;
+    interactRun.phase = "";
+    interactRun.phaseRemaining = 0;
+    interactRun.total = (Number(node.duration) || 0) * 1000;
+    interactRun.remaining = interactRun.total;
+    interactRun.lastTs = 0;
+    interactRun.lastSecond = -1;
+    interactRun.entries = [];
+    lastInteractResult = null;
+    interactRun.rafId = 0;
+
+    if (node.mode === "rollcall") {
+      els.interactKicker.textContent = "点名";
+      interactRun.entries = (node.names || []).map(function (entry) {
+        return { id: entry.id, name: entry.name, base: entry.status || "self", status: entry.status || "self", done: false };
+      });
+      els.interactAnswer.textContent = "替他答到";
+      els.interactAnswer.hidden = true;
+      renderRollcallChips();
+      nextRollcall();
+    } else if (node.mode === "namepick") {
+      els.interactKicker.textContent = "记名";
+      els.interactName.textContent = "抄名字";
+      els.interactAnswer.textContent = "跳过";
+      els.interactAnswer.hidden = false;
+      buildNamepick(node);
+    } else {
+      console.error("[XB] 未知交互模式：" + node.mode);
+      stopInteract();
+      advanceVn();
+      return;
+    }
+    interactRun.rafId = requestAnimationFrame(stepInteract);
+  }
+
+  function stopInteract() {
+    interactRun.active = false;
+    if (interactRun.rafId) cancelAnimationFrame(interactRun.rafId);
+    interactRun.rafId = 0;
+    if (els.vnInteract) els.vnInteract.hidden = true;
+    if (els.sceneVn) els.sceneVn.classList.remove("is-interacting");
+  }
+
+  function setInteractProgress(ratio) {
+    var percent = Math.max(0, Math.min(1, ratio)) * 100;
+    els.interactProgress.style.width = percent.toFixed(2) + "%";
+  }
+
+  function announceInteract(text) {
+    els.interactLive.textContent = text;
+  }
+
+  function renderRollcallChips() {
+    els.interactNames.textContent = "";
+    interactRun.entries.forEach(function (entry) {
+      var chip = document.createElement("span");
+      chip.className = "interact-chip is-" + entry.status + (entry.done ? " is-done" : "");
+      chip.textContent = entry.name;
+      els.interactNames.append(chip);
+    });
+  }
+
+  function nextRollcall() {
+    if (!interactRun.active || interactRun.finished) return;
+    interactRun.cursor += 1;
+    if (interactRun.cursor >= interactRun.entries.length) {
+      finishRollcall();
+      return;
+    }
+    var entry = interactRun.entries[interactRun.cursor];
+    els.interactName.textContent = entry.name;
+    if (entry.base === "remote" || entry.base === "self") {
+      interactRun.phase = "auto";
+      interactRun.phaseRemaining = 700;
+      els.interactStatus.textContent = entry.base === "remote" ? "在别的连，那边有人应了一声" : "答到";
+      els.interactAnswer.hidden = true;
+      announceInteract("念到 " + entry.name + "，" + (entry.base === "remote" ? "别的连有人应了" : "答到"));
+    } else {
+      interactRun.phase = "wait";
+      interactRun.phaseRemaining = 4000;
+      els.interactStatus.textContent = "没有人应 · 4";
+      els.interactAnswer.hidden = false;
+      announceInteract("念到 " + entry.name + "，没有人应");
+    }
+    interactRun.lastSecond = -1;
+    renderRollcallChips();
+  }
+
+  function answerRollcall() {
+    if (!interactRun.active || interactRun.mode !== "rollcall" || interactRun.phase !== "wait") return;
+    var entry = interactRun.entries[interactRun.cursor];
+    if (!entry || entry.done) return;
+    entry.status = "player";
+    entry.done = true;
+    interactRun.answered += 1;
+    announceInteract("替 " + entry.name + " 答到");
+    nextRollcall();
+  }
+
+  function finishRollcall() {
+    if (interactRun.finished) return;
+    interactRun.finished = true;
+    interactRun.entries.forEach(function (entry) {
+      if (entry.done) return;
+      entry.status = entry.base === "remote" || entry.base === "self" ? entry.base : "missed";
+      entry.done = true;
+    });
+    var names = interactRun.entries.map(function (entry) {
+      return { id: entry.id, name: entry.name, status: entry.status };
+    });
+    var answered = names.filter(function (entry) { return entry.status === "player"; }).length;
+    var missed = names.filter(function (entry) { return entry.status === "missed"; }).length;
+    state.ending = { names: names, answered: answered, missed: missed };
+    setFlag(state, "memory.rollcall_missed_any", missed > 0);
+    lastInteractResult = null;
+    saveNow();
+    stopInteract();
+    advanceVn();
+  }
+
+  function buildNamepick(node) {
+    interactRun.entries = (node.names || []).map(function (entry) {
+      return { id: entry.id, name: entry.name, status: "none", done: false };
+    });
+    els.interactName.textContent = "抄名字";
+    els.interactStatus.textContent = "还有 " + Math.ceil(interactRun.remaining / 1000) + " 秒";
+    els.interactNames.textContent = "";
+    interactRun.entries.forEach(function (entry) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "interact-name-button";
+      button.dataset.action = "pick-name";
+      button.dataset.nameId = entry.id;
+      button.textContent = entry.name;
+      els.interactNames.append(button);
+    });
+    setInteractProgress(1);
+    announceInteract("点选要抄下的名字，不选即跳过");
+  }
+
+  function pickName(nameId) {
+    if (!interactRun.active || interactRun.mode !== "namepick" || interactRun.finished) return;
+    var entry = null;
+    interactRun.entries.forEach(function (candidate) {
+      if (candidate.id === nameId) entry = candidate;
+    });
+    if (!entry) return;
+    interactRun.finished = true;
+    if (nameId === "zhang") setFlag(state, "memory.zhang", true);
+    lastInteractResult = { count: 1, name: entry.name, id: entry.id };
+    announceInteract("记下 " + entry.name);
+    stopInteract();
+    advanceVn();
+  }
+
+  function skipNamepick() {
+    if (!interactRun.active || interactRun.mode !== "namepick" || interactRun.finished) return;
+    interactRun.finished = true;
+    lastInteractResult = { count: 0, name: "", id: "" };
+    announceInteract("一个没抄");
+    stopInteract();
+    advanceVn();
+  }
+
+  function stepInteract(timestamp) {
+    if (!interactRun.active || interactRun.finished) return;
+    if (state.paused) {
+      interactRun.lastTs = 0;
+      interactRun.rafId = requestAnimationFrame(stepInteract);
+      return;
+    }
+    if (!interactRun.lastTs) interactRun.lastTs = timestamp;
+    var dt = Math.min(timestamp - interactRun.lastTs, 50);
+    interactRun.lastTs = timestamp;
+    interactRun.remaining -= dt;
+    setInteractProgress(interactRun.remaining / interactRun.total);
+
+    if (interactRun.mode === "rollcall") {
+      if (interactRun.remaining <= 0) {
+        finishRollcall();
+        return;
+      }
+      interactRun.phaseRemaining -= dt;
+      var seconds = Math.ceil(interactRun.phaseRemaining / 1000);
+      if (interactRun.phase === "wait" && seconds !== interactRun.lastSecond) {
+        interactRun.lastSecond = seconds;
+        els.interactStatus.textContent = "没有人应 · " + Math.max(0, seconds);
+      }
+      if (interactRun.phaseRemaining <= 0) {
+        var entry = interactRun.entries[interactRun.cursor];
+        if (entry && !entry.done) {
+          if (interactRun.phase === "auto") {
+            entry.status = entry.base;
+          } else {
+            entry.status = "missed";
+            announceInteract("念到 " + entry.name + "，没有应");
+          }
+          entry.done = true;
+        }
+        nextRollcall();
+      }
+    } else if (interactRun.mode === "namepick") {
+      var left = Math.ceil(interactRun.remaining / 1000);
+      if (left !== interactRun.lastSecond) {
+        interactRun.lastSecond = left;
+        els.interactStatus.textContent = "还有 " + Math.max(0, left) + " 秒";
+      }
+      if (interactRun.remaining <= 0) {
+        skipNamepick();
+        return;
+      }
+    }
+    interactRun.rafId = requestAnimationFrame(stepInteract);
+  }
+
   function soloStatsText(result) {
     var stats = result.stats || {};
     if (result.gameId === "door") {
@@ -1709,16 +2271,53 @@
     els.vnResult.focus({ preventScroll: true });
   }
 
+  function applyChapterMemory(chapterId) {
+    var key = CHAPTER_MEMORY[chapterId];
+    if (!key) return;
+    if (state.flags[key] !== true) setFlag(state, key, true);
+  }
+
+  // 章末三种出口：下一章（解锁并直接接上）/ 地图 / 结局快照。
   function finishChapter(node) {
+    applyChapterMemory(state.chapterId);
     var nextId = node.next || null;
-    if (nextId) {
-      var chapter = chapterById(nextId);
-      if (chapter && state.unlockedChapters.indexOf(nextId) === -1) {
-        state.unlockedChapters.push(nextId);
-        toast("「" + chapter.title + "」已解锁；本步只做到序章");
-      } else {
-        toast("序章到此（试玩版）");
-      }
+
+    if (nextId === "ending") {
+      state.ending = buildEnding(state);
+      state.scene = "ending";
+      state.nodeId = null;
+      saveExists = true;
+      saveNow();
+      render();
+      return;
+    }
+
+    if (!nextId || nextId === "map") {
+      state.nodeId = null;
+      go("map");
+      return;
+    }
+
+    var chapter = chapterById(nextId);
+    if (!chapter || !chapter.playable) {
+      state.nodeId = null;
+      go("map");
+      return;
+    }
+    if (state.unlockedChapters.indexOf(nextId) === -1) {
+      state.unlockedChapters.push(nextId);
+      toast("「" + chapter.title + "」已解锁");
+    }
+    if (nextId === "wuqi") {
+      WUQI_MEMORY.forEach(function (key) {
+        if (state.flags[key] !== true) setFlag(state, key, true);
+      });
+    }
+    if (startChapter(state, nextId)) {
+      saveExists = true;
+      render();
+      saveNow();
+      return;
     }
     state.nodeId = null;
     go("map");
@@ -1821,10 +2420,80 @@
     toast("史实注已记入图鉴：" + codexById(id).title);
   }
 
+  function galleryGateLabel(card) {
+    var chapters = (XB.story && XB.story.chapters) || [];
+    var cards = (XB.story && XB.story.codex) || [];
+    var index = cards.indexOf(card);
+    if (index < 0 || !chapters[index]) return "继续往北解锁";
+    return index === 0 ? "序章解锁" : "第 " + index + " 章解锁";
+  }
+
+  function renderGallery() {
+    var cards = (XB.story && XB.story.codex) || [];
+    els.galleryCount.textContent = state.codex.length + " / " + cards.length;
+    els.galleryGrid.textContent = "";
+    cards.forEach(function (card, index) {
+      var unlocked = state.codex.indexOf(card.id) !== -1;
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "xb-gallery__card " + (unlocked ? "is-unlocked" : "is-locked");
+      button.dataset.action = "gallery-card";
+      button.dataset.codex = card.id;
+      if (!unlocked) button.setAttribute("aria-disabled", "true");
+      button.setAttribute("aria-label", card.title + (unlocked ? "，已解锁" : "，未解锁，" + galleryGateLabel(card)));
+
+      var order = document.createElement("span");
+      order.className = "xb-gallery__card-order";
+      order.textContent = index + 1 < 10 ? "0" + (index + 1) : String(index + 1);
+      var title = document.createElement("h3");
+      title.textContent = card.title;
+      var type = document.createElement("p");
+      type.className = "xb-gallery__card-type";
+      type.textContent = card.type;
+      var gate = document.createElement("span");
+      gate.className = "xb-gallery__card-state";
+      gate.textContent = unlocked ? "已记入" : galleryGateLabel(card);
+      button.append(order, title, type, gate);
+      els.galleryGrid.append(button);
+    });
+  }
+
+  function openGallery() {
+    if (galleryState.open) return;
+    galleryState.open = true;
+    galleryState.previousFocus = document.activeElement;
+    renderGallery();
+    els.codexGallery.hidden = false;
+    els.galleryClose.focus();
+  }
+
+  function closeGallery() {
+    if (!galleryState.open) return;
+    galleryState.open = false;
+    els.codexGallery.hidden = true;
+    var previous = galleryState.previousFocus;
+    galleryState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  function openGalleryCard(id) {
+    var card = codexById(id);
+    if (!card) {
+      toast("史实注缺失：" + id);
+      return;
+    }
+    if (state.codex.indexOf(id) === -1) {
+      toast(galleryGateLabel(card) + "后可在图鉴查看");
+      return;
+    }
+    openCodex(id, { unlock: false });
+  }
+
   /* ---------------- 场景与暂停 ---------------- */
 
   function go(scene) {
     stopMinigame();
+    stopInteract();
     cancelAuto();
     cancelChoiceTimer();
     cancelTyping();
@@ -1866,6 +2535,12 @@
     stopMinigame();
     if (state.scene !== "title") {
       render();
+      return;
+    }
+    if (!state.nodeId && isFullEnding(state.ending)) {
+      state.scene = "ending";
+      render();
+      saveNow();
       return;
     }
     var found = state.nodeId ? locate(state.chapterId, state.nodeId) : null;
@@ -2170,6 +2845,9 @@
     els.codexClose.addEventListener("click", function () {
       closeCodex();
     });
+    els.codexGallery.addEventListener("click", function (event) {
+      if (event.target === els.codexGallery) closeGallery();
+    });
     // 标题卡不单独绑 pointerdown：document 上的 onPointerDown 已经负责关它并 return，
     // 两处都绑会让同一次点击关完卡片后继续把 p001 的第一页“补全”，第一句等于没打。
   }
@@ -2183,7 +2861,8 @@
       closeTitleCard();
       return;
     }
-    if (codexState.open) return;
+    if (codexState.open || galleryState.open) return;
+    if (interactRun.active) return;
     if (!state || state.scene !== "vn" || state.paused) return;
     if (XB.minigames && XB.minigames.isActive()) return;
     if (target.closest("#vn-dialogue, #scene-vn")) advanceInput();
@@ -2194,7 +2873,8 @@
     if (!target || !target.closest) return;
     var actionElement = target.closest("[data-action]");
     if (!actionElement) return;
-    if (actionElement.getAttribute("aria-disabled") === "true" && actionElement.dataset.action !== "skip") return;
+    var actionName = actionElement.dataset.action;
+    if (actionElement.getAttribute("aria-disabled") === "true" && actionName !== "skip" && actionName !== "gallery-card") return;
     handleAction(actionElement.dataset.action, actionElement);
   }
 
@@ -2202,6 +2882,11 @@
     if (event.key === "Escape") {
       if (codexState.open) {
         closeCodex();
+        event.preventDefault();
+        return;
+      }
+      if (galleryState.open) {
+        closeGallery();
         event.preventDefault();
         return;
       }
@@ -2226,6 +2911,21 @@
 
     if (event.key === "Tab" && codexState.open) {
       trapFocus(event, els.codex);
+      return;
+    }
+    if (event.key === "Tab" && galleryState.open) {
+      trapFocus(event, els.codexGallery);
+      return;
+    }
+    if (galleryState.open) return;
+
+    if (interactRun.active) {
+      var answerKey = event.key === " " || event.key === "Enter" || event.key === "Spacebar";
+      if (answerKey && !event.repeat && !state.paused && interactRun.mode === "rollcall" &&
+          interactRun.phase === "wait" && !isControlFocused()) {
+        event.preventDefault();
+        answerRollcall();
+      }
       return;
     }
 
@@ -2266,7 +2966,26 @@
         resumeGame();
         break;
       case "codex":
-        toast("完整图鉴在步骤五接入；本步只在剧情里解锁单张史实注");
+        openGallery();
+        break;
+      case "gallery-close":
+        closeGallery();
+        break;
+      case "gallery-card":
+        openGalleryCard(target.dataset.codex);
+        break;
+      case "interact-answer":
+        if (interactRun.mode === "rollcall") answerRollcall();
+        else skipNamepick();
+        break;
+      case "pick-name":
+        pickName(target.dataset.nameId);
+        break;
+      case "ending-home":
+        go("title");
+        break;
+      case "ending-codex":
+        openGallery();
         break;
       case "station":
         enterStation(target.dataset.chapter);

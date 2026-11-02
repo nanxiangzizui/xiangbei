@@ -90,7 +90,7 @@ function walkToEnd(state) {
 
 check("S01", "defaults 形状与持久字段", function () {
   var state = XB.core.defaults();
-  assertEqual(XB.core.SCENES, ["title", "map", "vn"], "SCENES");
+  assertEqual(XB.core.SCENES, ["title", "map", "vn", "ending"], "SCENES");
   assertEqual(state.scene, "title", "scene");
   assertEqual(state.nodeId, null, "nodeId");
   assertEqual(state.chapterId, "prologue", "chapterId");
@@ -125,7 +125,7 @@ check("S05", "locate 下标与未知节点", function () {
   assertEqual(XB.core.locate("prologue", "p001").index, 0, "p001");
   assertEqual(XB.core.locate("prologue", "p020").index, 19, "p020");
   assertEqual(XB.core.locate("prologue", "p021").index, 20, "p021");
-  assertEqual(XB.core.locate("prologue", "p900").index, 47, "p900");
+  assertEqual(XB.core.locate("prologue", "p900").index, 48, "p900");
   assertEqual(XB.core.locate("prologue", "nope"), null, "未知节点");
 });
 
@@ -171,31 +171,29 @@ check("S09", "七章元数据", function () {
   var chapters = XB.story.chapters;
   assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"], "章节 id");
   assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7], "顺序");
-  assertEqual(chapters[0].playable, true, "序章可玩");
-  chapters.slice(1).forEach(function (item) {
-    assertEqual(item.playable, false, item.id + " 未接上");
-    assertEqual(item.nodes.length, 0, item.id + " 节点应为空");
-  });
+  assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true], "七章全部可玩");
+  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [49, 43, 33, 35, 36, 32, 49], "七章节点数");
 });
 
 check("S10", "序章节点 id 唯一、七种类型齐全", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 48, "节点数");
+  assertEqual(nodes.length, 49, "节点数");
   var ids = nodes.map(function (node) { return node.id; });
   assertEqual(ids.length, new Set(ids).size, "id 唯一");
   var types = nodes.map(function (node) { return node.type; });
   var unique = types.filter(function (type, index) { return types.indexOf(type) === index; }).sort();
   assertEqual(unique, ["choice", "codex", "end", "line", "minigame", "result", "title"], "类型集合");
-  assertEqual(nodes[47].type, "end", "末节点是 end");
+  assertEqual(nodes[48].type, "end", "末节点是 end");
 });
 
 check("S11", "背景指令落在四处换景", function () {
   assertEqual(nodeById("p001").bg, "yudu_river", "p001.bg");
   assertEqual(nodeById("p006").bg, "yudu_night", "p006.bg");
   assertEqual(nodeById("p031").bg, "yudu_river", "p031.bg");
-  assertEqual(nodeById("p039").bg, "yudu_night", "p039.bg");
+  assertEqual(nodeById("p039a").bg, "yudu_night", "p039a.bg");
+  assertEqual(nodeById("p039b").bg, "yudu_night", "p039b.bg");
   var others = chapter().nodes.filter(function (node) {
-    return node.bg && ["p001", "p006", "p031", "p039"].indexOf(node.id) === -1;
+    return node.bg && ["p001", "p006", "p031", "p039a", "p039b"].indexOf(node.id) === -1;
   });
   assertEqual(others.length, 0, "不该有第五处 bg");
 });
@@ -267,10 +265,10 @@ check("S16", "rng 同种子同序列、异种子不同", function () {
 });
 
 check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
-  ["title", "map", "yudu_river", "yudu_night"].forEach(function (id) {
+  assertEqual(XB.art.SCENES.length, 16, "SCENES 数量");
+  ["title", "map", "yudu_river", "yudu_night", "xiangjiang_ford", "zunyi_hall", "jinsha_river", "luding_bridge", "grass_marsh", "wuqi_dawn", "wuqi_wall"].forEach(function (id) {
     assert(XB.art.SCENES.indexOf(id) !== -1, "SCENES 缺 " + id);
   });
-  assert(XB.art.SCENES.length >= 4, "SCENES 少于 4 个");
   XB.story.chapters.forEach(function (item) {
     item.nodes.forEach(function (node) {
       if (node.bg) assert(XB.art.SCENES.indexOf(node.bg) !== -1, node.id + " 的 bg 不在 SCENES");
@@ -278,9 +276,9 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "九条旗标与六项设置默认值", function () {
+check("S18", "十条旗标与六项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
-  assertEqual(Object.keys(flags).sort(), ["choice.jinsha.trips", "choice.xiangjiang.abandoned", "choice.zunyi.missed", "fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
+  assertEqual(Object.keys(flags).sort(), ["choice.jinsha.trips", "choice.xiangjiang.abandoned", "choice.zunyi.admit", "choice.zunyi.missed", "fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
   assertEqual(flags["item.door"], false, "item.door");
   assertEqual(flags["item.pot"], false, "item.pot");
   assertEqual(flags.load, 0, "load");
@@ -289,6 +287,7 @@ check("S18", "九条旗标与六项设置默认值", function () {
   assertEqual(flags.lights_lost, 0, "lights_lost");
   assertEqual(flags["choice.xiangjiang.abandoned"], [], "abandoned");
   assertEqual(flags["choice.zunyi.missed"], 0, "missed");
+  assertEqual(flags["choice.zunyi.admit"], 0, "admit");
   assertEqual(flags["choice.jinsha.trips"], 0, "trips");
   assertEqual(Object.keys(XB.core.DEFAULT_SETTINGS).sort(), ["muted", "reducedMotion", "skipSeen", "textScale", "textSpeed", "volume"], "设置键");
   assertEqual(XB.core.DEFAULT_SETTINGS.textSpeed, 30, "textSpeed");
@@ -366,8 +365,8 @@ check("S21", "applyChoice 写旗标与选择日志", function () {
 
 check("S22", "序章结构统计与分支同位置", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 48, "节点数");
-  assertEqual(nodesOfType("line").length, 41, "line");
+  assertEqual(nodes.length, 49, "节点数");
+  assertEqual(nodesOfType("line").length, 42, "line");
   assertEqual(nodesOfType("choice").length, 2, "choice");
   assertEqual(nodesOfType("minigame").length, 1, "minigame");
   assertEqual(nodesOfType("result").length, 1, "result");
@@ -375,7 +374,7 @@ check("S22", "序章结构统计与分支同位置", function () {
   assertEqual(nodesOfType("codex").length, 1, "codex");
   assertEqual(nodesOfType("end").length, 1, "end");
   // a/b 两支必须相邻，运行期只会落一个
-  [["p022a", "p022b"], ["p029a", "p029b"], ["p038a", "p038b"]].forEach(function (pair) {
+  [["p022a", "p022b"], ["p029a", "p029b"], ["p038a", "p038b"], ["p039a", "p039b"]].forEach(function (pair) {
     var first = XB.core.locate("prologue", pair[0]).index;
     var second = XB.core.locate("prologue", pair[1]).index;
     assert(second === first + 2 || second === first + 1, pair.join("/") + " 不相邻");
@@ -404,7 +403,8 @@ check("S24", "p900 指向湘江且不再前进", function () {
   assertEqual(XB.core.currentNode(state).next, "xiangjiang", "next");
   assertEqual(XB.core.advance(state).id, "p900", "end 再推进返回自身");
   assertEqual(XB.core.currentNode(state).id, "p900", "end 不移动");
-  assertEqual(XB.core.chapterById("xiangjiang").playable, false, "湘江仍未接上");
+  assertEqual(XB.core.chapterById("xiangjiang").playable, true, "湘江已接上");
+  assertEqual(XB.core.chapterById("xiangjiang").nodes[0].id, "x001", "湘江首节点");
 });
 
 check("S25", "engine 已接 minigames、无外部加载", function () {
@@ -467,12 +467,16 @@ check("S29", "start 失败可降级、stop/resize 幂等", function () {
   XB.minigames.resize();
 });
 
-check("S30", "九条旗标：abandoned 数组、trips/missed/lights 夹取", function () {
+check("S30", "默认旗标：abandoned 数组、trips/missed/lights 夹取", function () {
   var state = XB.core.defaults();
   assertEqual(XB.core.setFlag(state, "choice.xiangjiang.abandoned", ["silver", "door", "silver", "xray"]), true, "写 abandoned");
   assertEqual(state.flags["choice.xiangjiang.abandoned"], ["xray", "silver", "door"], "去重固定顺序");
   assertEqual(XB.core.setFlag(state, "choice.jinsha.trips", 99), true, "写 trips");
   assertEqual(state.flags["choice.jinsha.trips"], 18, "trips 夹到 18");
+  assertEqual(XB.core.setFlag(state, "choice.zunyi.admit", 2), true, "写 admit");
+  assertEqual(state.flags["choice.zunyi.admit"], 2, "admit 2");
+  assertEqual(XB.core.setFlag(state, "choice.zunyi.admit", 99), true, "admit 上限");
+  assertEqual(state.flags["choice.zunyi.admit"], 3, "admit 夹到 3");
   assertEqual(XB.core.setFlag(state, "choice.zunyi.missed", 5), true, "写 missed");
   assertEqual(state.flags["choice.zunyi.missed"], 1, "missed 夹到 1");
   assertEqual(XB.core.setFlag(state, "lights_lost", 99), true, "写 lights");
@@ -515,6 +519,157 @@ check("S33", "四关代码无外部加载、无禁用画面词", function () {
   });
 });
 
+
+check("S34", "七章默认路径 p001→w900→ending，无断链", function () {
+  var state = XB.core.defaults();
+  XB.core.startChapter(state, "prologue");
+  var ends = [];
+  var guard = 0;
+  while (guard < 600) {
+    var node = XB.core.currentNode(state);
+    if (node.type === "end") {
+      ends.push(node.id);
+      if (node.next === "ending") break;
+      assert(XB.core.startChapter(state, node.next), node.id + " 的下一章 " + node.next + " 起不来");
+    } else {
+      XB.core.advance(state);
+    }
+    guard += 1;
+  }
+  assert(guard < 600, "600 步内没走到 ending");
+  assertEqual(ends, ["p900", "x900", "z900", "j900", "l900", "g900", "w900"], "七章章末");
+  assertEqual(XB.core.currentNode(state).next, "ending", "w900.next");
+});
+
+check("S35", "遵义 admit 0–3 累计，record 不覆盖", function () {
+  var state = XB.core.defaults();
+  XB.core.startChapter(state, "zunyi", "z019");
+  XB.core.applyChoice(state, XB.core.currentNode(state), "A", false);
+  XB.core.startChapter(state, "zunyi", "z022");
+  XB.core.applyChoice(state, XB.core.currentNode(state), "A", false);
+  XB.core.startChapter(state, "zunyi", "z025");
+  XB.core.applyChoice(state, XB.core.currentNode(state), "A", false);
+  assertEqual(state.flags["choice.zunyi.admit"], 3, "三次 A 应累计到 3");
+  assertEqual(state.flags["choice.zunyi.missed"], 1, "第三组 A 记漏名");
+  assertEqual(state.choices.length, 3, "三条选择日志");
+  XB.core.startChapter(state, "zunyi", "z019");
+  XB.core.applyChoice(state, XB.core.currentNode(state), "A", false);
+  assertEqual(state.flags["choice.zunyi.admit"], 3, "第四次 A 夹在 3");
+  assertEqual(state.choices.length, 4, "日志继续追加");
+  assertEqual(state.choices[0].chapter, "zunyi", "日志章 id");
+  assertEqual(state.choices[0].timedOut, false, "不计时");
+});
+
+check("S36", "章末记忆与进入吴起前置", function () {
+  var map = XB.core.CHAPTER_MEMORY;
+  assertEqual(Object.keys(map), ["xiangjiang", "zunyi", "luding", "grass"], "CHAPTER_MEMORY 键");
+  assertEqual(XB.core.WUQI_MEMORY, ["memory.ximei", "memory.dongsheng", "memory.lin"], "WUQI_MEMORY");
+  var state = XB.core.defaults();
+  Object.keys(map).forEach(function (chapterId) {
+    var key = map[chapterId];
+    assertEqual(key.indexOf("memory."), 0, chapterId + " 记忆不是 memory.*");
+    XB.core.setFlag(state, key, true);
+    assertEqual(state.flags[key], true, key + " 未置 true");
+    XB.core.setFlag(state, key, true);
+    assertEqual(state.flags[key], true, key + " 重复置 true 变了");
+  });
+  XB.core.WUQI_MEMORY.forEach(function (key) {
+    XB.core.setFlag(state, key, true);
+    assertEqual(state.flags[key], true, key + " 未置 true");
+  });
+  assertEqual(XB.core.setFlag(state, "memory.luding_unknown", false), true, "memory bool 可写 false");
+  assertEqual(state.flags["memory.luding_unknown"], false, "memory bool 值");
+});
+
+check("S37", "五卡五组边界与全灰/全亮", function () {
+  function build(overrides) {
+    var state = XB.core.defaults();
+    Object.keys(overrides || {}).forEach(function (key) { state.flags[key] = overrides[key]; });
+    return XB.core.buildEnding(state).cards;
+  }
+  function lit(cards, id) {
+    return cards.filter(function (card) { return card.id === id; })[0].lit;
+  }
+  assertEqual(lit(build({ fire: 19 }), "ideal"), false, "fire 19 灰");
+  assertEqual(lit(build({ fire: 20 }), "ideal"), true, "fire 20 亮");
+  assertEqual(lit(build({ "choice.xiangjiang.hold": true }), "sacrifice"), true, "hold true 亮");
+  assertEqual(lit(build({ "choice.zunyi.admit": 1 }), "truth"), false, "admit 1 灰");
+  assertEqual(lit(build({ "choice.zunyi.admit": 2 }), "truth"), true, "admit 2 亮");
+  assertEqual(lit(build({ "choice.jinsha.priority": "main" }), "overall"), true, "main 亮");
+  assertEqual(lit(build({ "choice.jinsha.priority": "wounded" }), "overall"), false, "wounded 灰");
+  assertEqual(lit(build({ trust: 3, "memory.zhang": true }), "people"), true, "trust3+记名亮");
+  assertEqual(lit(build({ trust: 3, "memory.zhang": false }), "people"), false, "trust3 未记名灰");
+  assertEqual(lit(build({ trust: 2, "memory.zhang": true }), "people"), false, "trust2 记名灰");
+  var gray = build({ fire: 10, "choice.xiangjiang.hold": false, "choice.zunyi.admit": 0, "choice.jinsha.priority": "wounded", trust: 0, "memory.zhang": false });
+  assertEqual(gray.filter(function (card) { return !card.lit; }).length, 5, "全灰 5 张");
+  var all = build({ fire: 50, "choice.xiangjiang.hold": true, "choice.zunyi.admit": 2, "choice.jinsha.priority": "main", trust: 3, "memory.zhang": true });
+  assertEqual(all.filter(function (card) { return card.lit; }).length, 5, "全亮 5 张");
+});
+
+check("S38", "ending normalize / 11 键 / 刷新", function () {
+  var state = XB.core.defaults();
+  state.scene = "ending";
+  state.chapterId = "wuqi";
+  state.nodeId = null;
+  state.ending = XB.core.buildEnding(state);
+  assertEqual(XB.core.isFullEnding(state.ending), true, "完整快照");
+  var save = JSON.parse(JSON.stringify(XB.core.serialize(state)));
+  var result = XB.core.normalize(save);
+  assertEqual(result.issue, null, "normalize issue");
+  assertEqual(result.state.scene, "ending", "scene");
+  assertEqual(Object.keys(save), XB.core.PERSIST_KEYS, "11 键");
+  var bytes = new TextEncoder().encode(JSON.stringify(save)).length;
+  assert(bytes < 4096, "存档 " + bytes + "B");
+  var broken = JSON.parse(JSON.stringify(save));
+  delete broken.ending.cards;
+  assertEqual(XB.core.normalize(broken).issue, "ending", "缺 cards 判 ending 坏档");
+});
+
+check("S39", "图鉴 0/7–7/7 与单一数据源", function () {
+  var ids = XB.story.codex.map(function (card) { return card.id; });
+  assertEqual(ids, ["yudu", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"], "七卡 id");
+  assertEqual(new Set(ids).size, 7, "id 唯一");
+  var state = XB.core.defaults();
+  assertEqual(state.codex.length, 0, "初始 0/7");
+  var normalized = XB.core.normalize(XB.core.serialize(state));
+  assertEqual(normalized.state.codex.length, 0, "0/7 往返");
+  state.codex = ids.slice();
+  var seven = XB.core.normalize(XB.core.serialize(state));
+  assertEqual(seven.issue, null, "7/7 issue");
+  assertEqual(seven.state.codex, ids, "7/7 往返");
+  ids.forEach(function (id) {
+    assert(XB.core.codexById(id), "codexById 缺 " + id);
+  });
+});
+
+check("S40", "点名状态机数据：7 名、替答/漏答、快照保留", function () {
+  var node = XB.core.locate("wuqi", "w026").node;
+  assertEqual(node.type, "interact", "w026 类型");
+  assertEqual(node.mode, "rollcall", "mode");
+  assertEqual(node.duration, 45, "duration");
+  assertEqual(node.names.length, 7, "7 名");
+  var absent = node.names.filter(function (entry) { return entry.status === "absent"; });
+  assertEqual(absent.map(function (entry) { return entry.id; }), ["zhou", "zaowang", "feimao"], "缺应三人");
+  var answeredNames = node.names.map(function (entry) {
+    return { id: entry.id, name: entry.name, status: entry.status === "absent" ? "player" : entry.status };
+  });
+  var state = XB.core.defaults();
+  state.ending = { names: answeredNames, answered: 3, missed: 0 };
+  var full = XB.core.buildEnding(state);
+  assertEqual(full.answered, 3, "全答 answered");
+  assertEqual(full.missed, 0, "全答 missed");
+  assertEqual(full.names.length, 7, "全答 names");
+  var missedNames = node.names.map(function (entry) {
+    return { id: entry.id, name: entry.name, status: entry.status === "absent" ? "missed" : entry.status };
+  });
+  state.ending = { names: missedNames, answered: 0, missed: 3 };
+  var missed = XB.core.buildEnding(state);
+  assertEqual(missed.missed, 3, "漏答 missed");
+  assertEqual(missed.answered, 0, "漏答 answered");
+  assertEqual(XB.core.setFlag(state, "memory.rollcall_missed_any", true), true, "漏答旗标");
+  assert(!/\bsuccess\b|\bscore\b/i.test(JSON.stringify(node)), "点名不评分");
+});
+
 if (failures.length) {
   failures.forEach(function (line) {
     console.log("× " + line);
@@ -522,5 +677,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 项失败");
   process.exitCode = 1;
 } else {
-  console.log("OK：纯状态层烟测 33 项全绿");
+  console.log("OK：纯状态层烟测 40 项全绿");
 }

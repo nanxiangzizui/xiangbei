@@ -9,11 +9,24 @@ const files = fs.readdirSync(DIR).filter((f) => /^\d\d-.*\.md$/.test(f)).sort();
 
 const found = [];
 let hasDisclaimer = false;
+const chapterIds = [];
+const endTargets = [];
 
 files.forEach((file, index) => {
   const raw = fs.readFileSync(path.join(DIR, file), "utf8");
   const lines = raw.split(/\r?\n/);
   if (raw.includes("虚构声明")) hasDisclaimer = true;
+  const header = /^- id:\s*([a-z]+)/m.exec(raw);
+  if (header) {
+    if (chapterIds.indexOf(header[1]) !== -1) found.push(`${file} 章节 id 重复：${header[1]}`);
+    chapterIds.push(header[1]);
+  } else {
+    found.push(`${file} 缺 - id:`);
+  }
+  const endLine = /^【结束】next=([a-z]+)\s*$/m.exec(raw);
+  if (endLine) endTargets.push({ file, next: endLine[1] });
+  else found.push(`${file} 缺带 next 的【结束】`);
+  if (raw.includes("【交互】") && !raw.includes("【结算】")) found.push(`${file} 有【交互】但缺【结算】`);
 
   lines.forEach((line, i) => {
     for (const w of BANNED) if (line.includes(w)) found.push(`${file}:${i + 1} 禁用词「${w}」`);
@@ -35,6 +48,12 @@ files.forEach((file, index) => {
 });
 
 if (!hasDisclaimer) found.push("全部剧本缺“虚构声明”");
+if (files.length !== 7) found.push(`剧本应为 7 章，实际 ${files.length}`);
+endTargets.forEach((item) => {
+  if (item.next !== "ending" && item.next !== "map" && chapterIds.indexOf(item.next) === -1) {
+    found.push(`${item.file} 的 next=${item.next} 不是章节/ending/map`);
+  }
+});
 
 if (found.length === 0) {
   console.log(`OK：${files.length} 个剧本文件；禁用词 0；真实人物 0；选项缺项 0；结构完整；声明已标注`);

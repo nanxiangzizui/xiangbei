@@ -26,7 +26,7 @@
     - 演出: 门板特写 / 浮桥纵深远景 / 门口剪影
     - 虚构声明: 满崽及本作人物均为虚构，非史料人物（片头、图鉴各出现一次）
 
-## 3. 行类型（只允许这 9 种）
+## 3. 行类型（只允许这 10 种）
 
 | 写法 | 含义 | 转成 story.js |
 |---|---|---|
@@ -41,7 +41,7 @@
 | `【交互】点名｜45s` | 结局交互（不计入 4 关） | `{type:'interact', id, …}` |
 | `【结束】next=xiangjiang` | 章末 | `{type:'end', next}` |
 
-> 上表 9 行含 10 个写法：`if` 与 `bg/sfx` 共占一行，`结束` 并入“章末”。实现以 `story.js` 为准，不在解析器里加新类型。
+> 上表 10 行含 11 个写法：`if` 与 `bg/sfx` 共占一行，`结束` 并入“章末”。实现以 `story.js` 为准，不在解析器里加新类型。
 
 ## 4. 选项与代价（硬规则）
 
@@ -68,7 +68,7 @@
 | 字段 | 适用 | 说明 |
 |---|---|---|
 | `id` | 全部 | 全局唯一字符串；规则见 §7 |
-| `type` | 全部 | `line` / `choice` / `minigame` / `result` / `title` / `codex` / `end` |
+| `type` | 全部 | `line` / `choice` / `minigame` / `result` / `title` / `codex` / `interact` / `end` |
 | `when` | 全部（可选） | 条件字符串；`item.door` 真、`!item.door` 假、`a && b` 与；同位置的互斥分支各写一条 |
 | `speaker` `text` | line | 旁白写 `旁白`；`speaker` 为旁白时 UI 不显示姓名签 |
 | `bg` | line | 只写 `art.js` `SCENES` 里的 id；不给就沿用上一句的背景 |
@@ -77,7 +77,7 @@
 | `lists` | result | `[{when, heading, items[]}]`；只列清单，不评分、不写旗标；可选 `source:"minigame"` + `game` 表示按运行时结果重建 |
 | `text` `sub` | title | 章名与副题；显示后自动关或点击关 |
 | `codexId` | codex | 必须是 `story.codex` 里的 id；关闭时解锁 |
-| `next` | end | 下一章 id 或 `map` |
+| `next` | end | 下一章 id、`ending` 或 `map` |
 
 **`when` / `set` 白名单**（越界在 `check-build` 与 `smoke` 里直接失败，不在运行期兜底）：
 
@@ -100,7 +100,7 @@
 - 存档只存当前节点 id，不存数组下标；载入时按 id 在全章节点表里定位。
 - 步骤三只能追加 id，不得重排 `p001–p020`；`p900` 的 `next` 由 `map` 改为 `xiangjiang`（第一章尚未接入，引擎按“章末待续”回地图）。
 
-**序章映射（步骤三定稿，48 节点）**
+**序章映射（步骤五定稿，49 节点）**
 
 | 源文件行 | id | 类型 | 条件 / 说明 |
 |---|---|---|---|
@@ -116,10 +116,12 @@
 | 58–63 | p031–p036 | line | p031 挂 `bg:yudu_river` |
 | 65–67 | p037 | choice | 限时 8s，默认 B，`record:choice.prologue.lookback` |
 | 70 / 72 | p038a / p038b | line | `when:choice.prologue.lookback` / `when:!choice.prologue.lookback` |
-| 76–79 | p039–p042 | line | p039 挂 `bg:yudu_night` |
+| 76–79 | p039a / p039b、p040–p042 | line | p039a `when:item.door`；p039b `when:!item.door`；都挂 `bg:yudu_night` |
 | 80 | p043 | title | 「第一章 · 湘江」 |
 | 81 | p044 | codex | `yudu` |
 | 82 | p900 | end | `next:xiangjiang` |
+
+**步骤五七章映射**：完整节点表见 `docs/chapter-integration.md` §1–2。七章实际 277 节点；结尾链 p900→x900→z900→j900→l900→g900→w900→`ending`。章节前缀与 a/b/c 分支规则不变，不允许把 `ending` 写成章节 id。
 
 ## 8. 统计表（每次改稿后回填，与正文一致）
 
