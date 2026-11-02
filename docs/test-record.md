@@ -10,7 +10,7 @@
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| 提交基线 | 6f1dd90（步骤七机器项 + 限时翻倍 + 计时回填）；本轮外读修文待提交 | git log |
+| 提交基线 | 0d41f59（外读修文；父 6f1dd90 为机器项 + 限时翻倍 + 计时回填） | git log |
 | node --check | 4/4 OK（engine/story/minigames/art） | docs/evidence/step-07/gates.log |
 | check-build | **36/36** | 同上 |
 | smoke | **46/46** | 同上 |
