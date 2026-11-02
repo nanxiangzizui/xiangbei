@@ -39,7 +39,7 @@
             type: "choice",
             prompt: "娘把锯子搁下，等你说。",
             record: "choice.prologue.door",
-            timeout: 8,
+            timeout: 16,
             defaultOption: "A",
             options: [
               {
@@ -128,7 +128,7 @@
             type: "choice",
             prompt: "桥头的人往前挤。前面就是浮桥。",
             record: "choice.prologue.lookback",
-            timeout: 8,
+            timeout: 16,
             defaultOption: "B",
             options: [
               {
@@ -247,7 +247,7 @@
             when: "item.door",
             prompt: "桥头的人往后挤。老周还在那边。",
             record: "choice.xiangjiang.hold",
-            timeout: 10,
+            timeout: 20,
             defaultOption: "C",
             options: [
               {
@@ -279,7 +279,7 @@
             when: "!item.door && !choice.xiangjiang.hold",
             prompt: "桥头的人往后挤。老周还在那边。",
             record: "choice.xiangjiang.hold",
-            timeout: 10,
+            timeout: 20,
             defaultOption: "A",
             options: [
               {
@@ -526,7 +526,7 @@
             type: "choice",
             prompt: "最后一批上船前，何指导员问：先渡谁？",
             record: "choice.jinsha.priority",
-            timeout: 8,
+            timeout: 16,
             defaultOption: "A",
             options: [
               {
@@ -606,7 +606,7 @@
             when: "item.door",
             prompt: "桥板不够。你背上有一块门板。",
             record: "choice.luding.door",
-            timeout: 6,
+            timeout: 12,
             defaultOption: "A",
             options: [
               {
@@ -643,7 +643,7 @@
             type: "choice",
             prompt: "二十二个人，名字不全。",
             record: "choice.luding.names",
-            timeout: 6,
+            timeout: 12,
             defaultOption: "A",
             options: [
               {
@@ -710,7 +710,7 @@
             type: "choice",
             prompt: "炒面只剩半袋。",
             record: "choice.grass.share",
-            timeout: 10,
+            timeout: 20,
             defaultOption: "A",
             options: [
               {
@@ -746,7 +746,7 @@
             type: "choice",
             prompt: "灶王的小锅还在火堆边。",
             record: "choice.grass.pot",
-            timeout: 8,
+            timeout: 16,
             defaultOption: "A",
             options: [
               {
@@ -822,7 +822,7 @@
             when: "item.door",
             prompt: "门板靠在墙上。标语还没写。",
             record: "choice.wuqi.door",
-            timeout: 10,
+            timeout: 20,
             defaultOption: "A",
             options: [
               {

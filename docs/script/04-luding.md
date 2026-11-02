@@ -28,7 +28,7 @@
 【旁白】我跟着队伍过桥。
 【旁白】走到中间，看见桥板上有一道划痕，像谁用指甲刻的。
 
->> 选项｜限时 6s｜默认 A｜记录到 choice.luding.door
+>> 选项｜限时 12s｜默认 A｜记录到 choice.luding.door
 A｜把门板铺上桥面｜set: item.door=false, trust=+1｜cost: 你的门板成了第三块桥板
 B｜抱着门板过桥｜set: load=+0｜cost: 你背上多三十斤，过桥慢了半拍，后面的人等你
 
@@ -40,7 +40,7 @@ B｜抱着门板过桥｜set: load=+0｜cost: 你背上多三十斤，过桥慢�
 【满崽】就剩一个了。
 【冬生】我知道。他吹的时候，我在后面听。
 
->> 选项｜限时 6s｜默认 A｜记录到 choice.luding.names
+>> 选项｜限时 12s｜默认 A｜记录到 choice.luding.names
 A｜记下数字，不写名字｜set: memory.luding_unknown=false｜cost: 名册上多一行空白
 B｜留一页空白，等名字｜set: memory.luding_unknown=true｜cost: 那一页一直是空的
 

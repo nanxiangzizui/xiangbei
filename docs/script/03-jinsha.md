@@ -38,7 +38,7 @@
 【旁白】第二天开船，我连他姓什么都想不起来了。
 [[end]]
 
->> 选项｜限时 8s｜默认 A｜记录到 choice.jinsha.priority
+>> 选项｜限时 16s｜默认 A｜记录到 choice.jinsha.priority
 A｜先渡主力｜set: choice.jinsha.priority=main, trust=+1｜cost: 后勤的人和骡子多等一天
 B｜先渡伤员｜set: choice.jinsha.priority=wounded, trust=-1｜cost: 主力在渡口多暴露一天
 C｜先渡炊事班｜set: choice.jinsha.priority=kettle, fire=+5｜cost: 伤员在岸上多躺一天

@@ -20,7 +20,7 @@
 【林先生】留着。标语写在正面，字写在背面，正好。
 【旁白】她先用粉笔打格子。一个字一格，写一个，退后两步看看，再写下一个。
 
->> 选项｜限时 10s｜默认 A｜记录到 choice.wuqi.door
+>> 选项｜限时 20s｜默认 A｜记录到 choice.wuqi.door
 A｜把门板留在吴起｜set: item.door=false, memory.door=true｜cost: 你从此没有那块板了
 B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回家的路还很长
 

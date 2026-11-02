@@ -30,7 +30,7 @@
 【旁白】那一夜，我把全连的名字抄了一遍。抄到最后一个，手是抖的。
 【旁白】名字写歪了，我用指甲刮掉重写。刮破了两处纸。
 
->> 选项｜限时 8s｜默认 A｜记录到 choice.prologue.door
+>> 选项｜限时 16s｜默认 A｜记录到 choice.prologue.door
 A｜带上这块门板｜set: item.door=true, load=+2, fire=+10｜cost: 行囊只剩两格，多背三十斤
 B｜只带花名册｜set: item.door=false, load=+0｜cost: 终章没有门板可放，娘的手停在半空
 
@@ -62,7 +62,7 @@ B｜只带花名册｜set: item.door=false, load=+0｜cost: 终章没有门板�
 【旁白】娘挤到桥头，把一根缝衣针别在我衣襟上。针尖朝里。
 【娘】衣裳破了，自己缝。
 
->> 选项｜限时 8s｜默认 B｜记录到 choice.prologue.lookback
+>> 选项｜限时 16s｜默认 B｜记录到 choice.prologue.lookback
 A｜回头看一眼｜set: choice.prologue.lookback=true, fire=+5｜cost: 落后几步，第一班船没赶上
 B｜不回头｜set: choice.prologue.lookback=false｜cost: 你没看见家里那盏灯
 

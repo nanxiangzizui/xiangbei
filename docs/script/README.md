@@ -33,7 +33,7 @@
 | `【说话人】文本` | 一句台词/旁白；旁白固定写 `【旁白】` | `{type:'line', speaker, text}` |
 | `[[bg:id]]` `[[sfx:id]]` | 挂到**下一条** line 的 `bg`/`sfx` 字段 | 字段合并 |
 | `[[if:key]]` … `[[else]]` … `[[end]]` | 条件块；`key` 为旗标路径，真值走第一段 | 编译为**同位置条件节点**：两段各给一个 id（主序号 + `a`/`b`），带 `when` 字段；不在运行期展开（§6） |
-| `>> 选项｜限时 8s｜默认 A｜记录到 choice.x.y` + `A｜文案｜set: …｜cost: …` | 选项；无“限时”即不计时，无“默认”即无超时 | `{type:'choice', id, record, timeout, defaultOption, options:[{key,text,value,set,cost}]}` |
+| `>> 选项｜限时 16s｜默认 A｜记录到 choice.x.y` + `A｜文案｜set: …｜cost: …` | 选项；无“限时”即不计时，无“默认”即无超时 | `{type:'choice', id, record, timeout, defaultOption, options:[{key,text,value,set,cost}]}` |
 | `【小游戏】door｜duration=75, capacity=6` | 小游戏入口；参数写行内 | `{type:'minigame', id, config}` |
 | `【史实注】yudu` | 弹史实注并解锁图鉴 | `{type:'codex', id}` |
 | `【标题卡】第一章 · 湘江` | 章节标题卡 | `{type:'title', text}` |
@@ -47,6 +47,7 @@
 
 - 每个选项必须有 `cost:`，写**可读的一句代价**，结算时原样显示。
 - 限时选项必须有 `默认 X`；超时按默认项结算，并记录 `timedOut: true`。
+- 2026-11-02 步骤七按试玩反馈把既有 9 个限时项统一翻倍（8→16、10→20、6→12；x025a/x025b 同一事件）；新增限时项沿用同一宽容度。
 - 每个选项必须有 `key`（A/B/C）与 `value`：`record:` 指向的旗标写入 `value`，所以「带门板 = true」这类语义是数据，不是代码。
 - `record:` 一律写 `choice.<章>.<事件>`；同一事件只记一次，不覆盖（重玩由重置存档负责）。
 - 选项之间不允许有“显然更好”的一项：如果一眼能看出哪项对，就给“看起来对”的那项加一个更痛的代价。
@@ -105,7 +106,7 @@
 | 源文件行 | id | 类型 | 条件 / 说明 |
 |---|---|---|---|
 | 9–31 | p001–p020 | line | 原样；p001 挂 `bg:yudu_river`，p006 挂 `bg:yudu_night` |
-| 33–35 | p021 | choice | 限时 8s，默认 A，`record:choice.prologue.door` |
+| 33–35 | p021 | choice | 限时 16s，默认 A，`record:choice.prologue.door` |
 | 38–39 | p022a / p023a | line | `when:item.door` |
 | 41 | p022b | line | `when:!item.door` |
 | 44 | p024 | minigame | `door`，`duration=75,capacity=6,doorCost=2,items=8`；步骤四接入真实小游戏，config 与 `RULES` 一致 |
@@ -114,7 +115,7 @@
 | 51 / 53 | p029a / p029b | line | `when:item.door` / `when:!item.door` |
 | 55 | p030 | line | |
 | 58–63 | p031–p036 | line | p031 挂 `bg:yudu_river` |
-| 65–67 | p037 | choice | 限时 8s，默认 B，`record:choice.prologue.lookback` |
+| 65–67 | p037 | choice | 限时 16s，默认 B，`record:choice.prologue.lookback` |
 | 70 / 72 | p038a / p038b | line | `when:choice.prologue.lookback` / `when:!choice.prologue.lookback` |
 | 76–79 | p039a / p039b、p040–p042 | line | p039a `when:item.door`；p039b `when:!item.door`；都挂 `bg:yudu_night` |
 | 80 | p043 | title | 「第一章 · 湘江」 |

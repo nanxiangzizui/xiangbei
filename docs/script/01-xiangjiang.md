@@ -39,7 +39,7 @@
 【旁白】有个名字我划错了行，刮不掉，只好在旁边画个小叉。
 【旁白】后来那种小叉越画越多，都是划错的行。一页纸像下了一场雨。
 
->> 选项｜限时 10s｜默认 C｜记录到 choice.xiangjiang.hold
+>> 选项｜限时 20s｜默认 C｜记录到 choice.xiangjiang.hold
 A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜cost: 你晚过江一个时辰，丢了半袋粮
 B｜按命令先过江｜set: choice.xiangjiang.hold=false｜cost: 桥头最后一面，你看见的是他的背影
 C｜把门板横在桥头挡一下｜set: choice.xiangjiang.hold=true, item.door=false｜cost: 门板留在了浮桥，三号担架少一块垫板

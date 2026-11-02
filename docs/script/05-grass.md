@@ -14,7 +14,7 @@
 【旁白】雨下起来没有声音。
 【旁白】落在草上，像有人在远处抖一块布。
 
->> 选项｜限时 10s｜默认 A｜记录到 choice.grass.share
+>> 选项｜限时 20s｜默认 A｜记录到 choice.grass.share
 A｜炒面分给伤员｜set: fire=-15, trust=+1｜cost: 你三天没吃饱，走不动
 B｜炒面分给还能走的人｜set: trust=-1, load=+1｜cost: 伤员看你的眼神，变了
 
@@ -31,7 +31,7 @@ B｜炒面分给还能走的人｜set: trust=-1, load=+1｜cost: 伤员看你的
 【旁白】火没起来。他就在那儿蹲着，没再站起来。
 【旁白】我把他埋在一个能看见太阳的地方。那天没有太阳。
 
->> 选项｜限时 8s｜默认 A｜记录到 choice.grass.pot
+>> 选项｜限时 16s｜默认 A｜记录到 choice.grass.pot
 A｜背走小锅｜set: item.pot=true, load=+1｜cost: 背上的东西又多一件
 B｜把小锅留给他｜set: item.pot=false｜cost: 到了陕北，你没有锅
 
