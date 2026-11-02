@@ -10,7 +10,7 @@
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| 提交基线 | de01755（本记录改动提交前的 HEAD；父 aeb06bd 为 T51 复读通过，0d41f59 为外读修文，6f1dd90 为机器项 + 限时翻倍 + 计时回填） | git log |
+| 提交基线 | de01755（§11 与 T47 例外回填的基线；回填提交 e4d4edd；父 aeb06bd 为 T51 复读通过，0d41f59 为外读修文，6f1dd90 为机器项 + 限时翻倍 + 计时回填） | git log |
 | node --check | 4/4 OK（engine/story/minigames/art） | docs/evidence/step-07/gates.log |
 | check-build | **36/36** | 同上 |
 | smoke | **46/46** | 同上 |
