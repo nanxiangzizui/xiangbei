@@ -19,6 +19,7 @@ const REQUIRED_IDS = [
   "title-menu", "map-stations", "map-route",
   "vn-chapter", "vn-toolbar", "vn-auto", "vn-skip", "vn-dialogue", "vn-name", "vn-text", "vn-next",
   "vn-choice-prompt", "vn-choices", "vn-minigame", "vn-result",
+  "minigame-canvas", "minigame-hud", "minigame-help", "minigame-live", "minigame-pause", "minigame-fallback",
   "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-measure",
   "vn-settings", "set-speed", "set-speed-value", "set-scale", "set-volume", "set-volume-value",
   "set-muted", "set-motion", "set-skip",
@@ -211,11 +212,12 @@ function checkPlaceholders() {
   ["SCENES: SCENES", "mount: mount", "paint: paint", "resize: resize", "rng: rng"].forEach(function (needle) {
     if (art.indexOf(needle) === -1) fail("C07", "art.js 缺契约 " + needle);
   });
-  if (readProject("minigames.js").indexOf("XB.minigames = {}") === -1) fail("C07", "minigames.js 不是空命名空间占位");
+  var minigames = loadGame().minigames;
+  if (!minigames || typeof minigames.start !== "function") fail("C07", "minigames.js 没有 XB.minigames.start");
   var engine = stripComments(readProject("engine.js"));
   if (!/XB\.art\b/.test(engine)) fail("C07", "engine.js 未接入 XB.art");
-  if (/XB\.minigames\b/.test(engine)) fail("C07", "engine.js 引用了 XB.minigames");
-  notes.push("C07 OK art.js 五项契约就位、engine 已接入、minigames 仍占位");
+  if (!/XB\.minigames\b/.test(engine)) fail("C07", "engine.js 未接入 XB.minigames");
+  notes.push("C07 OK art.js 五项契约就位、minigames API 可加载、engine 已接入两者");
 }
 
 function checkDocs() {
@@ -554,6 +556,120 @@ function checkSaveAndCodex() {
   notes.push("C17 OK 7 张图鉴齐全、存档 11 键冻结、p001→p900 可走通、剧情内联");
 }
 
+// C18：四关 API、冻结的数值/物品表、纯函数契约
+function checkMinigameApi() {
+  var XB = loadGame();
+  var mg = XB.minigames;
+  if (!mg || typeof mg !== "object") {
+    fail("C18", "找不到 XB.minigames");
+    return;
+  }
+  if (mg.SCENES.join(",") !== "door,abandon,boat,climb") fail("C18", "SCENES 应为 door/abandon/boat/climb，实际 " + mg.SCENES.join(","));
+  if (!Object.isFrozen(mg.SCENES)) fail("C18", "SCENES 未冻结");
+  if (!Object.isFrozen(mg.RULES) || !Object.isFrozen(mg.RULES.door)) fail("C18", "RULES 未深冻结");
+  if (!Object.isFrozen(mg.ITEMS) || !Object.isFrozen(mg.ITEMS.door)) fail("C18", "ITEMS 未深冻结");
+  ["start", "stop", "isActive", "resize", "labelFor", "itemIds", "crewForTrust", "usedSlots", "canPack"].forEach(function (name) {
+    if (typeof mg[name] !== "function") fail("C18", "XB.minigames." + name + " 不是函数");
+  });
+  if (mg.itemIds("door").length !== 8) fail("C18", "门板物品应为 8 件，实际 " + mg.itemIds("door").length);
+  if (mg.itemIds("abandon").length !== 7) fail("C18", "弃物物品应为 7 件，实际 " + mg.itemIds("abandon").length);
+  if (mg.usedSlots(["pot"], true) !== 4) fail("C18", "门板+铁锅应占 4 格");
+  if (mg.canPack(["pot", "medicine", "barley"], "raincloth", true) !== false) fail("C18", "门板+锅+药+青稞+雨布应放不下");
+  if (mg.crewForTrust(0) !== 12 || mg.crewForTrust(6) !== 37) fail("C18", "船工表端点应为 12/37");
+  notes.push("C18 OK 四关 API、深冻结、8+7 物品、容量/船工纯函数");
+}
+
+// C19：结果对象没有 success/score/Game Over，只允许 reason/carried/left/stats
+function checkMinigameResultContract() {
+  var code = stripComments(readProject("minigames.js"));
+  ["success", "score", "gameOver", "game_over"].forEach(function (word) {
+    if (new RegExp("\\b" + word + "\\b", "i").test(code)) fail("C19", "minigames.js 出现结果字段 " + word);
+  });
+  ["reason", "elapsed", "carried", "left", "stats"].forEach(function (field) {
+    if (code.indexOf(field + ":") === -1) fail("C19", "结果对象缺字段 " + field);
+  });
+  notes.push("C19 OK 结果只有 reason/elapsed/carried/left/stats，无成功失败分");
+}
+
+// C20：p024 的 config 只是作者元数据，必须与 RULES 起点一致；p025 标明结果来源
+function checkMinigameStoryContract() {
+  var XB = loadGame();
+  var p024 = XB.core.locate("prologue", "p024").node;
+  if (!p024 || p024.type !== "minigame" || p024.game !== "door") {
+    fail("C20", "p024 不是 door 小游戏节点");
+    return;
+  }
+  var config = p024.config || {};
+  var expected = { duration: 75, capacity: 6, doorCost: 2, items: 8 };
+  Object.keys(expected).forEach(function (key) {
+    if (config[key] !== expected[key]) fail("C20", "p024.config." + key + " 应为 " + expected[key] + "，实际 " + config[key]);
+  });
+  var p025 = XB.core.locate("prologue", "p025").node;
+  if (!p025 || p025.type !== "result") fail("C20", "p025 不是 result 节点");
+  else {
+    if (p025.source !== "minigame") fail("C20", "p025 缺 source=minigame");
+    if (p025.game !== "door") fail("C20", "p025 缺 game=door");
+  }
+  notes.push("C20 OK p024 config 75/6/2/8 与 RULES 一致，p025 标明 minigame/door");
+}
+
+// C21：结算重建必须从旗标/背包出发，刷新后仍能说出同一组代价
+function checkMinigameRebuild() {
+  var engine = stripComments(readProject("engine.js"));
+  ["applyMinigameResult", "buildResultView", "node.source !== \"minigame\"", "choice.xiangjiang.abandoned", "choice.jinsha.trips", "lights_lost", "inventory.items"].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C21", "engine.js 缺重建标记 " + needle);
+  });
+  if (engine.indexOf("vn-result__stats") === -1) fail("C21", "结果页缺 stats DOM");
+  // 旗标必须是数值区间；字符串边界会让夹取悄悄失效（负例 N4）。
+  if (engine.indexOf("lights_lost: [0, 22]") === -1) fail("C21", "lights_lost 必须是数值区间 [0, 22]");
+  if (engine.indexOf('"choice.jinsha.trips": [0, 18]') === -1) fail("C21", "choice.jinsha.trips 必须是数值区间 [0, 18]");
+  notes.push("C21 OK 门板/弃物/渡船/攀索结果均按持久旗标重建");
+}
+
+// C22：RULES 是唯一数值源，tuning 的 §4 表必须逐行同值
+function checkMinigameTuning() {
+  var XB = loadGame();
+  var tuning = readRoot("docs/minigame-tuning.md");
+  var values = {};
+  tuning.split(/\r?\n/).forEach(function (line) {
+    var match = /^\|\s*((?:door|abandon|boat|climb)\.[a-zA-Z]+)\s*\|\s*([^|]+?)\s*\|/.exec(line);
+    if (match) values[match[1]] = match[2].trim();
+  });
+  Object.keys(XB.minigames.RULES).forEach(function (gameId) {
+    var group = XB.minigames.RULES[gameId];
+    Object.keys(group).forEach(function (key) {
+      var path = gameId + "." + key;
+      if (!(path in values)) {
+        fail("C22", "tuning 表缺 " + path);
+        return;
+      }
+      var actual = group[key];
+      var documented = values[path];
+      if (Array.isArray(actual)) {
+        var numbers = documented.replace(/[^0-9,]/g, "").split(",").filter(Boolean).map(Number);
+        if (numbers.join(",") !== actual.join(",")) fail("C22", path + " 文档 " + documented + " 与 RULES " + actual.join(",") + " 不一致");
+      } else if (Number(documented) !== actual) {
+        fail("C22", path + " 文档 " + documented + " 与 RULES " + actual + " 不一致");
+      }
+    });
+  });
+  notes.push("C22 OK tuning §4 与 RULES 同名同值（" + Object.keys(values).length + " 行）");
+}
+
+// C23：小游戏画面不出现 X 光机、牺牲人数、Game Over、成功/失败大字
+function checkMinigameWords() {
+  var code = stripComments(readProject("minigames.js"));
+  ["X 光机", "X光机", "Game Over", "gameOver", "牺牲"].forEach(function (word) {
+    if (code.indexOf(word) !== -1) fail("C23", "minigames.js 出现禁用词「" + word + "」");
+  });
+  var parts = code.split("drawText(");
+  parts.slice(1).forEach(function (part) {
+    var call = part.slice(0, part.indexOf(");"));
+    if (/成功|失败/.test(call)) fail("C23", "小游戏画面出现成功/失败大字");
+  });
+  notes.push("C23 OK 无 X 光机/牺牲/Game Over/成功失败大字");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -571,6 +687,12 @@ checkChoiceRules();
 checkReadingDom();
 checkConditionWhitelist();
 checkSaveAndCodex();
+checkMinigameApi();
+checkMinigameResultContract();
+checkMinigameStoryContract();
+checkMinigameRebuild();
+checkMinigameTuning();
+checkMinigameWords();
 
 notes.forEach(function (line) {
   console.log(line);
@@ -583,5 +705,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 17 项全绿");
+  console.log("OK：构建自检 23 项全绿");
 }

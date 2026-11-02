@@ -42,7 +42,7 @@ B｜不承认：命令没错｜set: choice.zunyi.admit=+0｜cost: 你把话咽�
 【旁白】我把名册摊开，纸边全是毛的。
 
 >> 选项｜不计时｜记录到 choice.zunyi.admit
-A｜承认：我漏记过名字｜set: choice.zunyi.admit=+1, lights_lost=+1｜cost: 你得把那一页补上，补得很慢
+A｜承认：我漏记过名字｜set: choice.zunyi.admit=+1, choice.zunyi.missed=+1｜cost: 你得把那一页补上，补得很慢
 B｜不承认：名册是全的｜set: choice.zunyi.admit=+0｜cost: 你合上名册，没敢再翻
 
 【结算】错误卡｜三条记录 + 一行结论；不评分

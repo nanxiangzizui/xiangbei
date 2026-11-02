@@ -73,8 +73,8 @@
 | `speaker` `text` | line | 旁白写 `旁白`；`speaker` 为旁白时 UI 不显示姓名签 |
 | `bg` | line | 只写 `art.js` `SCENES` 里的 id；不给就沿用上一句的背景 |
 | `record` `timeout` `defaultOption` `prompt` `options` | choice | `options[].key/text/value/set/cost`；`timeout` 单位秒，0 或省略 = 不计时 |
-| `game` `config` | minigame | 步骤三只用 `game:"door"` 显示占位面板；真实参数见 `docs/minigame-tuning.md` |
-| `lists` | result | `[{when, heading, items[]}]`；只列清单，不评分、不写旗标 |
+| `game` `config` | minigame | `game` 为 `door`/`abandon`/`boat`/`climb`；`config` 是 authored 元数据（p024 保留 `duration/capacity/doorCost/items`），运行期以 `minigames.js` 的 `RULES` 为准，不写 `success` |
+| `lists` | result | `[{when, heading, items[]}]`；只列清单，不评分、不写旗标；可选 `source:"minigame"` + `game` 表示按运行时结果重建 |
 | `text` `sub` | title | 章名与副题；显示后自动关或点击关 |
 | `codexId` | codex | 必须是 `story.codex` 里的 id；关闭时解锁 |
 | `next` | end | 下一章 id 或 `map` |
@@ -82,8 +82,8 @@
 **`when` / `set` 白名单**（越界在 `check-build` 与 `smoke` 里直接失败，不在运行期兜底）：
 
 - `when` 只读：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`，支持前置 `!` 与 `&&`。
-- `set` 只写：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`；`fire` clamp 0–100，`trust` clamp 0–6，`load` 取整且 ≥0。
-- `item.door` 写入时同步 `inventory.door`（存档里两处必须一致）。
+- `set` 只写：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`；`fire` clamp 0–100，`trust` clamp 0–6，`load` 取整且 ≥0，`lights_lost` clamp 0–22，`choice.jinsha.trips` clamp 0–18，`choice.zunyi.missed` clamp 0–1。
+- `item.door` 写入时同步 `inventory.door`（存档里两处必须一致）。`choice.xiangjiang.abandoned` 是唯一 list flag，只由小游戏结算写，剧本 `set` 不得写。
 - `ending.*`、`card.*`、`unlockedChapters` **不许**由剧本写，只能由引擎写。
 
 **三步转换**（步骤一照抄，不许再发明）：
@@ -108,8 +108,8 @@
 | 33–35 | p021 | choice | 限时 8s，默认 A，`record:choice.prologue.door` |
 | 38–39 | p022a / p023a | line | `when:item.door` |
 | 41 | p022b | line | `when:!item.door` |
-| 44 | p024 | minigame | `door`，`duration=75,capacity=6,doorCost=2,items=8`；步骤三只显示占位面板 |
-| 46 | p025 | result | 行囊两清单（带走/留下），不评分 |
+| 44 | p024 | minigame | `door`，`duration=75,capacity=6,doorCost=2,items=8`；步骤四接入真实小游戏，config 与 `RULES` 一致 |
+| 46 | p025 | result | 行囊两清单（带走/留下），不评分；加 `source:"minigame"`、`game:"door"` 后按运行时结果重建 |
 | 47–49 | p026–p028 | line | |
 | 51 / 53 | p029a / p029b | line | `when:item.door` / `when:!item.door` |
 | 55 | p030 | line | |

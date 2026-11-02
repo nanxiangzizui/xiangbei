@@ -23,9 +23,11 @@
         "choice.prologue.door": true,
         "choice.prologue.lookback": false,
         "choice.xiangjiang.hold": true,
-        "choice.xiangjiang.abandoned": ["xray", "printing_press", "cotton"],
-        "choice.zunyi.admit": 2,
+        "choice.xiangjiang.abandoned": ["xray", "press", "silver"],
+        "choice.zunyi.admit": 1,
+        "choice.zunyi.missed": 1,
         "choice.jinsha.priority": "main",
+        "choice.jinsha.trips": 12,
         "choice.luding.door": "A",
         "choice.luding.names": "B",
         "choice.grass.share": "A",
@@ -34,7 +36,7 @@
       },
       "inventory": {
         "door": true,
-        "items": ["maps", "medicine", "radio"]
+        "items": ["roster", "pencil", "medicine", "pot"]
       },
       "choices": [
         { "chapter": "xiangjiang", "nodeId": "x008", "option": "C", "text": "把门板横在桥头挡一下", "timedOut": false }
@@ -57,7 +59,7 @@
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | version | 1 | 存档格式版本 |
-| scene | title | 当前场景：title/map/vn/choice/minigame/result/codex/ending（共 8 个） |
+| scene | title | 当前场景：title/map/vn（共 3 个）；小游戏、结算、图鉴都是 vn 的子视图，不单列 scene |
 | chapterId | prologue | 当前章 id（prologue/xiangjiang/zunyi/jinsha/luding/grass/wuqi） |
 | nodeId | null | 当前节点 id（字符串，如 "p010"）或 null；数字下标已废弃，见 §5 v1 内部修订 |
 | flags | {} | 旗标；缺省按 false/0 处理 |
@@ -77,12 +79,12 @@
 
 | 键 | 类型 | 默认 | 写入处 | 读取处 |
 |---|---|---|---|---|
-| item.door | boolean | false | 序章选项；湘江 C；泸定 A；终章 | 湘江/泸定/草地/终章分支 |
+| item.door | boolean | false | 序章选项；湘江 C；弃物结算（留下时）；泸定 A；终章 | 湘江/泸定/草地/终章分支 |
 | item.pot | boolean | false | 草地选项 | 草地分支；终章“背上的东西” |
 | load | number | 0 | 序章 +2；湘江 +1；遵义 -1；泸定 +0；草地 +1；终章 +1 | 行囊/体力提示；不影响结局 |
 | trust | number | 0 | 湘江 +1；金沙江 +1/-1；泸定 +1；草地 +1/-1 | 五卡·船工 |
-| fire | number | 50 | 序章带门板 +10、回头 +5；湘江回头接应 +5、弃药箱 −15；金沙江先渡炊事班 +5；泸定每失误 −5；草地分粮 −15；clamp 0–100 | 五卡·火种（≥20） |
-| lights_lost | number | 0 | 遵义“漏记名字” +1 | 泸定光点显示；五卡备注 |
+| fire | number | 50 | 序章带门板 +10、回头 +5；湘江回头接应 +5、弃药箱 −15；金沙江先渡炊事班 +5；泸定结算 −5×min(lost,3)（最多 −15）；草地分粮 −15；clamp 0–100 | 五卡·火种（≥20） |
+| lights_lost | number | 0 | 泸定攀索小游戏：每次点空/火墙失败 +1，结算时绝对赋值 | 泸定结算；五卡备注（不参与点亮判定） |
 | memory.zhou | boolean | false | 湘江结束后置 true | 终章点名 |
 | memory.he | boolean | false | 遵义后置 true | 终章点名 |
 | memory.ximei | boolean | false | 终章前置 true | 终章点名 |
@@ -96,9 +98,11 @@
 | choice.prologue.door | boolean | false | 序章选项 A | 序章分支 |
 | choice.prologue.lookback | boolean | false | 序章选项 B | 序章分支 |
 | choice.xiangjiang.hold | boolean | false | 湘江选项 A/C | 五卡·断后；湘江分支 |
-| choice.xiangjiang.abandoned | string[] | [] | 弃物小游戏结算 | 湘江结算清单；终章回看 |
+| choice.xiangjiang.abandoned | string[] | [] | 弃物小游戏结算（留下 id，≤7） | 湘江结算清单；终章回看 |
 | choice.zunyi.admit | number | 0 | 遵义三个选项（各 +1） | 五卡·复盘（≥2） |
+| choice.zunyi.missed | number | 0 | 遵义 A“漏记过名字” +1，上限 1 | 终章名册/回看 |
 | choice.jinsha.priority | string | "main" | 金沙江选项 | 五卡·先渡（=main） |
+| choice.jinsha.trips | number | 0 | 渡船小游戏结算（0–18） | 金沙江结算；终章回看 |
 | choice.luding.door | string | "A" | 泸定选项 A/B | 泸定分支；五卡备注 |
 | choice.luding.names | string | "A" | 泸定选项 A/B | 名册留白页 |
 | choice.grass.share | string | "A" | 草地选项 A/B | 结算文案 |
@@ -109,9 +113,12 @@
 
 - 读取时按默认值深合并：顶层键缺失取默认值，`settings` 逐键合并（不能用 `Object.assign` 浅合并，否则旧档会整块覆盖新默认键）；缺字段不报错、不崩。
 - 旗标在 JSON 里是**扁平的带点键**（`flags["item.door"]`），不是嵌套对象；写读都走 `XB.core.setFlag(state, path, value)`，不要在别处拼键名。
-- 载入时补齐六个默认旗标：`item.door=false`、`item.pot=false`、`load=0`、`trust=0`、`fire=50`、`lights_lost=0`；`memory.*` / `choice.*` 缺失按 false 读。
-- **写入白名单**（`set:` 只能用这些键，越界在 check-build 与 smoke 里直接失败）：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`。`ending.*`、`card.*`、`unlockedChapters` 只由引擎写。
-- `inventory.door` 是 `flags["item.door"]` 的**镜像**：`setFlag` 写 `item.door` 时同步，载入时以 `flags` 为准重算；两处不一致视为坏档。
+- 载入时补齐九个默认旗标：`item.door=false`、`item.pot=false`、`load=0`、`trust=0`、`fire=50`、`lights_lost=0`、`choice.xiangjiang.abandoned=[]`、`choice.zunyi.missed=0`、`choice.jinsha.trips=0`；其余 `memory.*` / `choice.*` 缺失按 false 读。
+- **写入白名单**（`set:` 只能用这些键，越界在 check-build 与 smoke 里直接失败）：`item.door`、`item.pot`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`。`ending.*`、`card.*`、`unlockedChapters` 只由引擎写；`choice.xiangjiang.abandoned` 这个 list flag 也只由引擎写。
+- `inventory.door` 是 `flags["item.door"]` 的**镜像**：`setFlag` 写 `item.door` 时同步，载入时以 `flags` 为准重算；两处不一致视为坏档。弃物关只有在门板被留下时才由引擎写 `item.door=false`；门板上船则保持 true。
+- `inventory.items` 合法 id 只有 `roster`、`pencil`、`medicine`、`barley`、`pot`、`raincloth`、`shoes`；门板单独存 `inventory.door`。弃物的 xray/press/files/medkit/radio/silver 只进 `choice.xiangjiang.abandoned`，不进 inventory.items。
+- `choice.xiangjiang.abandoned` 只允许 `door`、`xray`、`press`、`files`、`medkit`、`radio`、`silver`；去重、最多 7 个、丢弃未知 id；排序固定 xray,press,files,medkit,radio,silver,door。**只开这一个 list flag**，不做通用数组。
+- `choice.jinsha.trips` clamp 0–18；`choice.zunyi.missed` clamp 0–1；`lights_lost` clamp 0–22。
 - 选项日志 `choices[]` 每条固定五个字段：`{chapter, nodeId, option, text, timedOut}`；`option` 是 A/B/C，`text` 是当时的选项文案（供遵义错误卡引用），`timedOut` 为布尔。只保留最近 64 条。
 - 旗标只增不改名；改名必须写迁移函数（见 §5）。
 - 不在 flags 里存大段文本；文本进 `story.js`。
@@ -124,7 +131,7 @@
 
 - **每个 line beat 推进即保存**：一次推进 = 一次 `xiangbei.save.v1` 写入；单次序列化目标 <4KB，4096 字节是上限（超限视为 schema 设计错误：不写、控制台报错、提示“存档异常”）。
 - 刷新/关闭恢复到当前 beat，不回退到关卡开头。
-- 以下保存点照旧保留并新增：进入新章、每个选项结算（含超时）、小游戏 end()、记名/点名交互结束、设置变更、结局生成；**标题卡关闭**、**史实注关闭**（同时写入 `codex`）、**占位/结算面板继续**。
+- 以下保存点照旧保留并新增：进入新章、每个选项结算（含超时）、小游戏结算应用后（不保存小游戏中间态）、记名/点名交互结束、设置变更、结局生成；**标题卡关闭**、**史实注关闭**（同时写入 `codex`）、**结算面板继续**。
 - `paused`（暂停）、打字机进度、`seenNodes`（跳过已读）是运行时状态：**不写存档**，刷新后回到节点开头。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
 
@@ -141,12 +148,15 @@
 - `?debug=1`：右上角显示 chapterId/nodeId/flags 摘要；不显示在正式版。
 - `?reset=1`：清空存档并回标题。
 - `?chapter=jinsha`：跳到章节（仅开发）。
-- `?minigame=door`：单独试玩小游戏。
+- `?minigame=door|abandon|boat|climb`：单独试玩；不写档、不推进剧情；非法 id toast 后回标题。
+- `?trust=0..6`、`?door=0/1`、`?fire=0..100`、`?lights=0..22`：调试起点；不提供 `?duration=` 覆盖。
+- 调试结果页的“再玩一次/回标题”只在 solo 出现；序章 p025 只有“继续”。
 - 调试参数在正式版保留但隐藏；不写进 UI。
 
 ## 7. 与故事圣经的对应
 
 - 五卡触发见 `docs/story-bible.md` §5：`fire ≥ 20`、`choice.xiangjiang.hold`、`choice.zunyi.admit ≥ 2`、`choice.jinsha.priority == "main"`、`trust ≥ 3 且 memory.zhang`。
+- `lights_lost` 只做泸定结算与五卡备注，不参与卡点亮；遵义“漏记名字”用 `choice.zunyi.missed`，不再写 lights_lost。
 - `ending.cards` 只存结果：`{ideal, sacrifice, truth, overall, people}`，每项 `{lit: bool, line: string}`。
 - 7 张史实注 id：yudu、xiangjiang、zunyi、jinsha、luding、grass、wuqi。
 - 人物 flag：memory.zhou、memory.he、memory.ximei、memory.dongsheng、memory.zaowang、memory.feimao、memory.lin、memory.zhang。

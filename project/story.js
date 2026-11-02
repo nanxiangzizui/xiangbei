@@ -82,6 +82,8 @@
           {
             id: "p025",
             type: "result",
+            source: "minigame",
+            game: "door",
             title: "行囊",
             note: "带走的摊在地上，只有一小堆。",
             lists: [

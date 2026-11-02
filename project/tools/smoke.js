@@ -90,7 +90,7 @@ function walkToEnd(state) {
 
 check("S01", "defaults 形状与持久字段", function () {
   var state = XB.core.defaults();
-  assertEqual(XB.core.SCENES, ["title", "map", "vn", "choice", "minigame", "result", "codex", "ending"], "SCENES");
+  assertEqual(XB.core.SCENES, ["title", "map", "vn"], "SCENES");
   assertEqual(state.scene, "title", "scene");
   assertEqual(state.nodeId, null, "nodeId");
   assertEqual(state.chapterId, "prologue", "chapterId");
@@ -278,15 +278,18 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "六条旗标与六项设置默认值", function () {
+check("S18", "九条旗标与六项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
-  assertEqual(Object.keys(flags).sort(), ["fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
+  assertEqual(Object.keys(flags).sort(), ["choice.jinsha.trips", "choice.xiangjiang.abandoned", "choice.zunyi.missed", "fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
   assertEqual(flags["item.door"], false, "item.door");
   assertEqual(flags["item.pot"], false, "item.pot");
   assertEqual(flags.load, 0, "load");
   assertEqual(flags.trust, 0, "trust");
   assertEqual(flags.fire, 50, "fire");
   assertEqual(flags.lights_lost, 0, "lights_lost");
+  assertEqual(flags["choice.xiangjiang.abandoned"], [], "abandoned");
+  assertEqual(flags["choice.zunyi.missed"], 0, "missed");
+  assertEqual(flags["choice.jinsha.trips"], 0, "trips");
   assertEqual(Object.keys(XB.core.DEFAULT_SETTINGS).sort(), ["muted", "reducedMotion", "skipSeen", "textScale", "textSpeed", "volume"], "设置键");
   assertEqual(XB.core.DEFAULT_SETTINGS.textSpeed, 30, "textSpeed");
   assertEqual(XB.core.DEFAULT_SETTINGS.textScale, 1, "textScale");
@@ -404,9 +407,9 @@ check("S24", "p900 指向湘江且不再前进", function () {
   assertEqual(XB.core.chapterById("xiangjiang").playable, false, "湘江仍未接上");
 });
 
-check("S25", "engine 不引用 minigames、无外部加载", function () {
+check("S25", "engine 已接 minigames、无外部加载", function () {
   var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
-  assert(!/XB\.minigames\b/.test(engine), "engine 引用了 XB.minigames");
+  assert(/XB\.minigames\b/.test(engine), "engine 没接 XB.minigames");
   assert(/XB\.art\b/.test(engine), "engine 没接 XB.art");
   assert(!/fetch\s*\(|XMLHttpRequest|document\.write|\.innerHTML\b/.test(engine), "engine 含禁用 API");
   assert(!/type\s*=\s*["']module["']/.test(engine), "engine 不是 module");
@@ -427,6 +430,91 @@ check("S26", "默认旗标一路走到 p900，没有隐藏 end", function () {
   assertEqual(XB.core.currentNode(state2).id, "p900", "带门板终点");
 });
 
+check("S27", "小游戏 API 与四关注册", function () {
+  var mg = XB.minigames;
+  assert(mg && typeof mg === "object", "XB.minigames 缺失");
+  assertEqual(mg.SCENES, ["door", "abandon", "boat", "climb"], "SCENES");
+  ["start", "stop", "isActive", "resize", "labelFor", "itemIds", "crewForTrust", "usedSlots", "canPack"].forEach(function (name) {
+    assert(typeof mg[name] === "function", name + " 不是函数");
+  });
+  assert(Object.isFrozen(mg.RULES), "RULES 未冻结");
+  assert(Object.isFrozen(mg.ITEMS), "ITEMS 未冻结");
+  assertEqual(mg.itemIds("door").length, 8, "门板 8 件");
+  assertEqual(mg.itemIds("abandon").length, 7, "弃物 7 件");
+});
+
+check("S28", "门板容量与船工纯函数", function () {
+  assertEqual(XB.minigames.usedSlots([], true), 2, "空手+门板 2 格");
+  assertEqual(XB.minigames.usedSlots(["medicine", "pot"], true), 5, "门板+药+锅 5 格");
+  assertEqual(XB.minigames.canPack(["pot", "medicine", "barley"], "raincloth", true), false, "再装雨布超 6 格");
+  assertEqual(XB.minigames.canPack(["pot", "medicine", "barley"], "raincloth", false), true, "无门板 5 格可装");
+  assertEqual(XB.minigames.crewForTrust(-1), 12, "trust 下限");
+  assertEqual(XB.minigames.crewForTrust(0), 12, "trust 0");
+  assertEqual(XB.minigames.crewForTrust(5), 37, "trust 5");
+  assertEqual(XB.minigames.crewForTrust(6), 37, "trust 6 按 5");
+});
+
+check("S29", "start 失败可降级、stop/resize 幂等", function () {
+  var errors = captureConsoleError(function () {
+    assertEqual(XB.minigames.start({ gameId: "nope" }), false, "非法 id");
+    assertEqual(XB.minigames.start({ gameId: "door" }), false, "无画布");
+  });
+  assert(errors.length >= 2, "失败应报错并返回 false");
+  assertEqual(XB.minigames.isActive(), false, "未启动");
+  XB.minigames.stop();
+  XB.minigames.stop();
+  XB.minigames.resize();
+  XB.minigames.resize();
+});
+
+check("S30", "九条旗标：abandoned 数组、trips/missed/lights 夹取", function () {
+  var state = XB.core.defaults();
+  assertEqual(XB.core.setFlag(state, "choice.xiangjiang.abandoned", ["silver", "door", "silver", "xray"]), true, "写 abandoned");
+  assertEqual(state.flags["choice.xiangjiang.abandoned"], ["xray", "silver", "door"], "去重固定顺序");
+  assertEqual(XB.core.setFlag(state, "choice.jinsha.trips", 99), true, "写 trips");
+  assertEqual(state.flags["choice.jinsha.trips"], 18, "trips 夹到 18");
+  assertEqual(XB.core.setFlag(state, "choice.zunyi.missed", 5), true, "写 missed");
+  assertEqual(state.flags["choice.zunyi.missed"], 1, "missed 夹到 1");
+  assertEqual(XB.core.setFlag(state, "lights_lost", 99), true, "写 lights");
+  assertEqual(state.flags.lights_lost, 22, "lights 夹到 22");
+  var errors = captureConsoleError(function () {
+    assertEqual(XB.core.setFlag(state, "choice.xiangjiang.abandoned", "xray"), false, "abandoned 只收数组");
+  });
+  assertEqual(errors.length, 1, "非数组应报错一次");
+});
+
+check("S31", "p024 config 与 p025 结果来源", function () {
+  var p024 = XB.core.locate("prologue", "p024").node;
+  assertEqual(p024.type, "minigame", "p024 类型");
+  assertEqual(p024.game, "door", "p024 game");
+  assertEqual(p024.config, { duration: 75, capacity: 6, doorCost: 2, items: 8 }, "p024 config");
+  var p025 = XB.core.locate("prologue", "p025").node;
+  assertEqual(p025.type, "result", "p025 类型");
+  assertEqual(p025.source, "minigame", "p025 source");
+  assertEqual(p025.game, "door", "p025 game");
+});
+
+check("S32", "结算重建与结果页字段", function () {
+  var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
+  ["applyMinigameResult", "buildResultView", "node.source !== \"minigame\"", "choice.xiangjiang.abandoned", "choice.jinsha.trips", "lights_lost", "vn-result__stats"].forEach(function (needle) {
+    assert(engine.indexOf(needle) !== -1, "缺 " + needle);
+  });
+  assert(!/\bsuccess\b|\bscore\b/i.test(engine), "engine 结果出现 success/score");
+});
+
+check("S33", "四关代码无外部加载、无禁用画面词", function () {
+  var code = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "minigames.js"), "utf8"));
+  assert(!/fetch\s*\(|XMLHttpRequest|import\s*\(|type\s*=\s*["']module["']|document\.write|\.innerHTML\b/.test(code), "minigames.js 含禁用 API");
+  ["X 光机", "X光机", "Game Over", "gameOver", "牺牲"].forEach(function (word) {
+    assert(code.indexOf(word) === -1, "出现「" + word + "」");
+  });
+  var parts = code.split("drawText(");
+  parts.slice(1).forEach(function (part) {
+    var call = part.slice(0, part.indexOf(");"));
+    assert(!/成功|失败/.test(call), "画面出现成功/失败大字");
+  });
+});
+
 if (failures.length) {
   failures.forEach(function (line) {
     console.log("× " + line);
@@ -434,5 +522,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 项失败");
   process.exitCode = 1;
 } else {
-  console.log("OK：纯状态层烟测 26 项全绿");
+  console.log("OK：纯状态层烟测 33 项全绿");
 }

@@ -13,7 +13,9 @@
   var SAVE_VERSION = 1;
 
   // 场景只用于“现在该显示哪一层”；剧情推进本身按 nodeId 定位，不用栈。
-  var SCENES = ["title", "map", "vn", "choice", "minigame", "result", "codex", "ending"];
+  // 小游戏/结算/选项都是 vn 视图内的分派，不再单独占 scene 值。
+  var SCENES = ["title", "map", "vn"];
+  var LEGACY_SCENES = ["choice", "minigame", "result", "codex", "ending"];
 
   // 存档字段固定 11 个：加字段先改 docs/state-schema.md 与工具 C17。
   var PERSIST_KEYS = [
@@ -39,14 +41,17 @@
     skipSeen: false
   };
 
-  // 六条基础旗标：缺省值即“还没做选择”的状态，normalize 会把旧档补齐。
+  // 九条基础旗标：缺省值即“还没做选择”的状态，normalize 会把旧档补齐。
   var FLAG_DEFAULTS = {
     "item.door": false,
     "item.pot": false,
     load: 0,
     trust: 0,
     fire: 50,
-    lights_lost: 0
+    lights_lost: 0,
+    "choice.xiangjiang.abandoned": [],
+    "choice.zunyi.missed": 0,
+    "choice.jinsha.trips": 0
   };
 
   // 数值旗标的上限下限：fire 是火种，trust 是民心（0–6 段），load 是行囊格数。
@@ -54,11 +59,28 @@
     fire: [0, 100],
     trust: [0, 6],
     load: [0, 99],
-    lights_lost: [0, 99]
+    lights_lost: [0, 22],
+    "choice.zunyi.missed": [0, 1],
+    "choice.jinsha.trips": [0, 18]
   };
 
   // 剧情只允许写这些旗标：ending/card/unlockedChapters 由引擎自己管。
-  var FLAG_KEYS = ["item.door", "item.pot", "load", "trust", "fire", "lights_lost"];
+  var FLAG_KEYS = [
+    "item.door",
+    "item.pot",
+    "load",
+    "trust",
+    "fire",
+    "lights_lost",
+    "choice.xiangjiang.abandoned",
+    "choice.zunyi.missed",
+    "choice.jinsha.trips"
+  ];
+
+  // 唯一允许的 list flag：弃物留下清单。顺序也是存档与结果页的排序。
+  var ABANDON_ORDER = ["xray", "press", "files", "medkit", "radio", "silver", "door"];
+  var INVENTORY_IDS = ["roster", "pencil", "medicine", "barley", "pot", "raincloth", "shoes"];
+  var DOOR_OPTIONAL_IDS = ["medicine", "barley", "pot", "raincloth", "shoes"];
   var FLAG_PREFIXES = ["memory.", "choice."];
   var CHOICE_LOG_LIMIT = 64;
   var TEXT_SCALES = [1, 1.15, 1.3];
@@ -73,6 +95,18 @@
 
   function clamp(value, min, max) {
     return value < min ? min : value > max ? max : value;
+  }
+
+  // list flag 只在边界收一次：只认 7 个 id，去重并按固定顺序排，避免存档里出现自由文本。
+  function normalizeAbandoned(value) {
+    if (!Array.isArray(value)) return [];
+    var seen = {};
+    value.forEach(function (id) {
+      if (ABANDON_ORDER.indexOf(id) !== -1) seen[id] = true;
+    });
+    return ABANDON_ORDER.filter(function (id) {
+      return seen[id] === true;
+    });
   }
 
   function isFiniteNumber(value) {
@@ -128,8 +162,11 @@
 
     var state = defaults();
 
-    if (SCENES.indexOf(save.scene) === -1) return { issue: "shape", state: defaults() };
-    state.scene = save.scene;
+    if (SCENES.indexOf(save.scene) === -1 && LEGACY_SCENES.indexOf(save.scene) === -1) {
+      return { issue: "shape", state: defaults() };
+    }
+    // 旧档里的 choice/minigame/result/codex 都归一到 vn；具体类型由 node.type 分派。
+    state.scene = SCENES.indexOf(save.scene) === -1 ? "vn" : save.scene;
 
     var chapter = chapterById(save.chapterId);
     if (!chapter) return { issue: "chapter", state: defaults() };
@@ -140,7 +177,14 @@
     if (isPlainObject(save.flags)) {
       Object.keys(save.flags).forEach(function (key) {
         var value = save.flags[key];
-        if (typeof value === "boolean" || typeof value === "string" || isFiniteNumber(value)) flags[key] = value;
+        if (
+          typeof value === "boolean" ||
+          typeof value === "string" ||
+          isFiniteNumber(value) ||
+          (key === "choice.xiangjiang.abandoned" && Array.isArray(value))
+        ) {
+          flags[key] = value;
+        }
       });
     }
     Object.keys(FLAG_LIMITS).forEach(function (key) {
@@ -149,14 +193,17 @@
     });
     flags["item.door"] = flags["item.door"] === true;
     flags["item.pot"] = flags["item.pot"] === true;
+    flags["choice.xiangjiang.abandoned"] = normalizeAbandoned(flags["choice.xiangjiang.abandoned"]);
     state.flags = flags;
     // inventory.door 只是 flags 的镜像，避免两处状态打架。
     state.inventory.door = flags["item.door"];
 
     var items = save.inventory && save.inventory.items;
     state.inventory.items = Array.isArray(items)
-      ? items.filter(function (item) {
-          return typeof item === "string";
+      ? items.filter(function (item, index, list) {
+          return typeof item === "string" &&
+            INVENTORY_IDS.indexOf(item) !== -1 &&
+            list.indexOf(item) === index;
         }).slice(0, 32)
       : [];
 
@@ -223,7 +270,7 @@
       var found = locate(state.chapterId, state.nodeId);
       if (!found || !isVisible(state, found.node)) {
         // 标题/地图允许带着“上次位置”，坏了就丢掉；进了剧情则必须能定位。
-        if (state.scene === "vn" || state.scene === "choice" || state.scene === "minigame" || state.scene === "result" || state.scene === "codex") {
+        if (state.scene === "vn") {
           return { issue: "node", state: defaults() };
         }
         state.nodeId = null;
@@ -332,6 +379,15 @@
       console.error("[XB] 禁止写入旗标：" + path);
       return false;
     }
+    if (path === "choice.xiangjiang.abandoned") {
+      if (!Array.isArray(value)) {
+        console.error("[XB] list flag 只接受数组：" + path);
+        return false;
+      }
+      state.flags[path] = normalizeAbandoned(value);
+      return true;
+    }
+
     var current = state.flags[path];
     var next;
 
@@ -490,6 +546,12 @@
     "vn-choice-prompt",
     "vn-choices",
     "vn-minigame",
+    "minigame-canvas",
+    "minigame-hud",
+    "minigame-help",
+    "minigame-live",
+    "minigame-pause",
+    "minigame-fallback",
     "vn-result",
     "vn-title-card",
     "vn-title-chapter",
@@ -559,6 +621,13 @@
   var titleCardState = { open: false, timer: 0, onClose: null };
   var codexState = { open: false, id: null, unlock: false, onClose: null, previousFocus: null };
 
+  // 小游戏运行时：lastMinigameResult 只活在本页；刷新后由 p025 从 flags/inventory 重建。
+  var lastMinigameResult = null;
+  var minigameRun = null;
+  var soloMode = false;
+  var soloGameId = null;
+  var soloParams = null;
+
   function camelize(id) {
     return id.replace(/-([a-z])/g, function (_, letter) {
       return letter.toUpperCase();
@@ -609,6 +678,13 @@
     state = loaded.state;
     storageOk = loaded.storageOk;
     saveExists = loaded.exists;
+
+    // 调试试玩：?minigame=door|abandon|boat|climb 直接进单关，不写档、不推进剧情。
+    var soloGame = params.get("minigame");
+    if (soloGame) {
+      startSolo(soloGame, readSoloOptions(params));
+      return;
+    }
 
     applySettings();
     applyStartScene();
@@ -674,6 +750,7 @@
 
   function saveNow() {
     if (!state) return;
+    if (soloMode) return;
     var json = JSON.stringify(serialize(state));
     var bytes = utf8Bytes(json);
     if (bytes > MAX_SAVE_BYTES) {
@@ -714,6 +791,9 @@
     var scale = Math.min(width / 1280, height / 720);
     document.documentElement.style.setProperty("--scale", String(scale));
     scheduleArtResize(scale);
+    if (XB.minigames && typeof XB.minigames.resize === "function" && XB.minigames.isActive()) {
+      XB.minigames.resize();
+    }
   }
 
   function mountArt() {
@@ -898,7 +978,7 @@
         renderChoice(found.node);
         break;
       case "minigame":
-        renderSeam(found.node);
+        startMinigameForNode(found.node);
         break;
       case "result":
         renderResult(found.node);
@@ -931,6 +1011,7 @@
   }
 
   function renderLine(node) {
+    els.vnDialogue.hidden = false;
     els.vnToolbar.hidden = false;
     updateToolbar();
     els.vnName.textContent = node.speaker || "";
@@ -1198,7 +1279,15 @@
     els.vnChoicePrompt.hidden = true;
   }
 
-  /* ---------------- 小游戏占位与结算 ---------------- */
+  /* ---------------- 小游戏接入与结算 ---------------- */
+
+  var MINIGAME_LABEL = { door: "门板", abandon: "弃物", boat: "渡口", climb: "铁索" };
+  var MINIGAME_HELP = {
+    door: "行囊 6 格；门板占 2 格，不能丢。点或拖动货架上的物品装进/取出；按 1–5 也能切换。空格或 Enter 系好行囊。",
+    abandon: "两批船，每批最多 3 件；点物品上船或下船。第一船发出后追兵开始逼近，带重物会拖慢。空格或 Enter 发船。",
+    boat: "点船派 8 人过江；点船卡右下「歇」让一条船休息。按 1–6 派船，Shift+1–6 歇。渡满 18 趟或时间到结束。",
+    climb: "等光圈收拢到目标时点一下；点空会熄灭一盏。火墙出现时连点三下。空格或 Enter 也可以点。"
+  };
 
   function createContinueButton(kind) {
     var button = document.createElement("button");
@@ -1209,48 +1298,304 @@
     return button;
   }
 
-  // 步骤三只验证 VN 衔接：给一块看得见的门，不假装小游戏已经能玩。
-  function renderSeam(node) {
-    var config = node.config || {};
+  function minigameLabel(id) {
+    if (XB.minigames && typeof XB.minigames.labelFor === "function") {
+      var label = XB.minigames.labelFor(id);
+      if (label) return label;
+    }
+    return id;
+  }
+
+  function idsFromRefs(refs) {
+    var ids = [];
+    (refs || []).forEach(function (ref) {
+      var id = typeof ref === "string" ? ref : ref && ref.id;
+      if (id && ids.indexOf(id) === -1) ids.push(id);
+    });
+    return ids;
+  }
+
+  function refsFromIds(ids) {
+    return (ids || []).map(function (id) {
+      return { id: id, label: minigameLabel(id) };
+    });
+  }
+
+  function listFromRefs(refs) {
+    return (refs || []).map(function (ref) {
+      return typeof ref === "string" ? minigameLabel(ref) : ref.label || minigameLabel(ref.id);
+    });
+  }
+
+  function resultReasonText(reason) {
+    if (reason === "time") return "时间到";
+    if (reason === "quit") return "提前收手";
+    if (reason === "error") return "出错后按当前结果继续";
+    return "完成";
+  }
+
+  function stopMinigame() {
+    if (XB.minigames && typeof XB.minigames.stop === "function" && XB.minigames.isActive()) {
+      XB.minigames.stop();
+    }
+    minigameRun = null;
+    if (els.vnMinigame) els.vnMinigame.hidden = true;
+    if (els.minigamePause) els.minigamePause.hidden = true;
+    if (els.minigameFallback) els.minigameFallback.hidden = true;
+  }
+
+  function beginMinigame(gameId, options) {
+    options = options || {};
+    if (!XB.minigames || typeof XB.minigames.start !== "function") {
+      console.error("[XB] minigames.js 未就位");
+      return false;
+    }
+    var node = options.node || null;
+    var initial = options.initial || {};
+    if (options.solo !== true) lastMinigameResult = null;
+    minigameRun = { gameId: gameId, nodeId: node ? node.id : null, solo: options.solo === true };
+    soloMode = options.solo === true;
+
     els.vnMinigame.hidden = false;
-    els.vnMinigame.textContent = "";
+    els.minigameFallback.hidden = true;
+    els.minigamePause.hidden = false;
+    els.minigameHud.textContent = MINIGAME_LABEL[gameId] || gameId;
+    els.minigameHelp.textContent = MINIGAME_HELP[gameId] || "";
+    els.minigameLive.textContent = "";
+    els.minigameCanvas.setAttribute("aria-label", (MINIGAME_LABEL[gameId] || "小游戏") + "画面：" + (MINIGAME_HELP[gameId] || ""));
 
-    var title = document.createElement("p");
-    title.className = "vn-seam__title";
-    title.textContent = "门板小游戏";
-    var params = document.createElement("p");
-    params.className = "vn-seam__params";
-    params.textContent =
-      "关卡 " + node.game + " · 限时 " + config.duration + " 秒 · 行囊 " + config.capacity + " 格 · 门板占 " + config.doorCost + " 格 · 待取舍 " + config.items + " 件";
-    var note = document.createElement("p");
-    note.className = "vn-seam__note";
-    note.textContent = "步骤三只验证对话衔接：面板停在这里，按「继续」往下走。步骤四接入后，这里换成可操作的门板取舍。";
+    var started = XB.minigames.start({
+      gameId: gameId,
+      canvas: els.minigameCanvas,
+      config: node ? node.config : null,
+      hud: els.minigameHud,
+      help: els.minigameHelp,
+      live: els.minigameLive,
+      initial: {
+        hasDoor: initial.hasDoor !== undefined ? initial.hasDoor === true : state.flags["item.door"] === true,
+        trust: initial.trust !== undefined ? Number(initial.trust) || 0 : Number(state.flags.trust) || 0,
+        fire: initial.fire !== undefined ? Number(initial.fire) || 0 : Number(state.flags.fire) || 0,
+        lights: initial.lights !== undefined ? Number(initial.lights) || 0 : Number(state.flags.lights_lost) || 0
+      },
+      callbacks: {
+        onEnd: handleMinigameEnd,
+        isPaused: function () {
+          return !!(state && state.paused);
+        },
+        isReducedMotion: prefersReduced,
+        toast: toast
+      }
+    });
 
-    els.vnMinigame.append(title, params, note, createContinueButton("vn-seam__more"));
+    if (!started) {
+      minigameRun = null;
+      soloMode = false;
+      els.vnMinigame.hidden = true;
+      els.minigamePause.hidden = true;
+      els.minigameFallback.hidden = false;
+      return false;
+    }
+    return true;
+  }
+
+  function startMinigameForNode(node) {
+    if (!node || !node.game) {
+      console.error("[XB] 小游戏节点缺少 game：" + (node && node.id));
+      toast("小游戏数据缺失，按剧情继续");
+      advance(state);
+      render();
+      return;
+    }
+    if (minigameRun && minigameRun.nodeId === node.id && XB.minigames && XB.minigames.isActive()) {
+      els.vnMinigame.hidden = false;
+      els.minigamePause.hidden = false;
+      return;
+    }
+    stopMinigame();
+    if (!beginMinigame(node.game, { node: node })) {
+      toast("小游戏未能启动，按剧情继续");
+      var fallback = advance(state);
+      if (!fallback) {
+        go("map");
+        return;
+      }
+      saveNow();
+      render();
+    }
+  }
+
+  function handleMinigameEnd(result) {
+    var run = minigameRun;
+    minigameRun = null;
+    els.vnMinigame.hidden = true;
+    els.minigamePause.hidden = true;
+    els.minigameFallback.hidden = true;
+    if (!run) return;
+
+    if (run.solo || soloMode) {
+      soloMode = true;
+      renderSoloResult(result || { gameId: run.gameId, reason: "error", carried: [], left: [], stats: {} });
+      return;
+    }
+
+    if (!state || state.scene !== "vn") return;
+    lastMinigameResult = result || null;
+    if (result) applyMinigameResult(result);
+    if (result && result.reason === "error") toast("小游戏出错，已按当前结果继续");
+    var next = advance(state);
+    if (!next) {
+      console.error("[XB] 小游戏之后没有结果节点");
+      go("map");
+      return;
+    }
+    saveNow();
+    render();
+  }
+
+  function applyMinigameResult(result) {
+    var stats = result.stats || {};
+    if (result.gameId === "door") {
+      var doorIds = idsFromRefs(result.carried);
+      var selected = doorIds.filter(function (id) {
+        return DOOR_OPTIONAL_IDS.indexOf(id) !== -1;
+      });
+      var items = ["roster", "pencil"];
+      selected.forEach(function (id) {
+        if (items.indexOf(id) === -1) items.push(id);
+      });
+      state.inventory.items = items;
+      setFlag(state, "item.pot", selected.indexOf("pot") !== -1);
+      return;
+    }
+    if (result.gameId === "abandon") {
+      var left = idsFromRefs(result.left);
+      setFlag(state, "choice.xiangjiang.abandoned", left);
+      if (left.indexOf("door") !== -1) setFlag(state, "item.door", false);
+      if (left.indexOf("medkit") !== -1) setFlag(state, "fire", "-15");
+      return;
+    }
+    if (result.gameId === "boat") {
+      setFlag(state, "choice.jinsha.trips", Number(stats.trips) || 0);
+      return;
+    }
+    if (result.gameId === "climb") {
+      var lost = Number(stats.lost) || 0;
+      setFlag(state, "lights_lost", lost);
+      setFlag(state, "fire", "-" + 5 * Math.min(lost, 3));
+    }
+  }
+
+  function buildResultView(node) {
+    var gameId = node.game || (lastMinigameResult && lastMinigameResult.gameId) || null;
+    var runtime = lastMinigameResult && (!gameId || lastMinigameResult.gameId === gameId) ? lastMinigameResult : null;
+    var view = {
+      title: node.title || "结算",
+      note: node.note || "",
+      stats: "",
+      lists: []
+    };
+
+    if (node.source !== "minigame" || !gameId) {
+      (node.lists || []).forEach(function (list) {
+        if (!evalWhen(state, list.when)) return;
+        view.lists.push({ heading: list.heading, items: (list.items || []).slice() });
+      });
+      return view;
+    }
+
+    if (gameId === "door") {
+      var carriedIds = runtime ? idsFromRefs(runtime.carried) : [];
+      var leftIds = runtime ? idsFromRefs(runtime.left) : [];
+      if (!runtime) {
+        carriedIds = (state.inventory.door ? ["door"] : []).concat(
+          state.inventory.items.filter(function (id) {
+            return DOOR_OPTIONAL_IDS.indexOf(id) !== -1;
+          })
+        );
+        leftIds = DOOR_OPTIONAL_IDS.filter(function (id) {
+          return carriedIds.indexOf(id) === -1;
+        });
+      }
+      var hasDoor = carriedIds.indexOf("door") !== -1;
+      var selected = carriedIds.filter(function (id) {
+        return DOOR_OPTIONAL_IDS.indexOf(id) !== -1;
+      });
+      var used = XB.minigames && typeof XB.minigames.usedSlots === "function"
+        ? XB.minigames.usedSlots(selected, hasDoor)
+        : 0;
+      view.stats = "行囊 " + used + "/6 格" + (hasDoor ? " · 门板占 2 格" : "");
+      view.note = (node.note || "") + " 花名册和铅笔一直贴身带着。";
+      view.lists = [
+        { heading: "带走的", items: listFromRefs(refsFromIds(carriedIds)) },
+        { heading: "留下的", items: listFromRefs(refsFromIds(leftIds)) }
+      ];
+      return view;
+    }
+
+    if (gameId === "abandon") {
+      var leftAbandon = runtime ? idsFromRefs(runtime.left) : (state.flags["choice.xiangjiang.abandoned"] || []);
+      var carriedAbandon = ABANDON_ORDER.filter(function (id) {
+        return leftAbandon.indexOf(id) === -1 && (id !== "door" || state.inventory.door === true);
+      });
+      view.stats = runtime
+        ? "两船已发 · 追兵 " + (runtime.stats && runtime.stats.enemyRemaining !== null ? Math.round(runtime.stats.enemyRemaining) + " 秒" : "未至")
+        : "两船已发";
+      view.lists = [
+        { heading: "带上船", items: listFromRefs(refsFromIds(carriedAbandon)) },
+        { heading: "留在岸上", items: listFromRefs(refsFromIds(leftAbandon)) }
+      ];
+      return view;
+    }
+
+    if (gameId === "boat") {
+      var trips = runtime && runtime.stats ? Number(runtime.stats.trips) || 0 : Number(state.flags["choice.jinsha.trips"]) || 0;
+      view.stats = "已渡 " + trips + "/18 趟";
+      if (runtime && runtime.stats) {
+        view.stats += " · 船工 " + (Number(runtime.stats.boatmen) || 0) + " 人";
+      }
+      return view;
+    }
+
+    if (gameId === "climb") {
+      var lostLights = runtime && runtime.stats ? Number(runtime.stats.lost) || 0 : Number(state.flags.lights_lost) || 0;
+      if (runtime && runtime.stats && typeof runtime.stats.reached === "number") {
+        view.stats = "过去 " + runtime.stats.reached + " 个 · 暗了 " + lostLights + " 个 · 其余 " + Math.max(0, 22 - runtime.stats.reached - lostLights) + " 亮着";
+      } else {
+        view.stats = "暗了 " + lostLights + " 个，其余 " + Math.max(0, 22 - lostLights) + " 亮着";
+      }
+      return view;
+    }
+
+    return view;
   }
 
   function renderResult(node) {
+    var view = buildResultView(node);
     els.vnResult.hidden = false;
     els.vnResult.textContent = "";
 
     var title = document.createElement("p");
     title.className = "vn-result__title";
-    title.textContent = node.title || "结算";
+    title.textContent = view.title;
     var note = document.createElement("p");
     note.className = "vn-result__note";
-    note.textContent = node.note || "";
+    note.textContent = view.note;
+    var stats = document.createElement("p");
+    stats.className = "vn-result__stats";
+    stats.textContent = view.stats;
     var lists = document.createElement("div");
     lists.className = "vn-result__lists";
 
-    (node.lists || []).forEach(function (list) {
-      if (!evalWhen(state, list.when)) return;
+    view.lists.forEach(function (list) {
+      // 没有内容的栏不画标题：不带门板时五件家当全带走，"留下的"会是空栏。
+      if (!list.items || !list.items.length) return;
       var column = document.createElement("div");
       var heading = document.createElement("h3");
       heading.className = "vn-result__heading";
       heading.textContent = list.heading;
       var items = document.createElement("ul");
       items.className = "vn-result__items";
-      (list.items || []).forEach(function (text) {
+      list.items.forEach(function (text) {
         var item = document.createElement("li");
         item.textContent = text;
         items.append(item);
@@ -1259,7 +1604,109 @@
       lists.append(column);
     });
 
-    els.vnResult.append(title, note, lists, createContinueButton("vn-result__more"));
+    els.vnResult.append(title, note);
+    if (view.stats) els.vnResult.append(stats);
+    if (view.lists.length) els.vnResult.append(lists);
+    var more = createContinueButton("vn-result__more");
+    els.vnResult.append(more);
+    // 焦点落在结算容器而不是底部按钮：结果区可滚动，直接 focus 按钮会把标题滚出首屏。
+    els.vnResult.tabIndex = -1;
+    els.vnResult.focus({ preventScroll: true });
+  }
+
+  function soloStatsText(result) {
+    var stats = result.stats || {};
+    if (result.gameId === "door") {
+      var ids = idsFromRefs(result.carried);
+      var selected = ids.filter(function (id) {
+        return DOOR_OPTIONAL_IDS.indexOf(id) !== -1;
+      });
+      var used = XB.minigames && typeof XB.minigames.usedSlots === "function"
+        ? XB.minigames.usedSlots(selected, ids.indexOf("door") !== -1)
+        : 0;
+      return "行囊 " + used + "/6 格";
+    }
+    if (result.gameId === "abandon") {
+      var enemy = stats.enemyRemaining;
+      return "追兵 " + (enemy === null || enemy === undefined ? "未至" : Math.round(enemy) + " 秒") + " · 已发 " + (Number(stats.batches) || 0) + " 船";
+    }
+    if (result.gameId === "boat") {
+      return "已渡 " + (Number(stats.trips) || 0) + "/18 趟 · 船工 " + (Number(stats.boatmen) || 0) + " 人";
+    }
+    if (result.gameId === "climb") {
+      return "过去 " + (Number(stats.reached) || 0) + " 个 · 暗了 " + (Number(stats.lost) || 0) + " 个 · 其余 " + (Number(stats.unlit) || 0) + " 亮着";
+    }
+    return "";
+  }
+
+  function renderSoloResult(result) {
+    var gameId = result.gameId || soloGameId;
+    els.vnResult.hidden = false;
+    els.vnResult.textContent = "";
+
+    var title = document.createElement("p");
+    title.className = "vn-result__title";
+    title.textContent = "调试试玩";
+    var note = document.createElement("p");
+    note.className = "vn-result__note";
+    note.textContent = (MINIGAME_LABEL[gameId] || gameId) + " · " + resultReasonText(result.reason);
+    var stats = document.createElement("p");
+    stats.className = "vn-result__stats";
+    var soloStats = soloStatsText(result);
+    stats.textContent = "用时 " + (Number(result.elapsed) || 0).toFixed(1) + " 秒" + (soloStats ? " · " + soloStats : "");
+
+    var lists = document.createElement("div");
+    lists.className = "vn-result__lists";
+    if (result.carried && result.carried.length) {
+      var carried = document.createElement("div");
+      var carriedHeading = document.createElement("h3");
+      carriedHeading.className = "vn-result__heading";
+      carriedHeading.textContent = "带走的";
+      var carriedList = document.createElement("ul");
+      carriedList.className = "vn-result__items";
+      listFromRefs(result.carried).forEach(function (text) {
+        var item = document.createElement("li");
+        item.textContent = text;
+        carriedList.append(item);
+      });
+      carried.append(carriedHeading, carriedList);
+      lists.append(carried);
+    }
+    if (result.left && result.left.length) {
+      var left = document.createElement("div");
+      var leftHeading = document.createElement("h3");
+      leftHeading.className = "vn-result__heading";
+      leftHeading.textContent = "留下的";
+      var leftList = document.createElement("ul");
+      leftList.className = "vn-result__items";
+      listFromRefs(result.left).forEach(function (text) {
+        var item = document.createElement("li");
+        item.textContent = text;
+        leftList.append(item);
+      });
+      left.append(leftHeading, leftList);
+      lists.append(left);
+    }
+
+    var replay = document.createElement("button");
+    replay.type = "button";
+    replay.className = "xb-btn xb-btn--sm";
+    replay.dataset.action = "solo-replay";
+    replay.textContent = "再玩一次";
+    var home = document.createElement("button");
+    home.type = "button";
+    home.className = "xb-btn xb-btn--sm";
+    home.dataset.action = "solo-title";
+    home.textContent = "回标题";
+    var actions = document.createElement("div");
+    actions.className = "vn-result__actions";
+    actions.append(replay, home);
+
+    els.vnResult.append(title, note, stats);
+    if (lists.childNodes.length) els.vnResult.append(lists);
+    els.vnResult.append(actions);
+    els.vnResult.tabIndex = -1;
+    els.vnResult.focus({ preventScroll: true });
   }
 
   function finishChapter(node) {
@@ -1377,6 +1824,7 @@
   /* ---------------- 场景与暂停 ---------------- */
 
   function go(scene) {
+    stopMinigame();
     cancelAuto();
     cancelChoiceTimer();
     cancelTyping();
@@ -1387,6 +1835,12 @@
 
   function startNewGame() {
     if (saveExists && !window.confirm("开始新游戏会清空当前进度，确定吗？")) return;
+    stopMinigame();
+    soloMode = false;
+    soloGameId = null;
+    soloParams = null;
+    lastMinigameResult = null;
+    setSoloPauseButtons(false);
     clearSave();
     state = defaults();
     if (!startChapter(state, "prologue")) {
@@ -1409,6 +1863,7 @@
   }
 
   function resumeGame() {
+    stopMinigame();
     if (state.scene !== "title") {
       render();
       return;
@@ -1424,6 +1879,7 @@
   }
 
   function enterStation(chapterId) {
+    stopMinigame();
     var chapter = chapterById(chapterId);
     if (!chapter || !chapter.playable) {
       toast("这一段还没接上");
@@ -1444,8 +1900,100 @@
     saveNow();
   }
 
+  function readSoloOptions(params) {
+    var doorParam = params.get("door");
+    return {
+      hasDoor: doorParam !== "0",
+      trust: clamp(Math.round(Number(params.get("trust")) || 0), 0, 6),
+      fire: clamp(Math.round(Number(params.get("fire")) || 50), 0, 100),
+      lights: clamp(Math.round(Number(params.get("lights")) || 0), 0, 22)
+    };
+  }
+
+  function setSoloPauseButtons(hidden) {
+    if (!els.pauseMenu) return;
+    ["pause-map", "pause-title"].forEach(function (action) {
+      var button = els.pauseMenu.querySelector('[data-action="' + action + '"]');
+      if (button) button.hidden = hidden;
+    });
+  }
+
+  function startSolo(gameId, options) {
+    if (!XB.minigames || XB.minigames.SCENES.indexOf(gameId) === -1) {
+      soloMode = false;
+      soloGameId = null;
+      soloParams = null;
+      state = defaults();
+      state.scene = "title";
+      els.vnResult.hidden = true;
+      els.vnMinigame.hidden = true;
+      els.minigameFallback.hidden = true;
+      applySettings();
+      render();
+      toast("未知的小游戏：" + gameId);
+      return;
+    }
+
+    options = options || {};
+    soloMode = true;
+    soloGameId = gameId;
+    soloParams = options;
+    lastMinigameResult = null;
+    state = defaults();
+    state.scene = "vn";
+    state.chapterId = "prologue";
+    state.nodeId = null;
+    state.flags["item.door"] = options.hasDoor !== false;
+    state.inventory.door = state.flags["item.door"];
+    state.flags.trust = Number(options.trust) || 0;
+    state.flags.fire = Number(options.fire) || 0;
+    state.flags.lights_lost = Number(options.lights) || 0;
+
+    applySettings();
+    showScene("vn");
+    els.vnChapter.textContent = "调试试玩 · " + (MINIGAME_LABEL[gameId] || gameId);
+    els.vnDialogue.hidden = true;
+    els.vnToolbar.hidden = true;
+    els.vnChoices.hidden = true;
+    els.vnChoicePrompt.hidden = true;
+    els.vnResult.hidden = true;
+    els.vnTitleCard.hidden = true;
+    els.vnText.textContent = "";
+    els.vnName.hidden = true;
+    els.vnNext.textContent = "";
+    setSoloPauseButtons(true);
+    paintStage("yudu_night");
+
+    if (!beginMinigame(gameId, { solo: true, node: null })) {
+      renderSoloResult({ gameId: gameId, reason: "error", elapsed: 0, carried: [], left: [], stats: {} });
+    }
+    updateDebug();
+  }
+
+  function replaySolo() {
+    if (!soloGameId) return;
+    stopMinigame();
+    startSolo(soloGameId, soloParams || {});
+  }
+
+  function exitSolo() {
+    stopMinigame();
+    soloMode = false;
+    soloGameId = null;
+    soloParams = null;
+    minigameRun = null;
+    state = defaults();
+    state.scene = "title";
+    state.paused = false;
+    setSoloPauseButtons(false);
+    els.vnResult.hidden = true;
+    els.pause.hidden = true;
+    render();
+  }
+
   function openPause() {
     if (!state || state.scene !== "vn" || state.paused) return;
+    setSoloPauseButtons(soloMode);
     state.paused = true;
     lastFocused = document.activeElement;
     cancelAuto();
@@ -1637,6 +2185,7 @@
     }
     if (codexState.open) return;
     if (!state || state.scene !== "vn" || state.paused) return;
+    if (XB.minigames && XB.minigames.isActive()) return;
     if (target.closest("#vn-dialogue, #scene-vn")) advanceInput();
   }
 
@@ -1672,6 +2221,8 @@
       }
       return;
     }
+
+    if (XB.minigames && XB.minigames.isActive()) return;
 
     if (event.key === "Tab" && codexState.open) {
       trapFocus(event, els.codex);
@@ -1751,6 +2302,12 @@
         break;
       case "continue-node":
         advanceVn();
+        break;
+      case "solo-replay":
+        replaySolo();
+        break;
+      case "solo-title":
+        exitSolo();
         break;
       default:
         console.error("[XB] 未知动作：" + action);

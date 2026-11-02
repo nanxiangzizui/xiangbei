@@ -20,7 +20,7 @@
 【旁白】数到十七，停了很久，才数到十八。
 【旁白】中间那一段，我数了三遍，都是十七。
 
-【小游戏】climb｜duration=75, spans=3, hitWindow=0.35, lights=22
+【小游戏】climb｜duration=75, spans=3, lights=22, stepMs=1800, hitWindow=0.35, fireAt=6/12/18, fireWindow=1.5s, fireTaps=3
 
 【结算】攀索｜过去了 / 没过去的；不评分
 【旁白】桥板一块一块铺上去的时候，铁索在抖。

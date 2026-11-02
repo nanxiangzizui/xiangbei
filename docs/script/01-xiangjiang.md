@@ -22,7 +22,7 @@
 【何指导员】先弄清情况：什么必须过江，什么可以留下。定了就不许回头拿。
 【旁白】他蹲下来，把六样东西摆成一排，像摆一副牌。摆完抬头问我：你自己挑三样。
 
-【小游戏】abandon｜duration=80, quota=3, items=6, enemy=45s
+【小游戏】abandon｜duration=80, batches=2, quota=3, items=6, enemy=45s, heavy=8s
 
 【结算】弃物｜过江清单 / 留在江那边；不评分
 [[if:item.door]]

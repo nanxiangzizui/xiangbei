@@ -58,8 +58,15 @@
       <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
       <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
 
-      <!-- 小游戏入口占位（步骤四换成真画布）与行囊结算（只列清单，不评分） -->
-      <div id="vn-minigame" class="vn-seam" role="group" aria-label="小游戏入口" hidden></div>
+      <!-- 小游戏覆盖层：单画布 + 可访问状态；结算只用 DOM，不把 canvas 当唯一信息源 -->
+      <div id="vn-minigame" class="vn-minigame" role="group" aria-label="小游戏" hidden>
+        <canvas id="minigame-canvas" class="minigame-canvas" width="1280" height="720" tabindex="0" role="application" aria-label="小游戏画面" aria-describedby="minigame-help"></canvas>
+        <p id="minigame-hud" class="sr-only"></p>
+        <p id="minigame-help" class="sr-only"></p>
+        <p id="minigame-live" class="sr-only" aria-live="polite"></p>
+        <button type="button" id="minigame-pause" class="minigame-pause" data-action="pause" aria-label="暂停小游戏">Ⅱ</button>
+        <p id="minigame-fallback" class="minigame-fallback" hidden>小游戏无法载入；按 Esc 可暂停。</p>
+      </div>
       <div id="vn-result" class="vn-result" role="group" aria-label="结算" hidden></div>
 
       <!-- 章节标题卡：全屏，1200ms 自动关 -->

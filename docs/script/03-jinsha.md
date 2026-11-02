@@ -16,7 +16,7 @@
 【张老幺】多一个，沉一个。你说呢？
 【旁白】他把人一个一个数上船。数完，又数一遍。
 
-【小游戏】boat｜duration=90, boats=6, capacity=8, trip=12s, fatigue=+8s, rest=-12s, enemy=120s
+【小游戏】boat｜duration=90, boats=6, capacity=8, crewPerBoat=3, plannedTrips=18, outbound=12s, inbound=12s, fatigue=12/leg, rest=-12s, enemy=120s
 
 【结算】渡江｜过了多少人 / 留在江东岸的；不评分
 【旁白】七天七夜。船工的号子从早喊到晚，最后哑成气音。

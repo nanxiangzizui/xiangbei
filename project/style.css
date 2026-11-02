@@ -1394,16 +1394,85 @@ a:focus-visible,
   }
 }
 
-/* 小游戏入口占位与行囊结算：同尺寸面板，只换内容 */
-.vn-seam,
+/* 小游戏覆盖层：单画布铺满舞台，DOM 只留暂停与可访问文本 */
+.vn-minigame {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-choice);
+  overflow: hidden;
+  background: var(--night);
+}
+
+.minigame-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--night);
+  touch-action: none;
+}
+
+.minigame-canvas:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--cinnabar);
+}
+
+.minigame-pause {
+  position: absolute;
+  right: 16px;
+  top: 24px;
+  width: 96px;
+  height: 96px;
+  z-index: 2;
+  color: var(--paper-hi);
+  background: var(--scrim);
+  border: var(--border) solid var(--paper-a72);
+  border-radius: var(--radius);
+  font-family: var(--font-num);
+  font-size: 30px;
+}
+
+.minigame-fallback {
+  position: absolute;
+  left: 360px;
+  top: 300px;
+  width: 560px;
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--paper-hi);
+  background: var(--scrim);
+  border: var(--border) solid var(--ember);
+  border-radius: var(--radius);
+  text-align: center;
+  z-index: 3;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 行囊/弃物/渡口/铁索结算：DOM 清单，不评分 */
 .vn-result {
   position: absolute;
   left: 360px;
+  top: 170px;
+  width: 560px;
+  height: 380px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5);
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
   z-index: var(--z-choice);
   background-color: var(--paper-hi);
   background-image: var(--paper-texture);
@@ -1413,19 +1482,11 @@ a:focus-visible,
   box-shadow: 4px 4px 0 var(--shadow);
 }
 
-.vn-seam {
-  top: 240px;
-  width: 560px;
-  height: 260px;
+/* 结算是阅读区，不是控件；焦点落在容器只为让读屏从标题开始读。 */
+.vn-result:focus {
+  outline: none;
 }
 
-.vn-result {
-  top: 220px;
-  width: 560px;
-  height: 300px;
-}
-
-.vn-seam__title,
 .vn-result__title {
   margin: 0;
   font-family: var(--font-title);
@@ -1451,10 +1512,24 @@ a:focus-visible,
   color: var(--ink-muted);
 }
 
+.vn-result__stats {
+  margin: 0;
+  font-family: var(--font-num);
+  font-size: var(--fs-small);
+  line-height: 1.7;
+  color: var(--ink);
+}
+
 .vn-result__lists {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: var(--space-4);
+}
+
+.vn-result__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: auto;
 }
 
 .vn-result__heading {
