@@ -1,0 +1,166 @@
+# 《向北》步骤七测试记录
+
+> 版本：v1.0 · 未打 tag（机器项完成，真人验收待补）
+> 日期：2026-11-02
+> 测试者：DSH 自动化（Edge headless）；真人试玩/计时/外读：未执行
+> 结论：**不可交差（待补真人项）**。自动闸门与 Edge 全流程全绿，但 T20 三次 20 分钟计时、T47 三位试玩、T51 真人外读未完成，按硬验收尚不成立；不 tag、不部署。
+> 阻塞项：T20、T40、T46、T47、T51。其余见 §11 例外。
+
+## 1. 构建与自动闸门
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| 提交基线 | e7dcbaf（步骤六完成）+ 步骤七未提交改动 | git status |
+| node --check | 4/4 OK（engine/story/minigames/art） | docs/evidence/step-07/gates.log |
+| check-build | **36/36** | 同上 |
+| smoke | **46/46** | 同上 |
+| check-script | 7 个剧本文件；禁用词 0、真实人物 0、选项缺项 0 | 同上 |
+| 体积（C05） | JS gzip **75KB**（≤150KB）；CSS gzip **9KB**（≤30KB） | check-build C05 |
+| 正常路径运行 | 0 console error、0 pageerror、0 404、0 外部请求 | 各 result.json |
+| 坏档预期错误 | 3 条 console.error（非法 JSON/版本 99/未知节点）单独归类，不算正常路径 | edge-file-20261102-155121 |
+
+## 2. 浏览器矩阵
+
+| 浏览器 | 版本 | 路径 | 结果 | 证据 |
+|---|---|---|---|---|
+| Edge | 156.0.4314.58 | file:// | 完整流程 + 全部用例通过 | edge-file-20261102-160034 等 |
+| Edge | 156.0.4314.58 | http://127.0.0.1 | 完整流程通过 | edge-http-20261102-160622 |
+| Chrome | 未安装 | — | **未执行**（X1） | C:\Program Files\Google\Chrome\Application\chrome.exe 不存在 |
+| Safari | 无 macOS/iOS | — | **未执行**（X2） | 不把 WebKit 写成 Safari |
+| WebKit 代理 | 未取得 | — | **未执行**；Playwright 下载停在 0% of 197.5 MiB | 仅记录，不替代 Safari |
+
+## 3. 分辨率与输入
+
+| 视口 | 舞台实测 | 结果 | 证据 |
+|---|---|---|---|
+| 1920×1080 | 1920×1080 | PASS，标题/VN/ending 均不出界 | viewport（175810） |
+| 1366×768 | 1365.33×768 | PASS，同上 | 同上 |
+| 1280×720 | 1280×720 | PASS，同上 | 同上 |
+| 844×390 | 693.33×390 | PASS；全流程 200.9s/406 line；四关、ending 五卡可达 | viewport（175810）+ mobile（175745）+ full（175956） |
+| 390×844 | stage display:none | PASS；只显示“请横屏”提示 | viewport（175810） |
+
+- 鼠标：全流程真实点击；键盘：Tab/Shift+Tab、Enter、Space、Esc、1–3、小游戏 1–8+Shift/Enter 通过（T50）。
+- 触摸：844×390 用 hasTouch/isMobile/DPR2 **模拟**，pointer 事件 + 8px slop 通过；真机未验证（X3）。
+- 焦点：暂停焦点陷阱、图鉴焦点陷阱、Esc 关闭回原场景通过。
+
+## 4. P0/P1 用例结果
+
+| 用例 | 结果 | 说明 |
+|---|---|---|
+| T01–T19、T21–T28、T31–T38 | PASS | 沿用步骤一–六已验证项 + 本轮 Edge/file 回归；正常/坏档/图鉴/结局/小游戏/隐私/键盘 |
+| T20 三次 20 分钟计时 | **未执行** | 真人项，见 §5 |
+| T29 手机横屏 | PASS（模拟） | 844×390，非真机 |
+| T30 工具负例 | PASS | C19/C21/C22/删 canvas 均报红（步骤四/六已测） |
+| T39 Chrome 完整流程 | **未执行** | X1 |
+| T40 Safari 真机 | **未执行** | X2 |
+| T41 三档分辨率 | PASS | 1920/1366/1280 + 844；标题/VN/ending 共 22 项断言，均不出界 |
+| T42 手机横竖屏 | PASS（模拟） | 844×390 全流程 200.9s/406 line、四关、ending；触摸 tap；竖屏仅提示 |
+| T43 隐私/存储降级 | PASS | Storage 五方法抛 SecurityError；toast“本局无法存档（浏览器限制），进度只在本次有效”；可继续；0 pageerror |
+| T44 断网 ZIP | PASS | 89,380B/6 文件；--offline 下 smoke 11/11、door 8/8；0 外部请求 |
+| T45 真实后台/锁屏 | 部分 | visibility 属性模拟 hidden→suspended+pause，visible→ready；真机锁屏未验（X5） |
+| T46 主观听感 | **未执行** | 只测到 locked→ready、9 床/12 cue、activeBeds≤1、duck；peak=0.028 不作听感证据（X4） |
+| T47 三位试玩 | **未执行** | 0/3（X8） |
+| T48 手机 ending/暂停 | PASS | 暂停 52×52 CSS px（≥44）；lede 15.17、name 14.08、card p 14.08、stats 14.08 CSS px（≥14）；五卡滚到底可见 |
+| T49 性能/资源 | 部分 | 体积 PASS；fps 未测（X11） |
+| T50 键盘/焦点/可访问性 | PASS | 见 §3 |
+| T51 真人外读 | **未执行** | X9 |
+
+## 5. 三次完整计时
+
+| # | 场景 | 用时 | 结果 | 证据 |
+|---|---|---|---|---|
+| 1 | 正常首玩 | 未执行 | — | 真人项 |
+| 2 | 慢读 | 未执行 | — | 真人项 |
+| 3 | 外部玩家 | 未执行 | — | 真人项 |
+| 参考 | 自动化基线（**不计入 T20**） | **03:10.75** | 407 line；door 64ms、abandon 971ms、boat 89.9s（时间到 12/18）、climb 29.8s | edge-file-20261102-160034 |
+
+> 自动化基线只证明“流程无断链、约 3 分钟可点完”，**不能**替代真人阅读计时。844×390 自动全流程 200.9s/406 line，同理不计入 T20。剧本静态预算 4108 字/19:44，余量仅 16 秒；超时按红线先裁草地、再裁金沙江、最后遵义改纯对话（第三刀须用户确认）。
+
+## 6. 四关、图鉴、结局
+
+| 项 | 结果 |
+|---|---|
+| 门板（正常） | 1.0s；结果无 success/score；可再来一次 |
+| 门板（失败/时间到） | 75.0s；行囊 2/6；不重开、不 Game Over |
+| 弃物（正常） | 1.8s；发 2 船 |
+| 弃物（失败/时间到） | 80.0s；已发 0 船；只列留下的 |
+| 渡船（正常/失败） | 90.0s 时间到；12/18 趟；结果只列代价 |
+| 攀索（正常） | 29.1s；16 过/6 暗 |
+| 攀索（失败） | 39.9s；22 灯全暗；“完成”但代价为 0 过 |
+| 图鉴 | 0/7 锁卡提示；7/7 开卡；标题/暂停/结局三入口均可打开并关回 |
+| 结局 | 全亮 5/5、全灰 5/5；七人名单；3 人划名；五卡文案随路径变；存档 1080B<4096 |
+| 点名 | 全答/漏答/替答三态；漏答划名 |
+
+## 7. 离线、隐私、音频、移动
+
+- 离线 ZIP：临时副本仅 6 个运行时文件，解压后断网跑序章 + 门板；0 外部请求；不把测试 ZIP 当正式交付包。
+- 隐私降级：Storage 抛错时提示“本局无法存档（浏览器限制），进度只在本次有效”，仍可继续，0 pageerror。
+- 音频：首次 pointerdown 前 locked，点击后 ready；9 床/12 cue/17 场景；activeBeds≤1；暂停 duck 0.3→继续 1；图鉴 duck 0.45；无音频文件。
+- 移动端修复（S2，已改 project/style.css:2150–2191）：暂停 26→52 CSS px；ending 面板 476.7×303.3→676×372.67，视口内可滚动；正文 14.08、姓名 14.08、卡句 14.08、stats 14.08、lede 15.17 CSS px；五卡滚到底可见。844×390 全流程 200.9s/406 line，门板 221ms、弃物 1.3s、渡船 89.5s、攀索 31.0s，ending 5 卡/7 人。
+
+## 8. 修复清单
+
+| ID | 级别 | 问题 | 处理 | 状态 |
+|---|---|---|---|---|
+| S2-01 | S2 | 844×390 暂停按钮 26×26 CSS px，低于 44 | 移动媒体查询改 96 逻辑（52 CSS） | 已修，复测 PASS |
+| S2-02 | S2 | 844×390 ending 字号 6.5–9.2 CSS px | 移动媒体查询整体放大；面板全舞台可滚 | 已修，复测 PASS |
+| S2-03 | S2 | ending 五卡在 844×390 首屏不可见 | 面板 overflow-y:auto；滚动可达（非首屏展示） | 已缓解，保留 |
+| S2-04 | S2 | 手机 ending 滚到底仍看不到第五卡（flex 子项收缩 + cards overflow:auto） | 移动媒体查询加 `.xb-ending > * { flex-shrink: 0 }`、cards `overflow: visible`；scrollH 833→1193，五卡可达 | 已修，复测 PASS |
+| S3-01 | S3 | 移动端 stats 数字 13 CSS px（<14） | 移动媒体查询 24→26 逻辑（14.08 CSS） | 已修，复测 PASS |
+| S3-02 | S3 | 自动化脚本 gallery 原只测标题入口 | 补暂停/结局入口（15/15） | 已修 |
+| — | — | 编辑 style.css 时 read 默认 2000 行导致截断 | git checkout 还原后 append；无残留 | 已恢复 |
+
+> 无 S1（白屏/无法通关/存档损坏/四关七注五卡缺失）。S2-01/02/04 已修复并复测；S2-03 是“首屏不展示五卡、滚动可达”的展示取舍；S3 记录不阻塞。
+
+## 9. 外部试玩与真人外读
+
+- 三位同学试玩：**0/3 未执行**。要求至少 1 位不常玩游戏；不指导、不诱导；记录首次卡点、介入、记得谁、5 个固定问题。
+- 真人外读：**未执行**。需回答满崽/门板/湘江/错误卡/点名五问，关闭 step-00 §11.4 的 AI 替代欠账。
+- 在补齐前不得写“试玩通过”，不得 tag。
+
+## 10. 结论
+
+- 机器可复现项：**通过**（Edge 156 headless / Windows 11 / file:// + http + 离线 ZIP）。
+- 真人验收项：**未完成**（T20/T40/T46/T47/T51）。
+- 当前结论：**不可交差（待补真人项）**；补齐后重跑闸门并更新本页，才可提交 tag step-7-done。
+- 不部署、不生成正式 ZIP、不打包字体（步骤八）。
+
+## 11. 例外与交接
+
+| ID | 例外 | 影响 | 交接 |
+|---|---|---|---|
+| X1 | Chrome 未安装，完整流程未跑 | 不能宣称 Chrome 通过 | 装 Chrome stable 后跑 _pw-step7 --browser=chrome --case=full |
+| X2 | Safari/WebKit 不可得 | 不能宣称 Safari 通过 | macOS/iOS 真机跑 T40 |
+| X3 | 真机触摸未验 | 仅模拟 844×390 | 手机横屏实机跑四关+暂停+ending |
+| X4 | 音频主观听感未验 | 只证 API/路由/duck | 扬声器+耳机试听 9 床/12 cue |
+| X5 | 真实后台/锁屏未验 | 只证 visibility 属性模拟 | 真机切后台/锁屏/回来 |
+| X6 | 字体未打包 | 默认落系统宋体/雅黑 | 步骤八决定子集 OFL |
+| X7 | 三次计时未做 | 20 分钟硬验收未成立 | 真人清档计时 3 次 |
+| X8 | 三位试玩未做 | 外部反馈缺失 | 3 人，≥1 不常玩 |
+| X9 | 真人外读未做 | step-00 欠账未关 | 1 人五问 |
+| X10 | 遵义第三刀未决 | 会动 choice.zunyi.admit/五卡 | 若计时超线，先向用户确认 |
+| X11 | 桌面/手机 fps 未采样 | 只证体积，不证帧率 | 用 rAF 采样后补 T49 |
+
+### 复现命令
+
+```powershell
+cd "D:\deepseek harness\新建文件夹"
+node --check project/engine.js; node --check project/story.js
+node --check project/minigames.js; node --check project/art.js
+node project/tools/check-build.js
+node project/tools/smoke.js
+node project/tools/check-script.js docs/script
+
+# Edge 全流程（file / http）
+node project/tools/_pw-step7.js --browser=edge --url=file --case=full
+node project/tools/_pw-step7.js --browser=edge --url=file --case=full --mobile=1
+node project/tools/_pw-step7.js --browser=edge --url=http --case=full
+# 分用例
+node project/tools/_pw-step7.js --browser=edge --url=file --case=all
+# 失败路径（各约 75–80s）
+node project/tools/_pw-step7.js --browser=edge --url=file --case=minigames --game=door --idle=1
+node project/tools/_pw-step7.js --browser=edge --url=file --case=minigames --game=abandon --idle=1
+node project/tools/_pw-step7.js --browser=edge --url=file --case=minigames --game=climb --idle=1
+```
+
+> 真机计时从标题“开始”到 ending 五卡+七人名单稳定；不暂停、不跳过已读、不跳章。记录开始/结束时间与是否超 20:00。

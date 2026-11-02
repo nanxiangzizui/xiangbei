@@ -2146,3 +2146,46 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
     opacity: 0;
   }
 }
+
+
+/* =====================================================================
+   手机横屏（844×390 一类）：舞台整体缩到 54%，逻辑字号必须放大，
+   否则 17px 正文只剩 9 CSS px。暂停热区按 96 逻辑 ≈ 52 CSS px。
+   ===================================================================== */
+@media (max-height: 500px) and (orientation: landscape) {
+  .vn-pause {
+    left: 1172px;
+    top: 12px;
+    width: 96px;
+    height: 96px;
+    font-size: 36px;
+  }
+
+  .xb-ending {
+    left: 16px;
+    top: 16px;
+    width: 1248px;
+    height: 688px;
+    gap: var(--space-3);
+    padding: 24px 32px;
+  }
+
+  .xb-ending__title { font-size: 42px; }
+  .xb-ending__date { font-size: 24px; letter-spacing: 1px; }
+  .xb-ending__lede { font-size: 28px; letter-spacing: 0; }
+  .xb-ending__cols { grid-template-columns: 1fr; gap: var(--space-3); }
+  .xb-ending__label { font-size: 22px; letter-spacing: 2px; }
+  .xb-ending__names { max-height: none; font-size: 26px; line-height: 1.5; }
+  .xb-ending__name { height: 40px; }
+  .xb-ending__name-status { font-size: 18px; }
+  .xb-ending__stats { font-size: 26px; line-height: 1.5; }
+  .xb-ending > * { flex-shrink: 0; }
+  .xb-ending__cards { grid-template-columns: repeat(2, 1fr); max-height: none; overflow: visible; gap: var(--space-3); }
+  .xb-ending__card { height: auto; min-height: 112px; padding: var(--space-3); }
+  .xb-ending__card h3 { margin-bottom: 4px; font-size: 26px; }
+  .xb-ending__card p { font-size: 26px; line-height: 1.35; }
+  .xb-ending__disclaimer { font-size: 18px; }
+  .xb-ending__actions .xb-btn { min-height: 64px; padding: 0 24px; font-size: 24px; }
+  .xb-pause { width: 520px; padding: var(--space-6); }
+  .xb-pause .pause-button { min-height: 72px; font-size: 26px; }
+}
