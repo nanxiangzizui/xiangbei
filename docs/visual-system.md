@@ -2,7 +2,7 @@
 
 > 本文件是视觉的唯一规格：设计令牌、字体、组件壳、画布契约、构图与性能预算。
 > 坐标只在 `docs/ui-layout.md`；存档只在 `docs/state-schema.md`；冲突时以「计划书 → .claude/CLAUDE.md → ui-layout/state-schema → 本文件」处理，不静默分叉。
-> 状态：步骤二定稿（2026-11-01）。步骤三–八只在本文件上追加，不改令牌含义。
+> 状态：步骤二定稿（2026-11-01）；步骤六追加动效令牌与特效层（2026-11-02）。步骤三–八只在本文件上追加，不改令牌含义。
 
 ## 1. 目的与边界
 
@@ -84,7 +84,7 @@
 | 间距 | `--space-1`…`--space-8` = 4/8/12/16/24/32/64 |
 | 边框 | `--border` 1px、`--border-strong` 2px、`--border-accent` 4px、`--radius` 2px |
 | 层级 | art 0 → scene 1 → figure 10 → hud 20 → dialogue 30 → choice 40 → modal 50 → transition 60 → pause 80 → toast 90 → debug 95 → orientation 100 |
-| 动效 | `--dur-fast` 120ms、`--dur-med` 240ms、`--dur-slow` 480ms；`--ease-out`、`--ease-in` |
+| 动效 | `--dur-fast` 120ms、`--dur-med` 240ms、`--dur-slow` 480ms；`--dur-transition` 480ms、`--dur-flash` 120ms、`--dur-shake` 180ms、`--dur-strike` 420ms、`--strike-stagger` 90ms；`--ease-out`、`--ease-in` |
 | 焦点 | `--focus-w` 2px、`--focus-offset` 2px、`--focus-color`、`--focus-gap` |
 | 舞台 | `--stage-w` 1280、`--stage-h` 720、`--scale` 1（由引擎写入） |
 
@@ -165,3 +165,19 @@
 | 零错误 | Console 0 error、0 404 | B1–B14 |
 
 与 `docs/quality-bar.md` 对应：可读性 → §2.2/§4；可操作性 → §4 焦点与 44px；性能 → 本节单帧预算；无外部素材 → §3 + C09/C12。
+
+## 9. 特效层（步骤六追加）
+
+> 动效只为“换场、危险、记住名字”服务；不做装饰性粒子、不做持续闪烁、不做屏幕抖动循环。
+
+| 层 | 位置/尺寸 | 令牌 | 规则 |
+|---|---|---|---|
+| `#fx-layer` | `#stage` 内 0,0,1280×720；`#scene-ending` 后、`#pause` 前 | `--z-transition` 60 | 绝对定位、`inset:0`、`overflow:hidden`、`pointer-events:none`、`aria-hidden="true"`；不接收点击 |
+| `.fx-wipe` | 层内满屏 | `--dur-transition` 480ms | 纸白（title/map）或夜蓝（vn/ending）渐变横擦；首载不播；1.2s 内以最后一次为准；不阻塞输入 |
+| `.fx-flash` | 层内满屏 | `--dur-flash` 120ms、`--fx-flash-opacity` .12 | 泸定桥首次进入闪一次；间隔 ≥2000ms；reduced 不闪 |
+| `#stage.is-shaking` | 舞台整体 | `--dur-shake` 180ms、`--fx-shake-distance` 2px | 攀索 `stats.lost>0` 时；keyframes 保留 `scale(var(--scale))`，不破坏等比缩放 |
+| `.xb-ending__name-text::after` | 名字文字内 | `--dur-strike` 420ms、`--strike-stagger` 90ms | 2px 墨线 `scaleX(0→1)` 划名；只对 `li.is-missed`；正常延迟 500ms + 90ms/行 |
+
+- 划名保留 `text-decoration: line-through` 作无动画回退；reduced 时墨线立即到 `scaleX(1)`，不依赖全局 `animation:none`。
+- 系统 reduced 与 `html.reduce-motion` 双入口都关闭 wipe/flash/shake；不把“减少动效”做成只关 CSS 不关 JS 的半套。
+- 特效层不新增背景画布；不改变 §6 的单画布契约。

@@ -1,8 +1,9 @@
-# 《向北》存档与旗标（v1.1 · 步骤五）
+# 《向北》存档与旗标（v1.2 · 步骤六）
 
 > 唯一存档键：`xiangbei.save.v1`；所有读写 try/catch；旗标只增不改名，改名必须迁移。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > 步骤五新增：`scene:"ending"`、ending 快照、`choice.zunyi.admit`、点名/图鉴/章末记忆；`PERSIST_KEYS` 仍是 11 键。
+> 步骤六不新增存档字段：音量/静音/减少动效继续用 `settings` 里已有的 `volume` / `muted` / `reducedMotion`；`SAVE_VERSION` 仍为 1。
 
 ## 1. 存档 JSON（示例）
 
@@ -192,7 +193,7 @@
 
 - **每个 line beat 推进即保存**：一次推进 = 一次 `xiangbei.save.v1` 写入；单次序列化目标 <4KB，4096 字节是上限（超限视为 schema 设计错误：不写、控制台报错、提示“存档异常”）。
 - 刷新/关闭恢复到当前 beat，不回退到关卡开头。
-- 保存点：进入新章、每个选项结算（含超时）、小游戏结算应用后（不保存小游戏中间态）、记名/点名交互结束、设置变更、结局生成、标题卡关闭、史实注关闭（同时写入 `codex`）、结算面板继续。
+- 保存点：进入新章、每个选项结算（含超时）、小游戏结算应用后（不保存小游戏中间态）、记名/点名交互结束、设置变更（含音量滑块实时写入）、结局生成、标题卡关闭、史实注关闭（同时写入 `codex`）、结算面板继续。
 - 点名中间态**不写档**：刷新回 w026 开头重念；ending 快照在点名结束时先写 names/answered/missed，w900 再补 stats/cards。
 - `paused`（暂停）、打字机进度、`seenNodes`（跳过已读）是运行时状态：**不写存档**，刷新后回到节点开头。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
@@ -208,7 +209,8 @@
 
 ## 7. 调试
 
-- `?debug=1`：右上角显示 scene/chapterId/nodeId/flags 摘要/ending/save 字节；不显示在正式版。
+- `?debug=1`：右上角显示 scene/chapterId/nodeId/flags 摘要/ending/save 字节，以及 `audio=locked|ready|suspended|off`、`bed=`、`duck=`、`beds=`、`peak=`；不显示在正式版。
+- `?fx=wipe|flash|shake|strike`：手工触发一次动效，用于核对转场/闪白/震动/划名；不写档。
 - `?reset=1`：清空存档并回标题。
 - `?chapter=<id>&node=<id>`：直接落到七章任一节点；**不补章末记忆、不跳章末**，用于逐章测试。
 - `?minigame=door|abandon|boat|climb`：单独试玩；不写档、不推进剧情；与 `?chapter` 同时出现时优先小游戏。

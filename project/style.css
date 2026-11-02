@@ -103,6 +103,13 @@
   --dur-fast: 120ms;
   --dur-med: 240ms;
   --dur-slow: 480ms;
+  --dur-transition: 480ms;
+  --dur-flash: 120ms;
+  --dur-shake: 180ms;
+  --dur-strike: 420ms;
+  --strike-stagger: 90ms;
+  --fx-flash-opacity: 0.12;
+  --fx-shake-distance: 2px;
   --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --focus-w: 2px;
@@ -170,6 +177,69 @@ body {
   position: absolute;
   inset: 0;
   z-index: var(--z-scene);
+}
+
+/* ---------- 特效层：墨色横擦 + 软闪白（步骤六） ---------- */
+.fx-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-transition);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fx-wipe,
+.fx-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fx-wipe {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.fx-layer.is-paper .fx-wipe {
+  background: linear-gradient(90deg, transparent 0%, var(--paper) 14%, var(--paper-hi) 50%, var(--paper) 86%, transparent 100%);
+}
+
+.fx-layer.is-night .fx-wipe {
+  background: linear-gradient(90deg, transparent 0%, var(--night-deep) 14%, var(--night) 50%, var(--night-deep) 86%, transparent 100%);
+}
+
+.fx-layer.is-wiping .fx-wipe {
+  animation: xb-fx-wipe var(--dur-transition) var(--ease-out) both;
+}
+
+.fx-flash {
+  background: var(--paper-hi);
+  opacity: 0;
+}
+
+.fx-layer.is-flashing .fx-flash {
+  animation: xb-fx-flash var(--dur-flash) var(--ease-out) both;
+}
+
+#stage.is-shaking {
+  animation: xb-fx-shake var(--dur-shake) linear both;
+}
+
+@keyframes xb-fx-wipe {
+  0% { transform: translateX(-100%); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 1; }
+}
+
+@keyframes xb-fx-flash {
+  0% { opacity: 0; }
+  28% { opacity: var(--fx-flash-opacity); }
+  100% { opacity: 0; }
+}
+
+@keyframes xb-fx-shake {
+  0%, 100% { transform: translateX(0) scale(var(--scale)); }
+  25% { transform: translateX(calc(var(--fx-shake-distance) * -1)) scale(var(--scale)); }
+  75% { transform: translateX(var(--fx-shake-distance)) scale(var(--scale)); }
 }
 
 button {
@@ -1109,9 +1179,39 @@ a:focus-visible,
   color: var(--ink-muted);
 }
 
+.xb-ending__name-text {
+  position: relative;
+  display: inline-block;
+}
+
 .xb-ending__name.is-missed .xb-ending__name-text {
   color: var(--ink-muted);
   text-decoration: line-through;
+}
+
+/* 墨迹划名：每行一道手写横线，延迟由 --strike-delay 控制 */
+.xb-ending__name.is-struck .xb-ending__name-text {
+  text-decoration-color: transparent;
+}
+
+.xb-ending__name.is-struck .xb-ending__name-text::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--ink-muted);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: xb-fx-strike var(--dur-strike) var(--ease-out) both;
+  animation-delay: var(--strike-delay, 0ms);
+}
+
+@keyframes xb-fx-strike {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .xb-ending__name.is-player .xb-ending__name-status {
@@ -2020,4 +2120,29 @@ a:focus-visible,
 html.reduce-motion * {
   transition: none !important;
   animation: none !important;
+}
+
+/* 减少动效时，划名与转场直接到终态（上面的 animation:none 会停在起始帧） */
+html.reduce-motion .xb-ending__name.is-struck .xb-ending__name-text::after {
+  animation: none !important;
+  transform: scaleX(1);
+}
+
+html.reduce-motion .fx-layer.is-wiping .fx-wipe,
+html.reduce-motion .fx-layer.is-flashing .fx-flash {
+  animation: none !important;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xb-ending__name.is-struck .xb-ending__name-text::after {
+    animation: none !important;
+    transform: scaleX(1);
+  }
+
+  .fx-layer.is-wiping .fx-wipe,
+  .fx-layer.is-flashing .fx-flash {
+    animation: none !important;
+    opacity: 0;
+  }
 }

@@ -118,6 +118,12 @@
       </div>
     </section>
 
+    <!-- 特效层：墨色横擦转场 + 软闪白；不接收点击，不朗读 -->
+    <div id="fx-layer" class="fx-layer" aria-hidden="true">
+      <div class="fx-wipe"></div>
+      <div class="fx-flash"></div>
+    </div>
+
     <!-- 暂停遮罩：继续 / 设置 / 返回地图 / 回到标题（ui-layout §7） -->
     <div id="pause" class="overlay" hidden>
       <div id="pause-menu" class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
@@ -147,7 +153,7 @@
           </div>
         </div>
         <div class="xb-settings__row">
-          <span class="xb-settings__label">音量<small class="xb-settings__hint">音效步骤六接入</small></span>
+          <span class="xb-settings__label">音量<small class="xb-settings__hint">首次点击后生效</small></span>
           <div class="xb-settings__control">
             <input id="set-volume" class="xb-range" type="range" min="0" max="100" step="5" value="60" aria-label="音量">
             <span id="set-volume-value" class="xb-settings__value">60</span>

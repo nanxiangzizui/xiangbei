@@ -14,7 +14,7 @@ const JS_FILES = ["art.js", "story.js", "minigames.js", "engine.js"];
 const SCRIPT_ORDER = ["art.js", "story.js", "minigames.js", "engine.js"];
 // 与 engine.js 的 REQUIRED_IDS 对齐：缺一个引擎就抛错，所以列表必须逐字一致
 const REQUIRED_IDS = [
-  "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending",
+  "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending", "fx-layer",
   "ending-title", "ending-date", "ending-lede", "ending-names", "ending-stats", "ending-cards",
   "ending-disclaimer", "ending-home", "ending-codex",
   "pause", "pause-menu", "toast", "debug", "orientation",
@@ -918,6 +918,157 @@ function checkEndingSnapshot() {
   notes.push("C30 OK ending 快照 stats/names/cards/answered/missed 形状；11 键；" + bytes + "B < 4096");
 }
 
+// C31：无音频文件、无 new Audio，AudioContext 只在 engine.js 的 XB.audio
+function checkAudioAssets() {
+  var code = JS_FILES.map(function (file) {
+    return stripComments(readProject(file));
+  }).join("\n");
+  var audioExt = /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)\b/i;
+  if (audioExt.test(code)) fail("C31", "JS 里出现音频文件引用");
+  if (/\bnew\s+Audio\s*\(/.test(code)) fail("C31", "出现 new Audio(");
+  JS_FILES.forEach(function (file) {
+    if (file === "engine.js") return;
+    var js = stripComments(readProject(file));
+    if (/AudioContext|webkitAudioContext/.test(js)) fail("C31", file + " 创建了 AudioContext，应只在 XB.audio");
+  });
+  var engine = stripComments(readProject("engine.js"));
+  if (engine.indexOf("var Ctor = window.AudioContext || window.webkitAudioContext;") === -1) fail("C31", "缺 AudioContext 构造点");
+  if ((engine.match(/new Ctor\(\)/g) || []).length !== 1) fail("C31", "engine.js 应只有一个 new Ctor() 创建点");
+  var html = readProject("index.html");
+  if (/<audio\b/i.test(html)) fail("C31", "index.html 含 <audio>");
+  if (audioExt.test(html)) fail("C31", "index.html 引用音频文件");
+  var assetDir = path.join(PROJECT_DIR, "assets");
+  var audioFiles = [];
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+    fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
+      var full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(entry.name)) audioFiles.push(full);
+    });
+  }
+  walk(assetDir);
+  if (audioFiles.length) fail("C31", "assets 里有音频文件：" + audioFiles.map(function (file) { return path.basename(file); }).join(","));
+  notes.push("C31 OK 无音频文件、无 new Audio、AudioContext 只在 XB.audio");
+}
+
+// C32：手势解锁、可见性暂停、压缩器、无 setInterval
+function checkAudioLifecycle() {
+  var engine = stripComments(readProject("engine.js"));
+  if (engine.indexOf("function unlockAudio(") === -1) fail("C32", "缺 unlockAudio");
+  if (!/function onPointerDown\(event\) \{\s*XB\.audio\.unlock\(\);/.test(engine)) fail("C32", "onPointerDown 首行未 unlock");
+  if (!/function onKeyDown\(event\) \{\s*XB\.audio\.unlock\(\);/.test(engine)) fail("C32", "onKeyDown 首行未 unlock");
+  if (engine.indexOf('document.addEventListener("visibilitychange"') === -1) fail("C32", "缺 visibilitychange");
+  if (engine.indexOf("XB.audio.suspend()") === -1 || engine.indexOf("XB.audio.resume()") === -1) fail("C32", "可见性切换未 suspend/resume");
+  if (engine.indexOf("setTargetAtTime") === -1) fail("C32", "增益未用 setTargetAtTime");
+  if (engine.indexOf("createDynamicsCompressor") === -1) fail("C32", "缺 DynamicsCompressor");
+  if (/setInterval\s*\(/.test(engine)) fail("C32", "engine.js 不应使用 setInterval");
+  var applyStart = engine.indexOf("function applyAudioSettings(");
+  var applyEnd = engine.indexOf("\n  function ", applyStart + 10);
+  var applyBody = applyStart >= 0 ? engine.slice(applyStart, applyEnd > applyStart ? applyEnd : applyStart + 900) : "";
+  if (!applyBody) fail("C32", "缺 applyAudioSettings");
+  if (/unlock|AudioContext|new\s+Audio/.test(applyBody)) fail("C32", "applyAudioSettings 不应创建上下文或解锁");
+  notes.push("C32 OK 首次手势解锁、hidden suspend/visible resume、压缩器、无 setInterval");
+}
+
+// C33：9 张床、17 个场景映射、未知回退
+function checkAudioBeds() {
+  var XB = loadGame();
+  var beds = XB.audio.BEDS;
+  var expectedBeds = ["wind_title", "yudu", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "ending"];
+  if (beds.length !== 9) fail("C33", "BEDS 应为 9 张，实际 " + beds.length);
+  expectedBeds.forEach(function (id) {
+    if (beds.indexOf(id) === -1) fail("C33", "BEDS 缺 " + id);
+  });
+  var map = XB.audio.BED_BY_SCENE;
+  if (!map || Object.keys(map).length !== 17) fail("C33", "BED_BY_SCENE 应为 17 项，实际 " + (map ? Object.keys(map).length : 0));
+  ["title", "map", "ending"].forEach(function (scene) {
+    if (!map || !map[scene]) fail("C33", "BED_BY_SCENE 缺显式场景 " + scene);
+  });
+  var bgs = {};
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.bg) bgs[node.bg] = true;
+    });
+  });
+  Object.keys(bgs).forEach(function (bg) {
+    if (!map || !map[bg]) fail("C33", "剧情背景没有床：" + bg);
+  });
+  if (!map || map.luding_bridge !== "luding") fail("C33", "泸定桥应映射 luding");
+  if (XB.audio.bedForScene("no_such_scene") !== "wind_title") fail("C33", "未知场景应回退 wind_title");
+  if (XB.audio.CUES.length !== 12) fail("C33", "CUES 应为 12 个，实际 " + XB.audio.CUES.length);
+  notes.push("C33 OK 9 床 / 17 场景 / " + Object.keys(bgs).length + " 个剧情背景全覆盖 / 未知回退");
+}
+
+// C34：设置接线，存档仍 11 键且不新增 audio 键
+function checkAudioSettings() {
+  var XB = loadGame();
+  if (XB.core.PERSIST_KEYS.length !== 11) fail("C34", "PERSIST_KEYS 应仍为 11 键，实际 " + XB.core.PERSIST_KEYS.length);
+  if (XB.core.PERSIST_KEYS.indexOf("audio") !== -1) fail("C34", "PERSIST_KEYS 不应新增 audio");
+  var settingsKeys = Object.keys(XB.core.DEFAULT_SETTINGS);
+  if (settingsKeys.length !== 6) fail("C34", "settings 应仍为 6 键，实际 " + settingsKeys.length);
+  settingsKeys.forEach(function (key) {
+    if (/audio|sound|music/.test(key)) fail("C34", "settings 不应新增音频键 " + key);
+  });
+  var engine = stripComments(readProject("engine.js"));
+  if (engine.indexOf("XB.audio.applySettings(state.settings)") === -1) fail("C34", "applySettings 未接音频");
+  if (engine.indexOf("XB.audio.applySettings({ volume: state.settings.volume })") === -1) fail("C34", "音量滑块未实时应用");
+  if (engine.indexOf("XB.fx.setReduced(state.settings.reducedMotion === true)") === -1) fail("C34", "applySettings 未接 fx reduced");
+  notes.push("C34 OK 音量实时接线、设置 6 键、存档 11 键、无 audio 持久键");
+}
+
+// C35：特效层位置、样式、reduced 入口
+function checkFxLayer() {
+  var html = readProject("index.html");
+  var css = readProject("style.css");
+  var layerAt = html.indexOf('id="fx-layer"');
+  var endingAt = html.indexOf('id="scene-ending"');
+  var pauseAt = html.indexOf('id="pause"');
+  if (layerAt === -1) fail("C35", "index.html 缺 #fx-layer");
+  if (layerAt !== -1 && (layerAt < endingAt || layerAt > pauseAt)) fail("C35", "#fx-layer 应在 #scene-ending 之后、#pause 之前");
+  if (layerAt !== -1) {
+    var openTag = html.slice(layerAt, html.indexOf(">", layerAt) + 1);
+    if (openTag.indexOf('aria-hidden="true"') === -1) fail("C35", "#fx-layer 应 aria-hidden");
+    if (openTag.indexOf('class="fx-layer"') === -1) fail("C35", "#fx-layer 应带 fx-layer 类");
+    if (html.indexOf('class="fx-wipe"') === -1 || html.indexOf('class="fx-flash"') === -1) fail("C35", "缺 fx-wipe/fx-flash 子层");
+  }
+  if (!/\.fx-layer\s*\{/.test(css)) fail("C35", "style.css 缺 .fx-layer");
+  if (!/--z-transition\s*:\s*60/.test(css)) fail("C35", "--z-transition 应为 60");
+  if (!/\.xb-ending__name\.is-struck/.test(css)) fail("C35", "style.css 缺 .is-struck 划名");
+  if (css.indexOf("prefers-reduced-motion: reduce") === -1) fail("C35", "style.css 缺系统 reduced 规则");
+  if (css.indexOf("html.reduce-motion") === -1) fail("C35", "style.css 缺设置 reduced 规则");
+  notes.push("C35 OK #fx-layer 位置/aria、wipe/flash 子层、划名与两套 reduced 规则");
+}
+
+// C36：闪白/震动/划名上限，减少动效时不抛错
+function checkFxLimits() {
+  var XB = loadGame();
+  var limits = XB.fx && XB.fx.LIMITS;
+  if (!limits) {
+    fail("C36", "缺 XB.fx.LIMITS");
+    return;
+  }
+  if (!(limits.flashMs <= 150)) fail("C36", "flashMs 应 ≤150");
+  if (!(limits.flashGapMs >= 2000)) fail("C36", "flashGapMs 应 ≥2000");
+  if (!(limits.flashOpacity <= 0.12)) fail("C36", "flashOpacity 应 ≤0.12");
+  if (!(limits.shakeMs <= 200)) fail("C36", "shakeMs 应 ≤200");
+  if (!(limits.shakePx <= 2)) fail("C36", "shakePx 应 ≤2");
+  if (!(limits.strikeMs <= 500)) fail("C36", "strikeMs 应 ≤500");
+  if (!(limits.strikeMs > 0 && limits.wipeMs > 0)) fail("C36", "动效时长应为正数");
+  try {
+    XB.fx.setReduced(true);
+    if (XB.fx.isReduced() !== true) fail("C36", "setReduced(true) 未生效");
+    XB.fx.setReduced(false);
+  } catch (error) {
+    fail("C36", "setReduced 抛错：" + error.message);
+  }
+  var css = readProject("style.css");
+  if (css.indexOf("prefers-reduced-motion") === -1) fail("C36", "CSS 缺系统 reduced 分支");
+  var engine = stripComments(readProject("engine.js"));
+  if ((engine.match(/fxReduced\(\)/g) || []).length < 3) fail("C36", "转场/闪白/震动应各有 reduced 守卫");
+  notes.push("C36 OK 闪白 " + limits.flashMs + "ms/" + limits.flashOpacity + "、震动 " + limits.shakeMs + "ms/" + limits.shakePx + "px、划名 " + limits.strikeMs + "ms");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -948,6 +1099,12 @@ checkRollcallData();
 checkGalleryDom();
 checkChapterMemory();
 checkEndingSnapshot();
+checkAudioAssets();
+checkAudioLifecycle();
+checkAudioBeds();
+checkAudioSettings();
+checkFxLayer();
+checkFxLimits();
 
 notes.forEach(function (line) {
   console.log(line);
@@ -960,5 +1117,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 30 项全绿");
+  console.log("OK：构建自检 36 项全绿");
 }

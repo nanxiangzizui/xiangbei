@@ -670,6 +670,71 @@ check("S40", "点名状态机数据：7 名、替答/漏答、快照保留", fun
   assert(!/\bsuccess\b|\bscore\b/i.test(JSON.stringify(node)), "点名不评分");
 });
 
+check("S41", "音频 API / 9 床 / 12 cue", function () {
+  assertEqual(XB.audio.BEDS.length, 9, "BEDS");
+  assertEqual(XB.audio.CUES.length, 12, "CUES");
+  ["unlock", "applySettings", "setScene", "bedForScene", "setDuck", "cue", "suspend", "resume", "stats", "isReady"].forEach(function (name) {
+    assertEqual(typeof XB.audio[name], "function", "XB.audio." + name);
+  });
+  assertEqual(XB.audio.isReady(), false, "加载时不创建 AudioContext");
+});
+
+check("S42", "原创五音动机频率与顺序", function () {
+  var motif = XB.audio.MOTIF;
+  assertEqual(motif.map(function (note) { return note.note; }), ["D4", "F4", "G4", "A4", "C5"], "音名");
+  assertEqual(motif.map(function (note) { return note.freq; }), [293.66, 349.23, 392.00, 440.00, 523.25], "频率");
+  assertEqual(motif.map(function (note) { return note.start; }), [0, 0.55, 0.90, 1.45, 1.80], "起点");
+  assertEqual(motif.map(function (note) { return note.dur; }), [0.45, 0.25, 0.45, 0.25, 0.90], "时值");
+});
+
+check("S43", "14 个剧情背景全部有床", function () {
+  var bgs = {};
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.bg) bgs[node.bg] = true;
+    });
+  });
+  assertEqual(Object.keys(bgs).length, 14, "剧情背景数");
+  Object.keys(bgs).forEach(function (bg) {
+    assert(XB.audio.BED_BY_SCENE[bg], "缺床 " + bg);
+  });
+  ["title", "map", "ending"].forEach(function (scene) {
+    assert(XB.audio.BED_BY_SCENE[scene], "缺显式场景 " + scene);
+  });
+  assertEqual(XB.audio.bedForScene("no_such_scene"), "wind_title", "未知回退");
+});
+
+check("S44", "cue 白名单与无 setInterval", function () {
+  assertEqual(new Set(XB.audio.CUES).size, 12, "cue 唯一");
+  assertEqual(XB.audio.cue("no_such_cue"), false, "白名单外不发声");
+  assertEqual(XB.audio.cue("chapter"), false, "无 ctx 不发声");
+  var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
+  assert(!/setInterval\s*\(/.test(engine), "engine 不应 setInterval");
+});
+
+check("S45", "无上下文时 applySettings 不抛错", function () {
+  XB.audio.applySettings({ volume: 0.33, muted: true });
+  assertEqual(XB.audio.stats().volume, 0.33, "音量已记录");
+  assertEqual(XB.audio.stats().muted, true, "静音已记录");
+  assertEqual(XB.audio.stats().state, "locked", "无 ctx 仍 locked");
+  XB.audio.applySettings({ volume: 0.6, muted: false });
+});
+
+check("S46", "fx 上限与 reduced 分支不抛错", function () {
+  var limits = XB.fx.LIMITS;
+  assert(limits.flashMs <= 150 && limits.flashGapMs >= 2000, "闪白上限");
+  assert(limits.shakeMs <= 200 && limits.shakePx <= 2, "震动上限");
+  assert(limits.strikeMs <= 500, "划名上限");
+  XB.fx.setReduced(true);
+  assertEqual(XB.fx.isReduced(), true, "reduced 开");
+  assertEqual(XB.fx.transition("title"), false, "reduced 不转场");
+  assertEqual(XB.fx.flash(), false, "reduced 不闪白");
+  assertEqual(XB.fx.shake(), false, "reduced 不震动");
+  XB.fx.reset();
+  XB.fx.setReduced(false);
+  assertEqual(XB.fx.isReduced(), false, "reduced 关");
+});
+
 if (failures.length) {
   failures.forEach(function (line) {
     console.log("× " + line);
@@ -677,5 +742,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 项失败");
   process.exitCode = 1;
 } else {
-  console.log("OK：纯状态层烟测 40 项全绿");
+  console.log("OK：纯状态层烟测 46 项全绿");
 }

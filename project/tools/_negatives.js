@@ -3,12 +3,17 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const ROOT = path.resolve(__dirname, "..", "..");
-const OUT = path.join(ROOT, "docs", "evidence", "step-05");
+const OUT = path.join(ROOT, "docs", "evidence", "step-06");
+fs.mkdirSync(OUT, { recursive: true });
 const cases = [
   { id: "N5", file: "project/story.js", from: '{ id: "w900", type: "end", next: "ending" }', to: '{ id: "w900", type: "end", next: "map" }', want: ["C24", "C26", "S34"] },
   { id: "N6", file: "project/engine.js", from: "ideal: isFiniteNumber(flags.fire) && flags.fire >= 20,", to: "ideal: true,", want: ["C26", "S37"] },
   { id: "N7", file: "project/story.js", from: "duration: 45,", to: "duration: 30,", want: ["C27", "S40"] },
-  { id: "N8", file: "project/engine.js", from: "cards: cards", to: "cards: cards,\n      extra: true", want: ["C30", "S38"] }
+  { id: "N8", file: "project/engine.js", from: "cards: cards", to: "cards: cards,\n      extra: true", want: ["C30", "S38"] },
+  { id: "N9", file: "project/engine.js", from: "  function unlockAudio() {", to: "  function unlockAudio() {\n    new Audio(\"x.mp3\");", want: ["C31", "C09"] },
+  { id: "N10", file: "project/engine.js", from: "    flashMs: 120,\r\n    flashGapMs: 2000,", to: "    flashMs: 400,\r\n    flashGapMs: 100,", want: ["C36"] },
+  { id: "N11", file: "project/index.html", from: 'id="fx-layer" class="fx-layer"', to: 'class="fx-layer"', want: ["C03", "C35"] },
+  { id: "N12", file: "project/engine.js", from: "  function unlockAudio() {", to: "  function unlockAudio() {\n    setInterval(function () {}, 1000);", want: ["C32"] }
 ];
 const results = [];
 function run(script, logPath, append) {

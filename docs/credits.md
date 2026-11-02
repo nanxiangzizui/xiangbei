@@ -26,10 +26,17 @@
 - 没有下载、没有 CDN、没有 data URI；`@font-face` 里不出现 `url(`（C12 检查）。
 - 子集化 + 随 ZIP 附 LICENSE 的欠账留步骤八；上线前必须补 LICENSE 与体积核算（≤300KB）。
 
+### 1.2 步骤六状态（2026-11-02）
+
+- 仍不打包字体；音频不需要字体授权。
+- 声音全部由 `project/engine.js` 的 `XB.audio` 用 Web Audio 合成：9 张环境床、12 个短 cue、1 段原创五音动机（D4–F4–G4–A4–C5）。
+- 没有音频文件、没有采样、没有第三方音源；噪声 buffer 与振荡器都在运行时生成。
+- 音效设计、五音音高序列为项目原创；不涉及外部音乐版权。
+
 ## 2. 素材
 
 - 图像：全部 Canvas/SVG 程序化版画；不使用影视/游戏/网络图片。
-- 音频：Web Audio 合成风声、水声、鼓点、口琴五音；不使用音频文件。
+- 音频：Web Audio 实时合成风声、水声、鼓点与原创五音动机；不使用音频文件，不引用任何歌曲旋律。
 - 图标：CSS/内联 SVG 自绘；不用图标库。
 - 参考：界面参考 galgame-d3n.pages.dev 的布局与氛围；不复制其素材/代码。
 - 游戏节奏参考：60 Seconds!、Papers, Please、Mini Metro、Celeste、This War of Mine；只借节奏，不用素材。

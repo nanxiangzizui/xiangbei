@@ -666,6 +666,735 @@
   };
 
   /* =====================================================================
+     XB.audio：Web Audio 合成层
+     首次用户手势前不创建 AudioContext；所有声音由振荡器/噪声实时合成。
+     ===================================================================== */
+
+  var BEDS = {
+    wind_title: {
+      layers: [
+        { type: "lowpass", freq: 650, q: 0.7, gain: 0.12, lfo: { rate: 0.07, depth: 120 } },
+        { type: "lowpass", freq: 320, q: 0.5, gain: 0.05, lfo: { rate: 0.05, depth: 40 } }
+      ],
+      tones: [{ freq: 46, gain: 0.018, type: "sine" }]
+    },
+    yudu: {
+      layers: [
+        { type: "bandpass", freq: 850, q: 0.9, gain: 0.12, lfo: { rate: 0.14, depth: 90 } },
+        { type: "lowpass", freq: 700, q: 0.6, gain: 0.05, lfo: { rate: 0.08, depth: 100 } }
+      ],
+      tones: []
+    },
+    xiangjiang: {
+      layers: [
+        { type: "bandpass", freq: 700, q: 0.8, gain: 0.13, lfo: { rate: 0.16, depth: 110 } },
+        { type: "lowpass", freq: 900, q: 0.6, gain: 0.04, lfo: { rate: 0.07, depth: 80 } }
+      ],
+      tones: [{ freq: 48, gain: 0.04, type: "sine" }]
+    },
+    zunyi: {
+      layers: [
+        { type: "lowpass", freq: 350, q: 0.5, gain: 0.06, lfo: { rate: 0.06, depth: 50 } },
+        { type: "bandpass", freq: 520, q: 0.8, gain: 0.04, lfo: { rate: 0.09, depth: 60 } }
+      ],
+      tones: [{ freq: 98, gain: 0.018, type: "sine" }]
+    },
+    jinsha: {
+      layers: [
+        { type: "bandpass", freq: 1100, q: 0.9, gain: 0.14, lfo: { rate: 0.18, depth: 140 } },
+        { type: "lowpass", freq: 800, q: 0.6, gain: 0.03, lfo: { rate: 0.06, depth: 70 } }
+      ],
+      tones: []
+    },
+    luding: {
+      layers: [
+        { type: "lowpass", freq: 1200, q: 0.5, gain: 0.13, lfo: { rate: 0.1, depth: 180 } },
+        { type: "bandpass", freq: 2400, q: 4, gain: 0.035, lfo: { rate: 0.13, depth: 120 } }
+      ],
+      tones: []
+    },
+    grass: {
+      layers: [
+        { type: "lowpass", freq: 600, q: 0.6, gain: 0.12, lfo: { rate: 0.06, depth: 90 } },
+        { type: "bandpass", freq: 500, q: 0.8, gain: 0.05, lfo: { rate: 0.1, depth: 50 } }
+      ],
+      tones: []
+    },
+    wuqi: {
+      layers: [
+        { type: "lowpass", freq: 700, q: 0.6, gain: 0.1, lfo: { rate: 0.07, depth: 100 } },
+        { type: "bandpass", freq: 420, q: 0.7, gain: 0.04, lfo: { rate: 0.05, depth: 40 } }
+      ],
+      tones: [{ freq: 45, gain: 0.03, type: "sine" }]
+    },
+    ending: {
+      layers: [
+        { type: "lowpass", freq: 600, q: 0.6, gain: 0.09, lfo: { rate: 0.06, depth: 80 } },
+        { type: "bandpass", freq: 480, q: 0.7, gain: 0.03, lfo: { rate: 0.04, depth: 30 } }
+      ],
+      tones: [{ freq: 42, gain: 0.025, type: "sine" }]
+    }
+  };
+
+  var BED_BY_SCENE = {
+    title: "wind_title",
+    map: "wind_title",
+    yudu_river: "yudu",
+    yudu_night: "yudu",
+    xiangjiang_ford: "xiangjiang",
+    xiangjiang_dawn: "xiangjiang",
+    zunyi_hall: "zunyi",
+    zunyi_street: "zunyi",
+    jinsha_river: "jinsha",
+    jinsha_night: "jinsha",
+    luding_bridge: "luding",
+    luding_after: "luding",
+    grass_marsh: "grass",
+    grass_dawn: "grass",
+    wuqi_dawn: "wuqi",
+    wuqi_wall: "wuqi",
+    ending: "ending"
+  };
+
+  var CUES = [
+    "chapter", "choice-select", "choice-timeout", "codex", "drum", "rollcall-answer",
+    "rollcall-miss", "result", "door-place", "boat-oar", "climb-fire", "ending"
+  ];
+
+  var MOTIF = [
+    { note: "D4", freq: 293.66, start: 0, dur: 0.45 },
+    { note: "F4", freq: 349.23, start: 0.55, dur: 0.25 },
+    { note: "G4", freq: 392.00, start: 0.90, dur: 0.45 },
+    { note: "A4", freq: 440.00, start: 1.45, dur: 0.25 },
+    { note: "C5", freq: 523.25, start: 1.80, dur: 0.90 }
+  ];
+
+  var audioState = {
+    ctx: null,
+    supported: null,
+    settings: { volume: DEFAULT_SETTINGS.volume, muted: DEFAULT_SETTINGS.muted },
+    ambienceBus: null,
+    sfxBus: null,
+    musicBus: null,
+    masterGain: null,
+    compressor: null,
+    analyser: null,
+    noise: null,
+    sceneId: null,
+    bedId: null,
+    voices: [],
+    fading: [],
+    duck: 1,
+    lastCue: {},
+    warned: false,
+    unknownWarned: false
+  };
+
+  function clampAudio(value, min, max) {
+    var number = Number(value);
+    if (!isFinite(number)) return min;
+    return Math.max(min, Math.min(max, number));
+  }
+
+  function audioToast(message) {
+    if (typeof toast === "function") toast(message);
+  }
+
+  function getNoiseBuffer() {
+    if (audioState.noise) return audioState.noise;
+    var ctx = audioState.ctx;
+    var length = Math.floor(ctx.sampleRate * 2);
+    var buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+    audioState.noise = buffer;
+    return buffer;
+  }
+
+  function buildAudioGraph() {
+    var ctx = audioState.ctx;
+    var master = ctx.createGain();
+    master.gain.value = 0;
+    var compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -14;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+    master.connect(compressor);
+    compressor.connect(ctx.destination);
+
+    var ambience = ctx.createGain();
+    ambience.gain.value = 0.35;
+    ambience.connect(master);
+    var sfx = ctx.createGain();
+    sfx.gain.value = 0.55;
+    sfx.connect(master);
+    var music = ctx.createGain();
+    music.gain.value = 0.40;
+    music.connect(master);
+
+    if (debugEnabled) {
+      var analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      master.connect(analyser);
+      audioState.analyser = analyser;
+    }
+
+    audioState.masterGain = master;
+    audioState.compressor = compressor;
+    audioState.ambienceBus = ambience;
+    audioState.sfxBus = sfx;
+    audioState.musicBus = music;
+    audioState.duck = 1;
+  }
+
+  function unlockAudio() {
+    if (audioState.ctx) {
+      if (audioState.ctx.state === "suspended") resumeAudio();
+      return true;
+    }
+    var Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) {
+      audioState.supported = false;
+      if (!audioState.warned) {
+        audioState.warned = true;
+        audioToast("本机无法播放声音，游戏可继续");
+      }
+      return false;
+    }
+    try {
+      audioState.ctx = new Ctor();
+    } catch (error) {
+      audioState.supported = false;
+      console.error("[audio] AudioContext 创建失败", error);
+      if (!audioState.warned) {
+        audioState.warned = true;
+        audioToast("声音启动失败，游戏可继续");
+      }
+      return false;
+    }
+    audioState.supported = true;
+    buildAudioGraph();
+    applyAudioSettings(audioState.settings);
+    if (audioState.ctx.state === "suspended") resumeAudio();
+    if (audioState.sceneId) setScene(audioState.sceneId);
+    return true;
+  }
+
+  function applyAudioSettings(next) {
+    if (next) {
+      if (next.volume !== undefined) audioState.settings.volume = clampAudio(next.volume, 0, 1);
+      if (next.muted !== undefined) audioState.settings.muted = !!next.muted;
+    }
+    if (!audioState.ctx || !audioState.masterGain) return false;
+    var target = audioState.settings.muted ? 0 : 0.87 * audioState.settings.volume;
+    audioState.masterGain.gain.setTargetAtTime(target, audioState.ctx.currentTime, 0.04);
+    return true;
+  }
+
+  function startBedVoice(id) {
+    var ctx = audioState.ctx;
+    var def = BEDS[id];
+    var output = ctx.createGain();
+    output.gain.value = 0.0001;
+    output.connect(audioState.ambienceBus);
+    var sources = [];
+
+    def.layers.forEach(function (layer) {
+      var source = ctx.createBufferSource();
+      source.buffer = getNoiseBuffer();
+      source.loop = true;
+      var filter = ctx.createBiquadFilter();
+      filter.type = layer.type;
+      filter.frequency.value = layer.freq;
+      filter.Q.value = layer.q;
+      var gain = ctx.createGain();
+      gain.gain.value = layer.gain;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(output);
+      source.start(0);
+      sources.push(source);
+      if (layer.lfo) {
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = layer.lfo.rate;
+        lfoGain.gain.value = layer.lfo.depth;
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+        lfo.start(0);
+        sources.push(lfo);
+      }
+    });
+
+    (def.tones || []).forEach(function (tone) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = tone.type || "sine";
+      osc.frequency.value = tone.freq;
+      gain.gain.value = tone.gain;
+      osc.connect(gain);
+      gain.connect(output);
+      osc.start(0);
+      sources.push(osc);
+    });
+
+    output.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.8);
+    return { id: id, gain: output, sources: sources, stopping: false };
+  }
+
+  function stopBedVoice(voice, fadeMs) {
+    if (!voice || voice.stopping) return;
+    voice.stopping = true;
+    var ctx = audioState.ctx;
+    var now = ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setValueAtTime(Math.max(voice.gain.gain.value, 0.0001), now);
+    voice.gain.gain.linearRampToValueAtTime(0.0001, now + fadeMs / 1000);
+    window.setTimeout(function () {
+      voice.sources.forEach(function (source) {
+        if (!source.__xbStopped) {
+          source.__xbStopped = true;
+          source.stop();
+        }
+      });
+      voice.gain.disconnect();
+      var index = audioState.fading.indexOf(voice);
+      if (index >= 0) audioState.fading.splice(index, 1);
+    }, fadeMs + 60);
+  }
+
+  function setBed(id) {
+    var bedId = BEDS[id] ? id : "wind_title";
+    audioState.bedId = bedId;
+    if (!audioState.ctx) return false;
+    var current = audioState.voices[0];
+    if (current && current.id === bedId && !current.stopping) return true;
+
+    var voice = startBedVoice(bedId);
+    audioState.voices.forEach(function (old) {
+      audioState.fading.push(old);
+      stopBedVoice(old, 800);
+    });
+    audioState.voices = [voice];
+
+    while (audioState.fading.length > 2) {
+      var oldest = audioState.fading.shift();
+      stopBedVoice(oldest, 120);
+    }
+    return true;
+  }
+
+  function setScene(sceneId) {
+    var hasScene = Object.prototype.hasOwnProperty.call(BED_BY_SCENE, sceneId);
+    if (!hasScene && !audioState.unknownWarned) {
+      audioState.unknownWarned = true;
+      console.warn("[audio] 未知场景，回落 title：" + sceneId);
+    }
+    audioState.sceneId = sceneId;
+    return setBed(hasScene ? BED_BY_SCENE[sceneId] : BED_BY_SCENE.title);
+  }
+
+  function bedForScene(sceneId) {
+    return Object.prototype.hasOwnProperty.call(BED_BY_SCENE, sceneId)
+      ? BED_BY_SCENE[sceneId]
+      : BED_BY_SCENE.title;
+  }
+
+  function setDuck(level) {
+    audioState.duck = clampAudio(level, 0, 1);
+    if (!audioState.ctx) return false;
+    var now = audioState.ctx.currentTime;
+    audioState.ambienceBus.gain.setTargetAtTime(0.35 * audioState.duck, now, 0.08);
+    audioState.musicBus.gain.setTargetAtTime(0.40 * audioState.duck, now, 0.08);
+    return true;
+  }
+
+  function toneAt(freq, start, duration, peak, type, bus) {
+    var ctx = audioState.ctx;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), start + Math.min(0.02, duration / 4));
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(gain);
+    gain.connect(bus);
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
+  }
+
+  function noiseAt(start, duration, filterType, freq, q, peak, bus) {
+    var ctx = audioState.ctx;
+    var source = ctx.createBufferSource();
+    source.buffer = getNoiseBuffer();
+    var filter = ctx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), start + Math.min(0.02, duration / 4));
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(bus);
+    source.start(start);
+    source.stop(start + duration + 0.02);
+  }
+
+  function drumAt(start, peak) {
+    var ctx = audioState.ctx;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(92, start);
+    osc.frequency.exponentialRampToValueAtTime(48, start + 0.3);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+    osc.connect(gain);
+    gain.connect(audioState.sfxBus);
+    osc.start(start);
+    osc.stop(start + 0.45);
+  }
+
+  function playMotif(count) {
+    var ctx = audioState.ctx;
+    var start = ctx.currentTime + 0.02;
+    var total = Math.min(count, MOTIF.length);
+    for (var i = 0; i < total; i += 1) {
+      var note = MOTIF[i];
+      var at = start + note.start;
+      var triangle = ctx.createOscillator();
+      var sine = ctx.createOscillator();
+      var triangleGain = ctx.createGain();
+      var sineGain = ctx.createGain();
+      var filter = ctx.createBiquadFilter();
+      var envelope = ctx.createGain();
+      triangle.type = "triangle";
+      sine.type = "sine";
+      triangle.frequency.value = note.freq;
+      sine.frequency.value = note.freq;
+      triangleGain.gain.value = 0.7;
+      sineGain.gain.value = 0.3;
+      filter.type = "lowpass";
+      filter.frequency.value = 1800;
+      triangle.connect(triangleGain);
+      sine.connect(sineGain);
+      triangleGain.connect(filter);
+      sineGain.connect(filter);
+      filter.connect(envelope);
+      envelope.connect(audioState.musicBus);
+      envelope.gain.setValueAtTime(0.0001, at);
+      envelope.gain.exponentialRampToValueAtTime(0.2, at + 0.03);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, at + note.dur);
+
+      var lfo = ctx.createOscillator();
+      var lfoGain = ctx.createGain();
+      lfo.frequency.value = 5;
+      lfoGain.gain.value = 3;
+      lfo.connect(lfoGain);
+      lfoGain.connect(triangle.detune);
+      lfoGain.connect(sine.detune);
+      triangle.start(at);
+      sine.start(at);
+      lfo.start(at);
+      triangle.stop(at + note.dur + 0.02);
+      sine.stop(at + note.dur + 0.02);
+      lfo.stop(at + note.dur + 0.02);
+    }
+  }
+
+  function playCue(name) {
+    var ctx = audioState.ctx;
+    var start = ctx.currentTime + 0.01;
+    switch (name) {
+      case "chapter":
+        playMotif(3);
+        drumAt(start, 0.12);
+        break;
+      case "choice-select":
+        toneAt(520, start, 0.07, 0.14, "triangle", audioState.sfxBus);
+        noiseAt(start, 0.06, "highpass", 1800, 0.7, 0.05, audioState.sfxBus);
+        break;
+      case "choice-timeout":
+        toneAt(180, start, 0.35, 0.13, "sine", audioState.sfxBus);
+        noiseAt(start, 0.25, "lowpass", 500, 0.7, 0.05, audioState.sfxBus);
+        break;
+      case "codex":
+        noiseAt(start, 0.32, "highpass", 2200, 0.6, 0.06, audioState.sfxBus);
+        noiseAt(start + 0.12, 0.18, "bandpass", 900, 1.2, 0.04, audioState.sfxBus);
+        break;
+      case "drum":
+        drumAt(start, 0.22);
+        break;
+      case "rollcall-answer":
+        toneAt(660, start, 0.09, 0.16, "triangle", audioState.sfxBus);
+        toneAt(990, start + 0.06, 0.12, 0.09, "sine", audioState.sfxBus);
+        break;
+      case "rollcall-miss":
+        toneAt(92, start, 0.5, 0.18, "sine", audioState.sfxBus);
+        noiseAt(start, 0.3, "lowpass", 320, 0.7, 0.05, audioState.sfxBus);
+        break;
+      case "result":
+        drumAt(start, 0.14);
+        noiseAt(start + 0.04, 0.36, "bandpass", 700, 0.8, 0.05, audioState.sfxBus);
+        break;
+      case "door-place":
+        toneAt(118, start, 0.18, 0.18, "triangle", audioState.sfxBus);
+        noiseAt(start, 0.14, "lowpass", 420, 0.7, 0.09, audioState.sfxBus);
+        break;
+      case "boat-oar":
+        noiseAt(start, 0.45, "bandpass", 760, 0.9, 0.1, audioState.sfxBus);
+        noiseAt(start + 0.18, 0.3, "bandpass", 980, 1.1, 0.07, audioState.sfxBus);
+        break;
+      case "climb-fire":
+        noiseAt(start, 0.22, "highpass", 1500, 0.6, 0.1, audioState.sfxBus);
+        toneAt(70, start, 0.22, 0.12, "sine", audioState.sfxBus);
+        break;
+      case "ending":
+        playMotif(5);
+        drumAt(start, 0.12);
+        noiseAt(start, 1.4, "lowpass", 600, 0.7, 0.04, audioState.sfxBus);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  function cue(name) {
+    if (CUES.indexOf(name) === -1) return false;
+    if (!audioState.ctx || audioState.settings.muted) return false;
+    var now = Date.now();
+    if (audioState.lastCue[name] && now - audioState.lastCue[name] < 100) return false;
+    audioState.lastCue[name] = now;
+    return playCue(name);
+  }
+
+  function suspendAudio() {
+    if (!audioState.ctx || audioState.ctx.state !== "running") return false;
+    var result = audioState.ctx.suspend();
+    if (result && result.catch) {
+      result.catch(function (error) {
+        console.warn("[audio] suspend 未完成", error);
+      });
+    }
+    return true;
+  }
+
+  function resumeAudio() {
+    if (!audioState.ctx) return false;
+    if (audioState.ctx.state !== "suspended") return true;
+    var result = audioState.ctx.resume();
+    if (result && result.catch) {
+      result.catch(function (error) {
+        console.warn("[audio] resume 未完成", error);
+      });
+    }
+    return true;
+  }
+
+  function readPeak() {
+    if (!audioState.analyser) return 0;
+    var data = new Float32Array(audioState.analyser.fftSize);
+    audioState.analyser.getFloatTimeDomainData(data);
+    var peak = 0;
+    for (var i = 0; i < data.length; i += 1) {
+      var value = Math.abs(data[i]);
+      if (value > peak) peak = value;
+    }
+    return Math.round(peak * 1000) / 1000;
+  }
+
+  function audioStats() {
+    var ctx = audioState.ctx;
+    var state;
+    if (!ctx) state = audioState.supported === false ? "off" : "locked";
+    else if (ctx.state === "suspended") state = "suspended";
+    else if (ctx.state === "closed") state = "off";
+    else state = "ready";
+    return {
+      supported: audioState.supported !== false,
+      ready: !!ctx,
+      state: state,
+      scene: audioState.sceneId,
+      bed: audioState.bedId,
+      duck: audioState.duck,
+      activeBeds: audioState.voices.length + audioState.fading.length,
+      volume: audioState.settings.volume,
+      muted: audioState.settings.muted,
+      peak: readPeak()
+    };
+  }
+
+  XB.audio = {
+    BEDS: Object.keys(BEDS),
+    BED_BY_SCENE: BED_BY_SCENE,
+    CUES: CUES,
+    MOTIF: MOTIF,
+    unlock: unlockAudio,
+    applySettings: applyAudioSettings,
+    setScene: setScene,
+    bedForScene: bedForScene,
+    setDuck: setDuck,
+    cue: cue,
+    suspend: suspendAudio,
+    resume: resumeAudio,
+    stats: audioStats,
+    isReady: function () { return !!audioState.ctx; }
+  };
+
+  /* =====================================================================
+     XB.fx：转场、闪白、震动、墨迹划名
+     ===================================================================== */
+
+  var FX_LIMITS = {
+    wipeMs: 480,
+    flashMs: 120,
+    flashGapMs: 2000,
+    flashOpacity: 0.12,
+    shakeMs: 180,
+    shakePx: 2,
+    strikeMs: 420,
+    strikeStaggerMs: 90
+  };
+
+  var fxState = {
+    layer: null,
+    stage: null,
+    reduced: false,
+    lastFlash: 0,
+    lastShake: 0,
+    lastWipe: 0,
+    wipeTimer: 0,
+    flashTimer: 0,
+    shakeTimer: 0,
+    strikeTimer: 0,
+    strikePlayed: false
+  };
+
+  function fxReduced() {
+    return !!(fxState.reduced ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches));
+  }
+
+  function fxInit(options) {
+    var opts = options || {};
+    fxState.layer = opts.layer || null;
+    fxState.stage = opts.stage || null;
+  }
+
+  function fxSetReduced(value) {
+    fxState.reduced = !!value;
+  }
+
+  function fxTransition(sceneName) {
+    if (!fxState.layer || fxReduced()) return false;
+    fxState.lastWipe = Date.now();
+    var layer = fxState.layer;
+    layer.classList.remove("is-paper", "is-night", "is-wiping");
+    layer.classList.add(sceneName === "title" || sceneName === "map" ? "is-paper" : "is-night");
+    void layer.offsetWidth;
+    layer.classList.add("is-wiping");
+    window.clearTimeout(fxState.wipeTimer);
+    fxState.wipeTimer = window.setTimeout(function () {
+      layer.classList.remove("is-wiping");
+    }, FX_LIMITS.wipeMs + 40);
+    return true;
+  }
+
+  function fxFlash() {
+    if (!fxState.layer || fxReduced()) return false;
+    var now = Date.now();
+    if (now - fxState.lastFlash < FX_LIMITS.flashGapMs) return false;
+    fxState.lastFlash = now;
+    var layer = fxState.layer;
+    layer.classList.remove("is-flashing");
+    void layer.offsetWidth;
+    layer.classList.add("is-flashing");
+    window.clearTimeout(fxState.flashTimer);
+    fxState.flashTimer = window.setTimeout(function () {
+      layer.classList.remove("is-flashing");
+    }, FX_LIMITS.flashMs + 30);
+    return true;
+  }
+
+  function fxShake() {
+    if (!fxState.stage || fxReduced()) return false;
+    var now = Date.now();
+    if (now - fxState.lastShake < 300) return false;
+    fxState.lastShake = now;
+    var stage = fxState.stage;
+    stage.classList.remove("is-shaking");
+    void stage.offsetWidth;
+    stage.classList.add("is-shaking");
+    window.clearTimeout(fxState.shakeTimer);
+    fxState.shakeTimer = window.setTimeout(function () {
+      stage.classList.remove("is-shaking");
+    }, FX_LIMITS.shakeMs + 30);
+    return true;
+  }
+
+  function fxStrike() {
+    if (!document.querySelectorAll) return false;
+    if (fxState.strikePlayed) return false;
+    var rows = document.querySelectorAll("#ending-names li.is-missed");
+    if (!rows.length) return false;
+    fxState.strikePlayed = true;
+    var list = Array.prototype.slice.call(rows);
+    var reduced = fxReduced();
+    function paint() {
+      list.forEach(function (row, index) {
+        row.style.setProperty("--strike-delay", (reduced ? 0 : index * FX_LIMITS.strikeStaggerMs) + "ms");
+        row.classList.add("is-struck");
+      });
+    }
+    if (reduced) {
+      paint();
+      return true;
+    }
+    window.clearTimeout(fxState.strikeTimer);
+    fxState.strikeTimer = window.setTimeout(paint, 500);
+    return true;
+  }
+
+  function fxReset() {
+    window.clearTimeout(fxState.wipeTimer);
+    window.clearTimeout(fxState.flashTimer);
+    window.clearTimeout(fxState.shakeTimer);
+    window.clearTimeout(fxState.strikeTimer);
+    if (fxState.layer) fxState.layer.classList.remove("is-wiping", "is-flashing", "is-paper", "is-night");
+    if (fxState.stage) fxState.stage.classList.remove("is-shaking");
+    if (document.querySelectorAll) {
+      var struck = document.querySelectorAll("#ending-names li.is-struck");
+      Array.prototype.forEach.call(struck, function (row) {
+        row.classList.remove("is-struck");
+        row.style.removeProperty("--strike-delay");
+      });
+    }
+    fxState.strikePlayed = false;
+    fxState.lastFlash = 0;
+    fxState.lastShake = 0;
+    fxState.lastWipe = 0;
+  }
+
+  XB.fx = {
+    LIMITS: FX_LIMITS,
+    init: fxInit,
+    setReduced: fxSetReduced,
+    isReduced: fxReduced,
+    transition: fxTransition,
+    flash: fxFlash,
+    shake: fxShake,
+    strike: fxStrike,
+    reset: fxReset
+  };
+
+  /* =====================================================================
      XB.engine：DOM 层
      ===================================================================== */
 
@@ -696,6 +1425,7 @@
   var REQUIRED_IDS = [
     "stage",
     "stage-art",
+    "fx-layer",
     "scene-title",
     "scene-map",
     "scene-vn",
@@ -783,6 +1513,9 @@
   var artResizeFrame = 0;
   var artResizeScale = 1;
   var inputLockUntil = 0;
+  var lastScene = null;
+  var ludingFlashed = false;
+  var endingCuePlayed = false;
 
   var autoEnabled = false;
   var skipEnabled = false;
@@ -876,6 +1609,7 @@
 
   function init() {
     cacheElements();
+    XB.fx.init({ layer: els.fxLayer, stage: els.stage });
     mountArt();
     bindInput();
     bindSettings();
@@ -912,6 +1646,18 @@
     applyStartScene();
     render();
     updateDebug();
+    setupFxDebug(params);
+  }
+
+  function setupFxDebug(params) {
+    var effect = params.get("fx");
+    if (["wipe", "flash", "shake", "strike"].indexOf(effect) === -1) return;
+    window.setTimeout(function () {
+      if (effect === "wipe") XB.fx.transition("map");
+      else if (effect === "flash") XB.fx.flash();
+      else if (effect === "shake") XB.fx.shake();
+      else if (!XB.fx.strike()) toast("划名需要先到达结局名单");
+    }, 600);
   }
 
   function loadSave() {
@@ -1074,9 +1820,11 @@
       "door    " + state.flags["item.door"] + "  fire=" + state.flags.fire + "  load=" + state.flags.load,
       "ending  " + (state.ending ? (state.ending.cards ? "snapshot" : "partial") : "—"),
       "choice  " + describeFlag("choice.prologue.door") + " / lookback=" + describeFlag("choice.prologue.lookback"),
-      "log     " + state.choices.length,
-      "canvas  " + els.stageArt.width + "×" + els.stageArt.height
+      "log     " + state.choices.length
     ];
+    var audio = XB.audio.stats();
+    lines.push("audio   " + audio.state + " bed=" + (audio.bed || "—") + " duck=" + audio.duck.toFixed(2) + " beds=" + audio.activeBeds + " peak=" + audio.peak.toFixed(3));
+    lines.push("canvas  " + els.stageArt.width + "×" + els.stageArt.height);
     if (debugExtra) lines.push("· " + debugExtra);
     els.debug.hidden = false;
     els.debug.textContent = lines.join("\n");
@@ -1088,11 +1836,19 @@
   }
 
   function showScene(name) {
+    var changed = lastScene !== name;
     els.stage.dataset.scene = name;
     els.sceneTitle.hidden = name !== "title";
     els.sceneMap.hidden = name !== "map";
     els.sceneVn.hidden = name !== "vn";
     els.sceneEnding.hidden = name !== "ending";
+    if (!changed) return;
+    if (name === "ending") {
+      XB.fx.reset();
+      endingCuePlayed = false;
+    }
+    if (lastScene !== null) XB.fx.transition(name);
+    lastScene = name;
   }
 
   function render() {
@@ -1111,6 +1867,7 @@
   }
 
   function renderTitle() {
+    XB.audio.setScene("title");
     paintStage("title");
     var button = els.titleMenu.querySelector('[data-action="continue"]');
     if (button) button.setAttribute("aria-disabled", saveExists ? "false" : "true");
@@ -1145,6 +1902,7 @@
   }
 
   function renderMap() {
+    XB.audio.setScene("map");
     paintStage("map");
     buildStations();
     Array.prototype.forEach.call(els.mapStations.querySelectorAll(".map-station"), function (button) {
@@ -1192,7 +1950,14 @@
     }
     els.vnChapter.textContent = found.chapter.title;
     var bg = backgroundAt(found.chapter, found.index);
-    if (bg) paintStage(bg);
+    if (bg) {
+      paintStage(bg);
+      XB.audio.setScene(bg);
+      if (bg === "luding_bridge" && !ludingFlashed) {
+        ludingFlashed = true;
+        XB.fx.flash();
+      }
+    }
 
     hidePanels();
     vnRun.nodeId = found.node.id;
@@ -1476,6 +2241,7 @@
       toast("选项数据异常，已按默认项继续");
       return;
     }
+    XB.audio.cue(timedOut ? "choice-timeout" : "choice-select");
     markChoice(node, key, timedOut);
     saveNow();
     if (timedOut) toast("超时：已按默认选项结算 —— " + option.text + "（" + option.cost + "）");
@@ -1609,6 +2375,9 @@
       },
       callbacks: {
         onEnd: handleMinigameEnd,
+        onCue: function (name) {
+          XB.audio.cue(name);
+        },
         isPaused: function () {
           return !!(state && state.paused);
         },
@@ -1661,6 +2430,9 @@
     els.minigamePause.hidden = true;
     els.minigameFallback.hidden = true;
     if (!run) return;
+
+    XB.audio.cue("result");
+    if (result && result.gameId === "climb" && Number(result.stats && result.stats.lost) > 0) XB.fx.shake();
 
     if (run.solo || soloMode) {
       soloMode = true;
@@ -1897,6 +2669,11 @@
 
   function renderEnding() {
     var storyEnding = (XB.story && XB.story.ending) || {};
+    XB.audio.setScene("ending");
+    if (!endingCuePlayed) {
+      endingCuePlayed = true;
+      XB.audio.cue("ending");
+    }
     if (!isFullEnding(state.ending)) {
       state.ending = buildEnding(state);
       saveNow();
@@ -1944,6 +2721,7 @@
     });
 
     els.endingDisclaimer.textContent = storyEnding.disclaimer || "本作人物与连队均为虚构，非史料人物。";
+    XB.fx.strike();
     els.endingHome.focus({ preventScroll: true });
   }
 
@@ -2326,6 +3104,7 @@
   /* ---------------- 标题卡与史实注 ---------------- */
 
   function showTitleCard(text, sub, onClose) {
+    XB.audio.cue("chapter");
     titleCardState.open = true;
     titleCardState.onClose = onClose || null;
     els.vnTitleChapter.textContent = text || "";
@@ -2367,6 +3146,8 @@
     }
     codexState.open = true;
     codexState.id = id;
+    XB.audio.cue("codex");
+    refreshAudioDuck();
     codexState.unlock = !!(options && options.unlock);
     codexState.onClose = (options && options.onClose) || null;
     codexState.previousFocus = document.activeElement;
@@ -2401,6 +3182,7 @@
     codexState.open = false;
     els.codex.hidden = true;
     if (codexState.unlock && codexState.id) unlockCodex(codexState.id);
+    refreshAudioDuck();
 
     var previous = codexState.previousFocus;
     var callback = codexState.onClose;
@@ -2461,6 +3243,8 @@
   function openGallery() {
     if (galleryState.open) return;
     galleryState.open = true;
+    XB.audio.cue("codex");
+    refreshAudioDuck();
     galleryState.previousFocus = document.activeElement;
     renderGallery();
     els.codexGallery.hidden = false;
@@ -2471,9 +3255,18 @@
     if (!galleryState.open) return;
     galleryState.open = false;
     els.codexGallery.hidden = true;
+    refreshAudioDuck();
     var previous = galleryState.previousFocus;
     galleryState.previousFocus = null;
     if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  // 暂停、图鉴、史实注可能叠在一起，取最安静的一档，不叠乘。
+  function refreshAudioDuck() {
+    var duck = 1;
+    if (codexState.open || galleryState.open) duck = Math.min(duck, 0.45);
+    if (state && state.paused) duck = Math.min(duck, 0.3);
+    XB.audio.setDuck(duck);
   }
 
   function openGalleryCard(id) {
@@ -2670,6 +3463,7 @@
     if (!state || state.scene !== "vn" || state.paused) return;
     setSoloPauseButtons(soloMode);
     state.paused = true;
+    refreshAudioDuck();
     lastFocused = document.activeElement;
     cancelAuto();
     if (vnRun.typing) {
@@ -2686,6 +3480,7 @@
   function closePause() {
     if (!state || !state.paused) return;
     state.paused = false;
+    refreshAudioDuck();
     els.pause.hidden = true;
     els.vnSettings.hidden = true;
     els.pauseMenu.hidden = false;
@@ -2716,7 +3511,12 @@
 
   function onVisibilityChange() {
     // 切走标签页时停表：倒计时和打字机都不该在看不见时偷跑。
-    if (document.hidden && state && state.scene === "vn" && !state.paused) openPause();
+    if (document.hidden) {
+      XB.audio.suspend();
+      if (state && state.scene === "vn" && !state.paused) openPause();
+      return;
+    }
+    XB.audio.resume();
   }
 
   /* ---------------- 设置 ---------------- */
@@ -2730,6 +3530,7 @@
     els.setVolume.addEventListener("input", function () {
       state.settings.volume = Number(els.setVolume.value) / 100;
       els.setVolumeValue.textContent = els.setVolume.value;
+      XB.audio.applySettings({ volume: state.settings.volume });
       saveNow();
     });
     els.setScale.addEventListener("click", function (event) {
@@ -2779,6 +3580,8 @@
   function applySettings() {
     els.stage.style.setProperty("--text-scale", String(state.settings.textScale));
     document.documentElement.classList.toggle("reduce-motion", state.settings.reducedMotion === true);
+    XB.audio.applySettings(state.settings);
+    XB.fx.setReduced(state.settings.reducedMotion === true);
     syncSettingsUI();
     updateToolbar();
   }
@@ -2853,6 +3656,7 @@
   }
 
   function onPointerDown(event) {
+    XB.audio.unlock();
     if (event.button !== undefined && event.button !== 0) return;
     var target = event.target;
     if (!target || !target.closest) return;
@@ -2879,6 +3683,7 @@
   }
 
   function onKeyDown(event) {
+    XB.audio.unlock();
     if (event.key === "Escape") {
       if (codexState.open) {
         closeCodex();

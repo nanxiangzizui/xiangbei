@@ -188,6 +188,16 @@
     }
   }
 
+  function cue(runtime, name) {
+    var callbacks = runtime && runtime.callbacks;
+    if (!callbacks || typeof callbacks.onCue !== "function") return;
+    try {
+      callbacks.onCue(name);
+    } catch (error) {
+      console.error("[minigames] onCue 失败：" + name, error);
+    }
+  }
+
   function reducedMotion(runtime) {
     try {
       return !!(runtime.callbacks && runtime.callbacks.isReducedMotion && runtime.callbacks.isReducedMotion());
@@ -807,6 +817,7 @@
     }
     state.selected.push(id);
     emit(runtime, "door:pack", { id: id });
+    cue(runtime, "door-place");
     doorSay(runtime, "装入「" + labelFor(id) + "」");
     return true;
   }
@@ -817,6 +828,7 @@
     if (index < 0) return false;
     state.selected.splice(index, 1);
     emit(runtime, "door:unpack", { id: id });
+    cue(runtime, "door-place");
     doorSay(runtime, "取出「" + labelFor(id) + "」");
     return true;
   }
@@ -1256,6 +1268,7 @@
     state.aboard = [];
     state.batchIndex += 1;
     emit(runtime, "abandon:dispatch", { batch: state.batchIndex, ids: ids });
+    cue(runtime, "boat-oar");
     if (state.batchIndex === 1) {
       state.enemyLeft = Math.max(0, RULES.abandon.enemy - heavy * RULES.abandon.heavyPenalty);
       abandonSay(runtime, "第一批离岸。追兵提前了。");
@@ -1617,6 +1630,7 @@
     boat.status = "out";
     boat.timer = boatOutboundSeconds(runtime, boat.fatigue);
     emit(runtime, "boat:depart", { boat: index + 1 });
+    cue(runtime, "boat-oar");
     boatSay(runtime, "第 " + (index + 1) + " 条船出程");
   }
 
@@ -1642,6 +1656,7 @@
     state.trips += 1;
     boat.fatigue = Math.min(RULES.boat.fatigueHard, boat.fatigue + RULES.boat.fatiguePerLeg);
     emit(runtime, "boat:return", { boat: boat.id });
+    cue(runtime, "boat-oar");
     if (state.trips >= RULES.boat.plannedTrips) {
       finish(runtime, "done");
       return;
@@ -1972,6 +1987,7 @@
     state.missFlashTtl = 0.45;
     state.missFlashPos = climbLightPos(state.reached + state.lost - 1);
     emit(runtime, "climb:miss", { lost: state.lost, why: why || "miss" });
+    cue(runtime, "climb-fire");
     if (state.reached + state.lost >= RULES.climb.lights || state.lost >= RULES.climb.lights) {
       finish(runtime, "done");
       return;
