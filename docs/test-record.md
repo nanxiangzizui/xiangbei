@@ -10,7 +10,7 @@
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| 提交基线 | f12a318（步骤七机器项）+ 本轮限时翻倍与记录改动 | git status |
+| 提交基线 | 077dfda（限时翻倍与记录；父 f12a318 为步骤七机器项） | git log |
 | node --check | 4/4 OK（engine/story/minigames/art） | docs/evidence/step-07/gates.log |
 | check-build | **36/36** | 同上 |
 | smoke | **46/46** | 同上 |
