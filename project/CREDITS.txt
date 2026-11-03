@@ -1,0 +1,41 @@
+《向北》—— 一块门板，两万五千里
+版本 v1.0.0 · 2026-11-03 · 课程项目，非商业使用
+
+【制作】
+制作 / 程序：刘子政
+剧本 / 文案：刘子政
+美术 / 版画：刘子政
+测试 / 演示：刘子政
+史料核对：刘子政
+
+【字体】
+本版不打包字体，使用系统回退。
+标题：得意黑 Smiley Sans（SIL Open Font License 1.1，上游仓库声明）；本版只读 local()。
+正文：霞鹜文楷 LXGW WenKai（SIL Open Font License 1.1，上游仓库声明）；本版只读 local()。
+回退：标题 Microsoft YaHei / PingFang SC / Noto Sans CJK SC；正文 Songti SC / SimSun / Noto Serif CJK SC。
+没有字体文件、没有外部字体请求；不把来源不明的字体打进本包。
+
+【图像与声音】
+图像全部为 Canvas/SVG 程序化版画，人物为剪影；不使用影视、游戏、网络图片。
+声音全部由 Web Audio 实时合成：9 张环境床、12 个短 cue、原创五音动机 D4–F4–G4–A4–C5；不使用音频文件或歌曲旋律。
+
+【史料】
+史实锚点 A1–A7 与出处 S1–S15 见 docs/sources.md；2026-11-03 复核。
+真实人物只进史实注，不进剧情对白；不虚构领导人台词。
+争议细节（X 光机、22 勇士姓名/牺牲人数、金沙江船数等）标注“有不同说法”。
+《七根火柴》《金色的鱼钩》是小说，不作为史料。
+大事件结局不可改：湘江必败、遵义必开、泸定必夺。
+
+【虚构声明】
+满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构人物，非史料人物。
+本连 104 → 19 为虚构设定；历史数字以 docs/sources.md 为准。
+
+【工具】
+开发：原生 HTML5/CSS3/JavaScript、Canvas 2D、Web Audio；无框架、无构建链。
+测试：Node + Playwright（仅测试，不进运行时）。
+发布：纯静态站点；离线 ZIP 可直接打开 index.html。
+
+【入口】
+游戏：index.html
+一页设计说明：design-note.pdf
+发布记录：docs/release-record.md

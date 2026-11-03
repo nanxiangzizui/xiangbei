@@ -332,6 +332,34 @@ a:focus-visible,
   color: var(--ink-muted);
 }
 
+/* 标题页制作名单入口：静态文本链接，不占主菜单、不弹窗。
+   右下角与左下版本行分开，避免 844×390 缩放下互相遮挡。 */
+.title-credits {
+  position: absolute;
+  right: 24px;
+  bottom: 10px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.title-credits:hover {
+  color: var(--ink);
+  border-bottom-color: var(--cinnabar);
+}
+
+.title-credits:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
 /* ---------- 地图画面 ---------- */
 .map-title {
   position: absolute;

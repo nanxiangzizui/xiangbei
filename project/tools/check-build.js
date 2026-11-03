@@ -380,7 +380,7 @@ function checkPreview() {
       if (/\.(woff2?|ttf|otf|eot)$/i.test(name)) fail("C12", "assets/fonts 混入字体文件：" + name);
     });
   }
-  notes.push("C12 OK 预览页 10 类组件唯一、只引 ../style.css、字体只用 local()");
+  notes.push("C12 OK 预览页 10 类组件唯一、只引 ../style.css、字体只用 local()（本版不打包）");
 }
 
 // C13：序章节点图结构（步骤三出口：一章能从头播到尾）
@@ -1069,6 +1069,35 @@ function checkFxLimits() {
   notes.push("C36 OK 闪白 " + limits.flashMs + "ms/" + limits.flashOpacity + "、震动 " + limits.shakeMs + "ms/" + limits.shakePx + "px、划名 " + limits.strikeMs + "ms");
 }
 
+// C37：制作名单入口与文本完整性（步骤八）
+function checkCredits() {
+  var creditsPath = path.join(PROJECT_DIR, "CREDITS.txt");
+  if (!fs.existsSync(creditsPath)) {
+    fail("C37", "缺 project/CREDITS.txt");
+    return;
+  }
+  var credits = fs.readFileSync(creditsPath, "utf8");
+  var html = readProject("index.html");
+  if (html.indexOf('href="./CREDITS.txt"') === -1) fail("C37", "index.html 缺 ./CREDITS.txt 链接");
+  if (!/刘子政/.test(credits)) fail("C37", "CREDITS.txt 缺制作署名");
+  if (/<[^>]*姓名|TODO|待填|待补|<老师>|<姓名>/.test(credits)) fail("C37", "CREDITS.txt 仍有姓名/待填占位");
+  var creditsBytes = Buffer.byteLength(credits, "utf8");
+  if (creditsBytes > 2048) fail("C37", "CREDITS.txt 超过 2KB（" + creditsBytes + " 字节）");
+  if (credits.indexOf("虚构人物") === -1) fail("C37", "CREDITS.txt 缺虚构声明");
+  notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、./CREDITS.txt 链接");
+}
+
+// C38：发布运行时无外部请求/模块（步骤八冻结）
+function checkReleaseRuntime() {
+  var files = ["index.html", "style.css"].concat(JS_FILES).concat(["CREDITS.txt"]);
+  files.forEach(function (file) {
+    var text = readProject(file);
+    if (/https?:\/\//.test(text)) fail("C38", file + " 含 http(s) 外部地址");
+    if (/\bfetch\s*\(|XMLHttpRequest|type\s*=\s*["']module/.test(text)) fail("C38", file + " 含外部加载/ES module");
+  });
+  notes.push("C38 OK 六个运行时 + CREDITS 无 http(s)、无 fetch/XHR、无 type=module");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -1105,6 +1134,8 @@ checkAudioBeds();
 checkAudioSettings();
 checkFxLayer();
 checkFxLimits();
+checkCredits();
+checkReleaseRuntime();
 
 notes.forEach(function (line) {
   console.log(line);
@@ -1117,5 +1148,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 36 项全绿");
+  console.log("OK：构建自检 38 项全绿");
 }
