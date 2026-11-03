@@ -52,10 +52,10 @@
 - T01–T38：P0 全过，含 T20 真人四次计时；T39–T51 见 §6 与 docs/test-record.md。
 - 音频：无音频文件；加载时 locked；首次手势后 ready；静音/音量刷新保留；peak<0.99；无 setInterval。
 - 动效：480ms 横擦、120ms 闪白、180ms 震动、420ms 划名；reduced 下全部立即完成；不阻挡输入。
-- 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:10 当真人。
+- 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:11 当真人。
 - 字体：本版**不打包**（官方源不可达）；`@font-face` 只 local()，回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体请求。
 - 发布包：`dist/site` 与离线 ZIP 只含六运行时 + CREDITS.txt + design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
-- 链接与视频：公网链接由用户上传（本步未部署，不伪造）；演示视频经用户 2026-11-03 明确取消，不列为缺口。
+- 链接与视频：GitHub Pages 已上线 https://nanxiangzizui.github.io/xiangbei/ （2026-11-03，main / root，部署提交 `7dbe2b4`）；Cloudflare OAuth 未完成，未部署；演示视频经用户 2026-11-03 明确取消，不列为缺口。
 - 4 个核心小游戏可独立进入（?minigame=…）；失败路径继续剧情、不重开；单关 60–90s（含 20s 结算）。
 - 7 张史实注可解锁；结局点名 + 7000 + 五卡。
 - 手机横屏可玩；断网 ZIP 可玩；Edge 完整流程通过；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受（不记为通过）。
@@ -85,10 +85,11 @@
 | 项 | 实测 | 判定 |
 |---|---|---|
 | 构建/烟测/剧本 | check-build 38/38；smoke 46/46；check-script OK | PASS |
-| 发布包 | site 8 文件 / 672,335 B；ZIP 10 条目 / 376,880 B；PDF 1 页 / 291,770 B；CREDITS 2,025 B | PASS |
+| 发布包 | site 8 文件 / 672,029 B；ZIP 10 条目 / 375,948 B；PDF 1 页 / 291,464 B；CREDITS 2,025 B | PASS |
 | 发布站点完整流程 | 191.1s / 407 line；四关均有结果；5 卡/4 亮/7 名；0 console error/pageerror/404/外部请求 | PASS |
 | 离线 ZIP（file:// + 断网） | 191.1s / 408 line；四关均有结果；0 console error/pageerror/404/外部请求 | PASS |
 | 全用例 | 96/96 | PASS |
+| 公网 live smoke | GitHub Pages 16/16；8/8 文件哈希一致（engine/style 按 LF 规范化） | PASS（仅冒烟，未重跑完整流程） |
 | 发布专项 | 桌面 22/22；移动 22/22 | PASS（移动热区例外 X12） |
 | 字体 | 无字体请求；正文回退 Songti SC/SimSun/Noto Serif CJK SC；字体 0 字节 | PASS |
 | 制作名单 | 新标签打开；键盘 2px 朱砂焦点；桌面逻辑 45px / CSS 48px | PASS |

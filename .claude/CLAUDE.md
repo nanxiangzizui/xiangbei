@@ -18,7 +18,7 @@
 
 - 语言/运行时：原生 HTML5 + CSS3 + JavaScript（ES6）；不使用前端框架、不使用构建链
 - 渲染：DOM/CSS 负责 UI 与文字，Canvas 2D 负责小游戏与程序化背景；固定 1280×720 舞台等比缩放，Canvas 按 `devicePixelRatio` 放大
-- 部署：纯静态站点，Cloudflare Pages 托管（备选 GitHub Pages）；无后端、无数据库、无登录
+- 部署：纯静态站点，GitHub Pages 托管（本版已上线；Cloudflare Pages 备选）；无后端、无数据库、无登录
 - 存档：`localStorage`，键名带版本号（如 `xiangbei.save.v1`），刷新可恢复；读写用 try/catch，隐私模式下降级提示
 - 剧情：内联进 `story.js`，不使用 `fetch`/XHR/ES module；为兼容 `file://` 离线 ZIP，脚本用经典 `<script>` + 全局命名空间（如 `window.XB`）
 - 美术：Canvas/SVG 程序化版画（层叠山形、江面白线、雪粒、雾、铁索），人物用剪影；不使用未授权图片/影视/游戏素材
@@ -38,7 +38,7 @@
 | 五 章节接入 | ✅ 完成（2026-11-02，tag `step-5-done`） | 7 | 七章流程；错误卡；民心值→船工数；史实图鉴 | 从头玩到尾；7 张史实注；结局点名 + 数字 + 五张精神卡 |
 | 六 音频与动效 | ✅ 完成（2026-11-02，tag `step-6-done`） | 8 | `XB.audio`（9 床 / 12 cue / 原创五音）+ `XB.fx`（480ms 横擦 / 120ms 闪白 / 180ms 震动 / 420ms 划名）内联 `engine.js`；`#fx-layer`；静音/音量持久化 | 无音频文件；首次手势前 locked、点击后 ready；9 床覆盖 17 场景；划名只划 is-missed 且 reduced 立即；check-build 36/36、smoke 46/46、N5–N12 全红；Edge B45–B56 79/79、0 console error；file:// 与 http 可玩 |
 | 七 测试与适配 | ✅ 完成（2026-11-02，tag `step-7-done`；有条件交差：T39/T40 与 T47 P0 例外经用户接受） | 9 | Chrome/Edge/Safari；1920×1080、1366×768、手机横屏；键鼠 + 触摸；20 分钟计时 | 一页测试记录 + 修复清单；验收标准逐项通过或记录例外 |
-| 八 打包与交差 | ✅ 完成（2026-11-03，tag `step-8-done`；链接由用户上传、视频按用户取消、字体不打包） | 10 | Cloudflare Pages/GitHub Pages；ZIP 离线版；设计说明；3 分钟演示（取消） | `dist/site` 8 文件 / 672,335 B；ZIP 10 条目 / 376,880 B；PDF 1 页 / 291,770 B；CREDITS 2,025 B；字体 0 字节；check-build 38/38、smoke 46/46；发布包 http 191.1s/407 line、ZIP file 191.1s/408 line、96/96；专项 22/22×2；fps 桌面 60/60、移动 60/48.7；移动四关沿用步骤七；链接未部署 |
+| 八 打包与交差 | ✅ 完成（2026-11-03，tag `step-8-done`；**GitHub Pages 已上线**；视频按用户取消、字体不打包） | 10 | GitHub Pages；ZIP 离线版；设计说明；3 分钟演示（取消） | **https://nanxiangzizui.github.io/xiangbei/**（部署提交 `7dbe2b4`）；`dist/site` 8 文件 / 672,029 B；ZIP 10 条目 / 375,948 B；PDF 1 页 / 291,464 B；CREDITS 2,025 B；字体 0 字节；check-build 38/38、smoke 46/46；发布包 http 191.1s/407 line、ZIP file 191.1s/408 line、96/96；专项 22/22×2；fps 桌面 60/60、移动 60/48.7；公网 live smoke 16/16；移动四关沿用步骤七 |
 
 ## 项目结构（计划）
 
@@ -98,10 +98,10 @@
 - 步骤五：✅ 完成（2026-11-02，tag `step-5-done`）。七章全部接入（277 节点 / 232 line / 13 choice / 4 minigame / 6 result / 6 title / 7 codex / 2 interact / 7 end）；`story.ending` 五卡 + `engine` 的 ending 场景、`buildEnding`、ending normalize；吴起点名 7 名/45s、金沙江记名、遵义错误卡、7 张图鉴三入口、章末记忆、`?chapter=&node=`；`art.js` 16 场景；`index/style` 加 ending/点名/图鉴。工具：check-build 30/30、smoke 40/40、check-script 通过、`_pw-extra` 49/49、`_pw-mobile-http` 14/14、四负例报红。Edge B31–B43 全绿、B44 部分（真人 20 分钟计时留步骤七）；0 console error；file:// 与 http、844×390 触摸、图鉴 0/7→7/7、全答/漏答、五卡全亮/全灰、刷新/继续均实测。修 x025a C 后掉回 x025b 的分支 bug（x025b when 加 `!choice.xiangjiang.hold`）与 p039 门板分支；docs 已同步。记录见 `step/step-05-章节接入.md` §11 与 `docs/evidence/step-05/run-log.md`。
 - 步骤六：✅ 完成（2026-11-02，tag `step-6-done`）。`engine.js` 内联 `XB.audio`：9 床 / 17 场景映射 / 12 cue / 原创五音动机 D4–F4–G4–A4–C5；三总线 → compressor → master，800ms 交叉、activeBeds≤2、100ms cue 节流、暂停 duck 0.3 / 图鉴 0.45、hidden suspend / visible resume；`XB.audio.unlock()` 只在首次 pointerdown/keydown 创建 AudioContext，无音频文件。`XB.fx` + `#fx-layer`：480ms 墨色横擦、120ms/0.12 闪白（2s 冷却）、180ms/2px 震动、ending 只划 is-missed 的 420ms 墨线（90ms 错峰，同局一次）；系统与设置双入口 reduced。工具：check-build 36/36、smoke 46/46、check-script OK、N5–N12 全红。Edge B45–B56 79/79、0 console error、0 pageerror；file:// 与 http、844×390 触摸、9 床映射、静音/音量刷新保留均实测。记录见 `step/step-06-音频与动效.md` §11 与 `docs/evidence/step-06/run-log.md`。
 - 步骤七：✅ 完成（2026-11-02，tag `step-7-done`）。机器项：`docs/test-record.md` 已建；Edge 156 headless/file+http 全流程（190.75s/407 line）与 844×390 全流程（200.9s/406 line，tap）通过；四关正常+失败路径、图鉴三入口、隐私降级、断网 ZIP、音频 API/9 床/12 cue、键盘/焦点、三档分辨率均通过；check-build 36/36、smoke 46/46、check-script OK；S2-01/02/04（移动暂停 52×52 CSS px、ending 字号、五卡可达）已修复；S3-03 限时选择翻倍（8→16/10→20/6→12）已改，p021 16.3s、x025b 20.3s 超时实测通过，限时翻倍后 Edge 全流程 190.7s/407 line 通过。T20 已通过：A 8:33/B 6:42/C 7:36/D 4:52（A/B 翻倍前，C/D 版本未注明，按 +74s 上限仍 ≤9:47）。T47：3 人联合访谈、代表提交，5 问已回收（三人均玩游戏，无法确认“不常玩/非重度”；2026-11-02 用户明确接受 P0 例外，X8 收口）。T51：首轮 3/5，修文后复读两问均正确，T51 PASS，X9 关闭。T39 Chrome、T40 Safari 为 P0 环境例外，2026-11-02 用户明确接受。结论“有条件交差”（P0 例外经用户接受；P1 例外见 docs/test-record.md §11），已提交并 tag `step-7-done`，未部署。
-- 步骤八：✅ 完成（2026-11-03，tag `step-8-done`）。按用户口径：全部署名刘子政；**不打包字体**（官方源不可达，系统回退，字体 0 字节）；**不部署**，交付可上传的 `dist/site` 与 ZIP，由用户上传；**演示视频取消**，不列为缺口。交付物：`dist/site` 8 文件 / 672,335 B；`dist/xiangbei-v1.0.0-offline.zip` 10 条目 / 376,880 B；`dist/design-note.pdf` 1 页 / 291,770 B；`project/CREDITS.txt` 2,025 B；`dist/SHA256SUMS.txt` 19 行；`project/tools/release.py` 可复现 stage/zip/verify/hash。检查：check-build 38/38、smoke 46/46、check-script OK；发布站点 http 完整流程 191.1s/407 line、离线 ZIP file:// 191.1s/408 line、全用例 96/96、发布专项桌面/移动各 22/22；fps 桌面 60/60、移动 60/48.7（最低 29.9，X11）；制作名单移动物理热区 41.2×24.4（X12）。移动四关沿用步骤七 200.9s/406 line，发布包未逐关重跑；公网链接未部署，不伪造 URL。见 `docs/release-record.md`、`docs/evidence/step-08/run-log.md`。
+- 步骤八：✅ 完成（2026-11-03，tag `step-8-done`）。全部署名刘子政；**不打包字体**（官方源不可达，系统回退，字体 0 字节）；**演示视频取消**，不列为缺口。**GitHub Pages 已上线**：https://nanxiangzizui.github.io/xiangbei/ （仓库 `nanxiangzizui/xiangbei`，`main` / root；部署提交 `7dbe2b48ff43da6be191d3b521e638540291f306`；2026-11-03 12:54 +08:00）。交付物：`dist/site` 8 文件 / 672,029 B；`dist/xiangbei-v1.0.0-offline.zip` 10 条目 / 375,948 B；`dist/design-note.pdf` 1 页 / 291,464 B；`project/CREDITS.txt` 2,025 B；`dist/SHA256SUMS.txt` 19 行；`project/tools/release.py` 可复现 stage/zip/verify/hash。检查：check-build 38/38、smoke 46/46、check-script OK；发布站点 http 完整流程 191.1s/407 line、离线 ZIP file:// 191.1s/408 line、全用例 96/96、发布专项桌面/移动各 22/22；fps 桌面 60/60、移动 60/48.7（最低 29.9，X11）；制作名单移动物理热区 41.2×24.4（X12）；公网 live smoke 16/16、8/8 文件哈希一致（engine/style 按 LF 规范化）。移动四关沿用步骤七 200.9s/406 line，发布包未逐关重跑。Cloudflare OAuth 三次超时，未部署，不写成已部署。见 `docs/release-record.md`、`docs/evidence/step-08/run-log.md`。
 - 已知风险：整章时长 19:48，仅余 12 秒；9 个限时项于 2026-11-02 翻倍（8→16/10→20/6→12）后，最坏等待上限约 23:44（常速目标仍 84s，不按上限翻倍）。裁剪顺序按红线 13（草地 → 金沙江 → 遵义改纯对话）。终章 834 字超 §5.6.3 的 660 字预算（+26%），已记录不隐藏，步骤七实测超时再裁。
 - 已知欠账：①真人外读已做（1 人，2026-11-02）：首轮 3/5，错误卡/点名 2 问不清；修文后同读者复读两问均正确，T51 PASS，X9 关闭；2026-11-01 的 AI 替代记录在 step-00 §11.4，不再算数；②本机默认沙箱下 pwsh 子进程初始化失败（0xC0000142），步骤七测试均在 `danger-full-access` 下完成；默认策略下仍不可执行，仅记环境事实；③浏览器：仅 Edge headless（含移动模拟 + touch）；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受；真机触摸未验；20 分钟计时 A–D 通过；隐私模式与断网 ZIP 通过；④字体：本机未安装得意黑/霞鹜文楷，默认落 Microsoft YaHei/SimSun；步骤八决定**不打包**（官方源不可达），只用 local()，字体 0 字节；⑤file:// localStorage 在 Edge 可用；隐私模式降级已测（提示“本局无法存档”，可继续）；⑥已修：844×390 ending 字号 ≥14 CSS px、面板可滚且五卡可达（S2-02/04）；⑦自动/跳过用本会话已读集合，刷新后归零（设计如此，不写档）；⑧已修：手机横屏暂停改 96 逻辑≈52 CSS px（S2-01）；⑨音频主观听感未验收——B49 headless 峰值采样为 0（只证明 <0.99），真机/耳机试听、真实切后台（B48 用 `document.hidden` 属性模拟）、真机首次手势与锁屏（B54 为移动模拟）作为 P1 例外留到步骤八前；B50 转场与 B53 划名未录屏。
-- 建议下一步：交差/上传。用户把 `dist/site/` 上传 Cloudflare Pages 后，将 URL、部署时间、哈希填回 `docs/release-record.md` §4，并按 `README.md` “线上自检”逐项勾选；不录演示视频。Chrome/Safari、真机触摸、音频听感、真实后台、X12 移动热区按例外如实说明；有余力再补跑发布包上的移动完整流程（约 200s），不把“沿用步骤七”写成“发布包已重跑”。
+- 建议下一步：交差。公网地址 **https://nanxiangzizui.github.io/xiangbei/** 已上线，部署提交 `7dbe2b4`；交付 `dist/site/`、`dist/xiangbei-v1.0.0-offline.zip`、`dist/design-note.pdf`、`dist/SHA256SUMS.txt` 与 `README.md`。按 `README.md` “线上自检”人工复检完整流程/移动/四关；不录演示视频。Chrome/Safari、真机触摸、音频听感、真实后台、X12 移动热区按例外如实说明；有余力再补跑发布包上的移动完整流程（约 200s），不把“沿用步骤七”写成“发布包已重跑”。
 
 ## 关键约束与红线
 
@@ -174,8 +174,9 @@ node project/tools/check-build.js
 node project/tools/smoke.js
 node project/tools/check-script.js docs/script
 
-# 部署：Cloudflare Pages 选择静态站点，构建命令留空，输出目录为根目录；
-# 也可用 Git 集成或控制台拖拽上传。不要把密钥写进仓库。
+# 部署：当前 GitHub Pages 从 nanxiangzizui/xiangbei 的 main/root 自动发布；
+# 更新 dist/site 与 .nojekyll 后 push main 即可。Cloudflare Pages 为备选（OAuth 未完成）。
+# 不要把 token/密钥写进仓库；临时 PAT 用完即删并撤销。
 ```
 
 ## 验收底线

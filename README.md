@@ -11,10 +11,10 @@
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接 | — | **未部署**；本版交付可上传的 `dist/site/`，由用户上传，不伪造 URL |
-| 发布站点 | `dist/site/` | 已生成并回归；8 个文件，672,335 B |
-| 离线 ZIP | `dist/xiangbei-v1.0.0-offline.zip` | 已生成并回归；10 个条目，376,880 B；根目录 `xiangbei-v1.0.0/` |
-| 一页设计说明 | `dist/design-note.pdf` | A4 一页，291,770 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
+| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **已上线**（GitHub Pages，2026-11-03；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `7dbe2b4`） |
+| 发布站点 | `dist/site/` | 已生成并回归；8 个文件，672,029 B |
+| 离线 ZIP | `dist/xiangbei-v1.0.0-offline.zip` | 已生成并回归；10 个条目，375,948 B；根目录 `xiangbei-v1.0.0/` |
+| 一页设计说明 | `dist/design-note.pdf` | A4 一页，291,464 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
 | 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，2,025 B |
 | 字体清单 | `docs/credits.md` | 本版不打包字体，系统回退；包内字体 0 字节 |
@@ -39,14 +39,11 @@ python -m http.server 8080
 
 浏览器打开本机 8080 端口。不要用 `fetch` 或 ES module 方式加载剧情；本项目全部剧情内联在 `story.js`。
 
-### 上传到 Cloudflare Pages
+### 线上地址与重新上传
 
-1. Cloudflare Pages → Create project → Direct Upload。
-2. 上传 `dist/site/`（不是仓库根目录）。
-3. 构建命令留空；输出目录为根目录。
-4. 上传后按“线上自检”逐项检查，把 URL 填回 `docs/release-record.md` §4。
+**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；2026-11-03 上线，部署提交 `7dbe2b4`）。
 
-避免上传 `docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
+重新上传：把 `dist/site/` 与 `.nojekyll` 更新到 `main`，Pages 会自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
 ## 操作
 
@@ -160,14 +157,16 @@ dist/                       交付产物（默认不提交）
 制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
 完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
 
-## 线上自检（上传后）
+## 线上自检（2026-11-03）
 
-- [ ] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
-- [ ] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
+> 公网 live smoke 16/16：标题、CREDITS、PDF、起步、localStorage、门板入口、0 console error / pageerror / 404 / 外部请求。完整流程与 96/96 用例在发布包本地跑过，未在公网重跑；以下保留人工复检清单。
+
+- [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
+- [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [ ] 四关入口（`?minigame=door|abandon|boat|climb`）与七张图鉴。
 - [ ] 手机横屏 844×390 可玩；竖屏提示。
-- [ ] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS。
+- [x] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS（公网 live smoke）。
 - [ ] 不暴露 docs/、step/、tools/、.git/、evidence。
 
 自检结果填回 `docs/release-record.md` §4/§5；未做的项写“未验证”，不写“通过”。

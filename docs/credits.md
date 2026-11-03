@@ -46,7 +46,7 @@
 - 编辑器：VS Code；浏览器：Edge 156（步骤七实测）；Chrome/Safari 为环境例外。
 - 本地服务：`python -m http.server 8080 --directory project`；离线：直接打开 `index.html`。
 - 测试：Node 24 + Playwright 1.64（仅测试，不进运行时）；静态检查 `check-build.js` / `smoke.js` / `check-script.js`。
-- 部署：Cloudflare Pages Direct Upload（静态、无构建命令、无 Functions、无 Analytics）；备选 GitHub Pages 子路径。
+- 部署：GitHub Pages（main / root，2026-11-03 上线，部署提交 `7dbe2b4`）；Cloudflare Pages Direct Upload 为备选（OAuth 未完成，未部署）。
 - 版本：Git，`main`；每步 tag；不提交 ZIP/MP4/完整字体/密钥。
 
 ## 5. 制作名单
@@ -69,9 +69,9 @@
 - [x] 无外部图片/音频/字体 CDN 请求；素材全部程序化/Web Audio。
 - [x] 游戏内制作名单入口：标题页“制作名单”链接 → `project/CREDITS.txt`。
 - [x] 7 条史料链接复核；争议标注；A1–A7 每条至少 2 出处。
-- [ ] ZIP 断网可玩（生成后由发布回归勾选）。
-- [ ] 链接可访问（用户上传后勾选；本步不伪造）。
-- [ ] 演示视频（用户 2026-11-03 明确取消，不列为缺口）。
+- [x] ZIP 断网可玩（发布回归 + 离线 file:// 191.1s / 408 line）。
+- [x] 公网链接可访问（GitHub Pages；2026-11-03 live smoke 16/16）。
+- [x] 演示视频：用户 2026-11-03 明确取消，不列为缺口。
 
 ## 7. 交付入口
 
