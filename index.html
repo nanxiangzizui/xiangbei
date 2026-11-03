@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>向北</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- 固定 1280×720 舞台：所有坐标都是舞台坐标（docs/ui-layout.md） -->
+  <div id="stage" data-scene="title">
+    <!-- 单画布：标题 / 地图 / VN 共用的程序化版画底（art.js 绘制，不接收点击） -->
+    <canvas id="stage-art" class="stage-art" width="1280" height="720" aria-hidden="true"></canvas>
+
+    <!-- 标题画面：ui-layout §2 -->
+    <section id="scene-title" class="scene" aria-label="标题画面">
+      <h1 class="title-main">向北</h1>
+      <span class="title-seal" aria-hidden="true">北</span>
+      <p class="title-sub">一块门板，两万五千里</p>
+      <div id="title-menu" class="title-menu" role="menu" aria-label="主菜单">
+        <button type="button" class="menu-button xb-btn xb-btn--primary" role="menuitem" data-action="start">开始</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
+      </div>
+      <p class="title-version">试玩版 · 人物虚构，非史料人物</p>
+      <a class="title-credits" href="./CREDITS.txt" target="_blank" rel="noopener">制作名单</a>
+    </section>
+
+    <!-- 地图画面：ui-layout §1.5 -->
+    <section id="scene-map" class="scene" aria-label="长征路线图" hidden>
+      <h2 class="map-title">往北</h2>
+      <p class="map-sub">一条路，七段</p>
+      <svg id="map-route" class="map-route" viewBox="0 0 1280 720" aria-hidden="true" focusable="false">
+        <polyline points="186,592 346,532 506,482 676,412 826,332 986,252 1146,162"></polyline>
+      </svg>
+      <div id="map-stations" class="map-stations"></div>
+      <p class="map-hint">点亮的站点可以进入；其余还在路上</p>
+    </section>
+
+    <!-- 对话画面：ui-layout §1 + §7 -->
+    <section id="scene-vn" class="scene" aria-label="对话" hidden>
+      <p id="vn-chapter" class="vn-chapter"></p>
+
+      <!-- 自动 / 跳过：只在线性节点显示 -->
+      <div id="vn-toolbar" class="vn-toolbar" hidden>
+        <button type="button" id="vn-auto" class="vn-tool" aria-pressed="false" data-action="auto">自动</button>
+        <button type="button" id="vn-skip" class="vn-tool" aria-pressed="false" data-action="skip">跳过</button>
+      </div>
+
+      <button type="button" class="vn-pause" data-action="pause" aria-label="暂停">Ⅱ</button>
+
+      <div id="vn-dialogue" class="vn-dialogue">
+        <p id="vn-name" class="vn-name"></p>
+        <p id="vn-text" class="vn-text"></p>
+        <span id="vn-next" class="vn-next" aria-hidden="true">▼</span>
+      </div>
+
+      <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
+      <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
+
+      <!-- 点名 / 记名：DOM 覆盖层，不走小游戏画布 -->
+      <div id="vn-interact" class="vn-interact" role="group" aria-label="点名" hidden>
+        <div class="vn-interact__panel">
+          <p id="interact-kicker" class="vn-interact__kicker"></p>
+          <p id="interact-name" class="vn-interact__name"></p>
+          <p id="interact-status" class="vn-interact__status"></p>
+          <div class="vn-interact__bar"><i id="interact-progress"></i></div>
+          <div id="interact-names" class="vn-interact__names"></div>
+          <button type="button" id="interact-answer" class="xb-btn vn-interact__answer" data-action="interact-answer">替他答到</button>
+          <p id="interact-live" class="sr-only" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <!-- 小游戏覆盖层：单画布 + 可访问状态；结算只用 DOM，不把 canvas 当唯一信息源 -->
+      <div id="vn-minigame" class="vn-minigame" role="group" aria-label="小游戏" hidden>
+        <canvas id="minigame-canvas" class="minigame-canvas" width="1280" height="720" tabindex="0" role="application" aria-label="小游戏画面" aria-describedby="minigame-help"></canvas>
+        <p id="minigame-hud" class="sr-only"></p>
+        <p id="minigame-help" class="sr-only"></p>
+        <p id="minigame-live" class="sr-only" aria-live="polite"></p>
+        <button type="button" id="minigame-pause" class="minigame-pause" data-action="pause" aria-label="暂停小游戏">Ⅱ</button>
+        <p id="minigame-fallback" class="minigame-fallback" hidden>小游戏无法载入；按 Esc 可暂停。</p>
+      </div>
+      <div id="vn-result" class="vn-result" role="group" aria-label="结算" hidden></div>
+
+      <!-- 章节标题卡：全屏，1200ms 自动关 -->
+      <div id="vn-title-card" class="xb-title-card" role="presentation" hidden>
+        <p id="vn-title-chapter" class="xb-title-card__chapter"></p>
+        <div class="xb-title-card__rule"></div>
+        <p id="vn-title-sub" class="xb-title-card__sub"></p>
+      </div>
+
+      <!-- 分页量具：屏外，与正文同字号同宽，只用来量行数；不能 display:none -->
+      <p id="vn-measure" class="vn-measure" aria-hidden="true"></p>
+    </section>
+
+    <!-- 结局：点名 + 数字 + 五张精神卡（ui-layout §8） -->
+    <section id="scene-ending" class="scene" aria-label="结局" hidden>
+      <div id="ending-panel" class="xb-ending">
+        <h2 id="ending-title" class="xb-ending__title"></h2>
+        <p id="ending-date" class="xb-ending__date"></p>
+        <p id="ending-lede" class="xb-ending__lede"></p>
+        <div class="xb-ending__cols">
+          <div class="xb-ending__names-wrap">
+            <h3 class="xb-ending__label">点名</h3>
+            <ol id="ending-names" class="xb-ending__names"></ol>
+          </div>
+          <div class="xb-ending__stats-wrap">
+            <h3 class="xb-ending__label">数字</h3>
+            <p id="ending-stats" class="xb-ending__stats"></p>
+          </div>
+        </div>
+        <div id="ending-cards" class="xb-ending__cards" aria-label="五张精神卡"></div>
+        <p id="ending-disclaimer" class="xb-ending__disclaimer"></p>
+        <div class="xb-ending__actions">
+          <button type="button" id="ending-codex" class="xb-btn" data-action="ending-codex">史实图鉴</button>
+          <button type="button" id="ending-home" class="xb-btn xb-btn--primary" data-action="ending-home">回到标题</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 特效层：墨色横擦转场 + 软闪白；不接收点击，不朗读 -->
+    <div id="fx-layer" class="fx-layer" aria-hidden="true">
+      <div class="fx-wipe"></div>
+      <div class="fx-flash"></div>
+    </div>
+
+    <!-- 暂停遮罩：继续 / 设置 / 返回地图 / 回到标题（ui-layout §7） -->
+    <div id="pause" class="overlay" hidden>
+      <div id="pause-menu" class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
+        <p class="pause-title">暂停</p>
+        <button type="button" class="pause-button" data-action="resume">继续</button>
+        <button type="button" class="pause-button" data-action="open-settings">设置</button>
+        <button type="button" class="pause-button" data-action="codex">史实图鉴</button>
+        <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
+        <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
+      </div>
+
+      <div id="vn-settings" class="xb-settings" role="dialog" aria-modal="true" aria-label="设置" hidden>
+        <p class="pause-title">设置</p>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">文字速度</span>
+          <div class="xb-settings__control">
+            <input id="set-speed" class="xb-range" type="range" min="10" max="60" step="5" value="30" aria-label="文字速度">
+            <span id="set-speed-value" class="xb-settings__value">30 字/秒</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">字号</span>
+          <div id="set-scale" class="xb-segmented" role="group" aria-label="字号">
+            <button type="button" data-scale="1" aria-pressed="true">100%</button>
+            <button type="button" data-scale="1.15" aria-pressed="false">115%</button>
+            <button type="button" data-scale="1.3" aria-pressed="false">130%</button>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">音量<small class="xb-settings__hint">首次点击后生效</small></span>
+          <div class="xb-settings__control">
+            <input id="set-volume" class="xb-range" type="range" min="0" max="100" step="5" value="60" aria-label="音量">
+            <span id="set-volume-value" class="xb-settings__value">60</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">静音</span>
+          <button type="button" id="set-muted" class="xb-switch" role="switch" aria-checked="false" aria-label="静音"></button>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">减少动效</span>
+          <button type="button" id="set-motion" class="xb-switch" role="switch" aria-checked="false" aria-label="减少动效"></button>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">跳读已读</span>
+          <button type="button" id="set-skip" class="xb-switch" role="switch" aria-checked="false" aria-label="跳读已读"></button>
+        </div>
+        <button type="button" class="pause-button" data-action="close-settings">返回</button>
+      </div>
+    </div>
+
+    <!-- 史实注：单张弹窗，四块（标题 / 类型 / 正文 / 出处）+ 争议行（ui-layout §7） -->
+    <div id="codex" class="xb-modal xb-codex" role="dialog" aria-modal="true" aria-labelledby="codex-title" hidden>
+      <button type="button" id="codex-close" class="xb-modal__close" aria-label="关闭">×</button>
+      <h2 id="codex-title" class="xb-modal__title"></h2>
+      <div id="codex-badges" class="xb-codex__badges"></div>
+      <div id="codex-body" class="xb-codex__body" tabindex="0"></div>
+      <p id="codex-note" class="xb-codex__note" hidden></p>
+      <p id="codex-source" class="xb-codex__source"></p>
+      <p class="xb-codex__disclaimer">人物虚构，非史料人物。</p>
+    </div>
+
+    <!-- 史实图鉴：7 张，3+3+1；锁卡点击只提示 -->
+    <div id="codex-gallery" class="xb-gallery" role="dialog" aria-modal="true" aria-labelledby="gallery-title" hidden>
+      <div class="xb-gallery__panel">
+        <button type="button" id="gallery-close" class="xb-modal__close" data-action="gallery-close" aria-label="关闭图鉴">×</button>
+        <h2 id="gallery-title" class="xb-gallery__title">史实图鉴</h2>
+        <p id="gallery-count" class="xb-gallery__count"></p>
+        <div id="gallery-grid" class="xb-gallery__grid"></div>
+        <p class="xb-gallery__hint">已解锁的卡片可以打开；其余卡片在对应章节记入。</p>
+      </div>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <pre id="debug" hidden></pre>
+  </div>
+
+  <div id="orientation">
+    <p>请把手机横过来</p>
+  </div>
+
+  <!-- 顺序固定：art → story → minigames → engine；全部经典 script，不用 module -->
+  <script src="./art.js"></script>
+  <script src="./story.js"></script>
+  <script src="./minigames.js"></script>
+  <script src="./engine.js"></script>
+</body>
+</html>
