@@ -3,7 +3,7 @@
 > 一块门板，两万五千里。
 > 16 岁红军文书，从于都走到吴起；七段路，四个小游戏，七张史实图鉴，一次点名。
 
-《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 轻量小游戏；没有框架、构建链、后端、登录、排行榜，也不使用外部图片、音频或 CDN。剧情内联，离线 ZIP 双击可玩。
+《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 轻量小游戏；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
 
 **虚构人物，非史料人物。** 满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构；真实人物只进“史实注”，不进剧情对白。历史结局不可改：湘江必败、遵义必开、泸定必夺。
 
@@ -11,13 +11,13 @@
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **已上线**（GitHub Pages，2026-11-03；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `7dbe2b4`） |
-| 发布站点 | `dist/site/` | 已生成并回归；8 个文件，672,029 B |
-| 离线 ZIP | `dist/xiangbei-v1.0.0-offline.zip` | 已生成并回归；10 个条目，375,948 B；根目录 `xiangbei-v1.0.0/` |
-| 一页设计说明 | `dist/design-note.pdf` | A4 一页，291,464 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
+| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **v1.1.0 已上线**（GitHub Pages，2026-11-04；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `f8b2045`）；关键文件 HTTP 200 + SHA256 8/8 一致 |
+| 发布站点 | `dist/site/` | v1.1.0 已生成并验证；47 个文件，27,888,240 B；与线上部署文件一致 |
+| 离线 ZIP | `dist/xiangbei-v1.1.0-offline.zip` | v1.1.0 已生成并验证；49 个条目，27,347,934 B；根目录 `xiangbei-v1.1.0/` |
+| 一页设计说明 | `dist/design-note.pdf` | A4 一页，299,941 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
-| 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，2,025 B |
-| 字体清单 | `docs/credits.md` | 本版不打包字体，系统回退；包内字体 0 字节 |
+| 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,438 B |
+| 字体清单 | `docs/credits.md` + `project/assets/fonts/OFL-*.txt` | v1.1.0 随包两份 OFL 1.1 子集（约 552 KB）；公网 v1.1.0 同步包含 |
 
 > `dist/` 是交付产物，默认不提交到 Git；仓库保留可复现的 `project/tools/release.py` 与文档。
 
@@ -25,8 +25,8 @@
 
 ### 直接打开（离线）
 
-1. 解压 `dist/xiangbei-v1.0.0-offline.zip`。
-2. 双击 `xiangbei-v1.0.0/index.html`。
+1. 解压 `dist/xiangbei-v1.1.0-offline.zip`。
+2. 双击 `xiangbei-v1.1.0/index.html`。
 3. 没有网络也能玩。Edge 下 `file://` 的 `localStorage` 可用；若浏览器禁止，游戏会提示“本局无法存档”，仍可继续，不白屏。
 
 ### 本地静态服务（更接近线上）
@@ -41,7 +41,7 @@ python -m http.server 8080
 
 ### 线上地址与重新上传
 
-**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；2026-11-03 上线，部署提交 `7dbe2b4`）。
+**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.0 于 2026-11-04 上线，部署提交 `f8b2045`）。
 
 重新上传：把 `dist/site/` 与 `.nojekyll` 更新到 `main`，Pages 会自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
@@ -52,7 +52,8 @@ python -m http.server 8080
 | 推进对话 | 点击 / 空格 / Enter | 点对话框 |
 | 选择 | 1–3 或点击选项 | 点选项 |
 | 暂停 | Esc | 右上角暂停按钮（Logic 96×96；手机 52 CSS px） |
-| 文字速度 / 字号 / 音量 / 静音 / 减少动效 / 跳读已读 | 暂停 → 设置 | 暂停 → 设置 |
+| 文字速度 / 字号 / 总音量 / 配乐 / 环境音 / 静音 / 减少动效 / 跳读已读 | 暂停 → 设置 | 暂停 → 设置 |
+| 花名册 | 暂停 → 花名册 | 同上 |
 | 图鉴 | 标题 / 暂停 / 结局入口 | 同上 |
 
 四个小游戏都可单手完成：
@@ -107,12 +108,29 @@ python -m http.server 8080
 | fps | 桌面标题 60.0 / 攀索 60.0；移动标题 60.0 / 攀索 48.7（最低 29.9，p95 33.4ms） |
 | 移动 844×390 | 标题、对话、ending、制作名单、四关独立入口与触摸 通过；发布包只改标题页链接与 style.css，未改六运行时逻辑；完整移动流程沿用步骤七 200.9 秒 / 406 行 |
 
+### v1.1.0 发布包（2026-11-04，已部署）
+
+| 项 | 结果 |
+|---|---|
+| `node --check` 四个 JS | 通过 |
+| `check-build.js` / `smoke.js` | **38/38** / **46/46** |
+| 阅读层专项 | Edge http **21/21**；照片卡、图鉴缩略图/年代说明、三档音量、花名册、file:// 标题/字体/图 |
+| Edge http 完整流程 | 201.585 秒 / 405 行；四关均有结果；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求；证据 `docs/evidence/step-07/edge-http-20261104-181721` |
+| Edge http 四关 | **20/20**；门板 0.1 秒、弃物 1.0 秒、渡船 89.3 秒（12/18 趟，37 船工）、攀索 29.9 秒（16 过 / 6 暗）；均有结果、无评分、可再玩；证据 `docs/evidence/step-07/edge-http-20261104-minigames-unique` |
+| Edge file:// 完整流程 | 197.639 秒 / 406 行；门板 0.1 / 弃物 1.0 / 渡船 90.0 / 攀索 29.9 秒；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求；证据 `docs/evidence/step-07/edge-file-20261104-182136` |
+| Edge 844×390 触摸完整流程 | 207.978 秒 / 405 行；门板 0.4 / 弃物 1.5 / 渡船 89.7 / 攀索 31.6 秒；5 卡 / 4 亮 / 7 名 / 0 划名；0 错误；证据 `docs/evidence/step-07/edge-http-20261104-182136-mobile` |
+| 844×390 阅读层专项 | 标题、章首卡、图鉴、花名册均在舞台内；7 张图鉴缩略图全部加载；花名册 7 行 + 返回可见；0 console error / pageerror / 404；证据 `docs/evidence/step-07/edge-mobile-20261104-feature` |
+| 六张章节卡 | 湘江地图、遵义、金沙江、泸定、草地、吴起均 `has-photo`，地点与底图匹配；0 console error / 404；证据 `docs/evidence/step-07/edge-http-20261104-titlecards` |
+| `release.py verify` | OK：site 47 文件 / package 48 文件 / ZIP 49 条目 / PDF 1 页 / CREDITS 9,438 B |
+
+`dist/SHA256SUMS.txt` 覆盖 97 个文件（PDF、ZIP、site 与 package）。`dist/site` 与 v1.1.0 ZIP 与本次线上部署文件一致；公网只做了关键文件 HTTP 200 + SHA256 比对，**没有重跑公网完整流程**。
+
 ### 已知例外（不写成通过）
 
 - **Chrome 未安装、Safari 无设备**：P0 环境例外，2026-11-02 用户接受；本版未补测。
 - **真机触摸**：只做 844×390 触摸模拟；真机未验（X3）。
 - **音频听感 / 真实后台/锁屏**：Web Audio 路由、9 床/12 cue、暂停 duck、visibility 模拟通过；真机耳机听感与真实切后台仍 carry（X4/X5）。
-- **字体**：本版不打包；标题/正文只读系统 `local()`，缺失回退 Microsoft YaHei / Songti SC / SimSun；字体文件 0 字节（X6）。
+- **字体**：v1.1.0 公网随包 OFL 1.1 子集（`XB Smiley` / `XB Zhuque`，约 552 KB），仍保留系统回退；v1.0.0 的“不打包”记录只作历史。
 - **制作名单移动热区**：逻辑 100×44，桌面实测 45 逻辑 / 48 CSS px；844×390 缩放下物理 41.2×24.4 CSS px，低于 44，按步骤七 B16 同类例外记录，不重排标题（X12）。
 - **X7 计时版本**：四次真人计时中 C/D 的版本注记缺失；不把自动化 191 秒当真人。
 - **X8 访谈**：试玩为联合访谈，用户已接受 P0 例外；不写成 3 份独立问卷。
@@ -123,9 +141,10 @@ python -m http.server 8080
 
 ## 字体、素材、史料
 
-- **字体**：标题得意黑 Smiley Sans（SIL OFL 1.1，上游仓库声明）、正文霞鹜文楷 LXGW WenKai（SIL OFL 1.1，上游仓库声明）；本版不打包，只用 `local()`，缺失回退系统宋体/雅黑。官方源在本机网络不可达，故不把未核实文件打进 ZIP。
-- **图像**：Canvas/SVG 程序化版画（层叠山形、江面白线、雪粒、雾、铁索），人物为剪影；不使用未授权图片、影视、游戏素材。
-- **音频**：Web Audio 实时合成 9 张环境床、12 个短 cue、原创五音动机 D4–F4–G4–A4–C5；无音频文件，不自动播放；首次点击后解锁。
+- **字体（2026-11-04 素材增强）**：随包 OFL 1.1 子集；大标题/印章用得意黑 Smiley Sans（`XB Smiley`），章节/正文/图鉴用朱雀仿宋 Zhuque Fangsong（`XB Zhuque`）；回退 Microsoft YaHei / Songti SC / SimSun。授权原文在 `project/assets/fonts/OFL-*.txt`。
+- **图像**：程序化版画 + 12 张 1920×1080 双色调场景底图（CC BY / CC BY-SA / PD / CC0；湘江地图作第一章标题卡）+ 1 张豆包 Seedream 生成的标题插画（虚构红军小战士与于都河渡口，非史料人物/现场）；逐张署名与“不是 1935 年现场”说明见 `docs/credits.md`。不使用未授权影视/游戏素材。
+- **音频**：既有 Web Audio 合成 9 张环境床、12 个短 cue、原创五音动机 D4–F4–G4–A4–C5；新增 5 条 CC0 环境录音与 8 首 CC0/CC-BY 现代配乐；无历史录音冒充，不自动播放，首次点击后解锁。
+- **素材版状态**：代码与 `project/assets/` 已接入；v1.1.0 `dist/site`、离线 ZIP 与设计说明已生成、`release.py verify` 通过；2026-11-04 已部署到 GitHub Pages（`f8b2045`）。Edge headless 的 `http://` 与 `file://` 已验证字体/背景/音频/照片卡/图鉴/花名册。
 - **史料**：A1–A7 / S1–S15 见 `docs/sources.md`；每条至少 2 个出处，2026-11-03 复核链接。争议（X 光机、22 勇士姓名/牺牲人数、金沙江船数、于都渡口数、草地减员、夹金山高度）标注“有不同说法”。《七根火柴》《金色的鱼钩》是小说，不作为史料。
 
 ## 目录
@@ -146,8 +165,8 @@ project/
   tools/                    开发期脚本（不进运行时）
 dist/                       交付产物（默认不提交）
   site/                     上传用站点
-  xiangbei-v1.0.0/          ZIP 根目录
-  xiangbei-v1.0.0-offline.zip
+  xiangbei-v1.1.0/          ZIP 根目录
+  xiangbei-v1.1.0-offline.zip
   design-note.pdf
   SHA256SUMS.txt
 ```
@@ -157,16 +176,16 @@ dist/                       交付产物（默认不提交）
 制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
 完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
 
-## 线上自检（2026-11-03）
+## 线上自检（2026-11-04，v1.1.0）
 
-> 公网 live smoke 16/16：标题、CREDITS、PDF、起步、localStorage、门板入口、0 console error / pageerror / 404 / 外部请求。完整流程与 96/96 用例在发布包本地跑过，未在公网重跑；以下保留人工复检清单。
+> 本次公网只做关键文件 HTTP 200 + SHA256 比对（8/8：index、标题图、两份字体、湘江地图、配乐、CREDITS、PDF）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
 
 - [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
 - [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [ ] 四关入口（`?minigame=door|abandon|boat|climb`）与七张图鉴。
 - [ ] 手机横屏 844×390 可玩；竖屏提示。
-- [x] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS（公网 live smoke）。
+- [ ] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS（v1.1.0 公网未跑浏览器 smoke，待人工复检）。
 - [ ] 不暴露 docs/、step/、tools/、.git/、evidence。
 
-自检结果填回 `docs/release-record.md` §4/§5；未做的项写“未验证”，不写“通过”。
+自检结果填回 `docs/release-record.md` §10/§5；未做的项写“未验证”，不写“通过”。

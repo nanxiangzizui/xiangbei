@@ -1,9 +1,10 @@
-# 《向北》存档与旗标（v1.2 · 步骤六）
+# 《向北》存档与旗标（v1.3 · 素材增强）
 
 > 唯一存档键：`xiangbei.save.v1`；所有读写 try/catch；旗标只增不改名，改名必须迁移。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > 步骤五新增：`scene:"ending"`、ending 快照、`choice.zunyi.admit`、点名/图鉴/章末记忆；`PERSIST_KEYS` 仍是 11 键。
 > 步骤六不新增存档字段：音量/静音/减少动效继续用 `settings` 里已有的 `volume` / `muted` / `reducedMotion`；`SAVE_VERSION` 仍为 1。
+> 2026-11-04 素材增强：`settings` 新增 `musicVolume`、`ambienceVolume`（配乐/环境音独立音量，默认 1）；顶层 `PERSIST_KEYS` 仍是 11 键，不改键名、不升版本，旧档按默认补齐。
 
 ## 1. 存档 JSON（示例）
 
@@ -50,6 +51,8 @@
         "textSpeed": 30,
         "textScale": 1,
         "volume": 0.6,
+        "musicVolume": 1,
+        "ambienceVolume": 1,
         "muted": false,
         "reducedMotion": false,
         "skipSeen": false
@@ -108,7 +111,9 @@
 | codex | [] | 已解锁史实注 id |
 | settings.textSpeed | 30 | 字/秒；10–60 |
 | settings.textScale | 1 | 1 / 1.15 / 1.3；手机可调 |
-| settings.volume | 0.6 | 0–1 |
+| settings.volume | 0.6 | 0–1；总音量 |
+| settings.musicVolume | 1 | 0–1；配乐独立音量，乘在 musicBus 上 |
+| settings.ambienceVolume | 1 | 0–1；环境音独立音量，乘在 ambienceBus 上 |
 | settings.muted | false | 静音 |
 | settings.reducedMotion | false | 尊重系统 prefers-reduced-motion |
 | settings.skipSeen | false | 跳过已读 |
@@ -193,7 +198,7 @@
 
 - **每个 line beat 推进即保存**：一次推进 = 一次 `xiangbei.save.v1` 写入；单次序列化目标 <4KB，4096 字节是上限（超限视为 schema 设计错误：不写、控制台报错、提示“存档异常”）。
 - 刷新/关闭恢复到当前 beat，不回退到关卡开头。
-- 保存点：进入新章、每个选项结算（含超时）、小游戏结算应用后（不保存小游戏中间态）、记名/点名交互结束、设置变更（含音量滑块实时写入）、结局生成、标题卡关闭、史实注关闭（同时写入 `codex`）、结算面板继续。
+- 保存点：进入新章、每个选项结算（含超时）、小游戏结算应用后（不保存小游戏中间态）、记名/点名交互结束、设置变更（含总音量/配乐/环境音三个滑块实时写入）、结局生成、标题卡关闭、史实注关闭（同时写入 `codex`）、结算面板继续。
 - 点名中间态**不写档**：刷新回 w026 开头重念；ending 快照在点名结束时先写 names/answered/missed，w900 再补 stats/cards。
 - `paused`（暂停）、打字机进度、`seenNodes`（跳过已读）是运行时状态：**不写存档**，刷新后回到节点开头。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
@@ -202,6 +207,7 @@
 
 - **v1 内部修订（2026-11）**：`nodeId` 由数字数组下标改为字符串节点 id（如 `"p010"`，规则见 `docs/script/README.md` §7），新增 `scene` 字段。v1 从未发布、没有真实玩家存档，因此**不升 version**，仍为 1。
 - 步骤五在 v1 内新增 `scene:"ending"`、`ending` 快照与 `choice.zunyi.admit` 默认项；仍不升 version，旧开发档缺字段按默认补齐。
+- 2026-11-04 在 v1 内新增 `settings.musicVolume` / `settings.ambienceVolume`；旧档缺这两个键时按 1 补齐，不写迁移函数、不升 version。设置面板共八行（速度/字号/总音量/配乐/环境音/静音/减少动效/跳读），面板高 440、可滚动。
 - 读到数字 `nodeId` 的旧开发存档：备份为 `xiangbei.save.v1.bad` 后重置默认存档，提示“存档与当前版本不匹配，已重置”。
 - 读取到更高版本：备份为 `xiangbei.save.v1.bak`，提示“存档来自更新版本，已备份”，允许重置。
 - 解析失败或结构校验不通过（未知 scene、未知 chapter、找不到 nodeId、ending 不完整）：统一备份 `.bad`，重置默认存档；不静默丢弃，不白屏。

@@ -24,10 +24,13 @@ const REQUIRED_IDS = [
   "minigame-canvas", "minigame-hud", "minigame-help", "minigame-live", "minigame-pause", "minigame-fallback",
   "vn-interact", "interact-kicker", "interact-name", "interact-status", "interact-progress",
   "interact-names", "interact-answer", "interact-live",
-  "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-measure",
+  "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-title-place", "vn-measure",
   "vn-settings", "set-speed", "set-speed-value", "set-scale", "set-volume", "set-volume-value",
+  "set-music-volume", "set-music-volume-value", "set-env-volume", "set-env-volume-value",
   "set-muted", "set-motion", "set-skip",
-  "codex", "codex-title", "codex-badges", "codex-body", "codex-note", "codex-source", "codex-close",
+  "vn-roster", "roster-list", "roster-foot",
+  "codex", "codex-title", "codex-badges", "codex-figure", "codex-body", "codex-note", "codex-source",
+  "codex-image-note", "codex-close",
   "codex-gallery", "gallery-close", "gallery-title", "gallery-count", "gallery-grid"
 ];
 
@@ -267,11 +270,25 @@ function checkDocs() {
 }
 
 function checkAssets() {
-  ["index.html", "style.css"].concat(JS_FILES).forEach(function (file) {
-    if (/\.(mp3|wav|png|jpe?g)\b/i.test(readProject(file))) fail("C09", file + " 引用了音频/图片文件");
+  var sources = ["index.html", "style.css"].concat(JS_FILES);
+  var seen = {};
+  sources.forEach(function (file) {
+    var code = readProject(file);
+    var matches = code.match(/["'](\.\/assets\/[^"']+)["']/g) || [];
+    matches.forEach(function (quoted) {
+      var rel = quoted.slice(1, -1);
+      if (seen[rel]) return;
+      seen[rel] = true;
+      if (!/^\.\/assets\/(?:backgrounds|fonts|audio)\//.test(rel)) {
+        fail("C09", file + " 的资源不在 assets 白名单：" + rel);
+      }
+      if (!fs.existsSync(path.join(PROJECT_DIR, rel.slice(2)))) {
+        fail("C09", file + " 引用的资源不存在：" + rel);
+      }
+    });
   });
   if (/<audio\b|<img\b/i.test(readProject("index.html"))) fail("C09", "index.html 含 audio/img 标签");
-  notes.push("C09 OK 无音频/图片文件引用");
+  notes.push("C09 OK 资源均位于 assets 且文件存在（" + Object.keys(seen).length + " 个）");
 }
 
 // C10：色值只能出现在 :root；组件规则一律 var()
@@ -325,10 +342,11 @@ function checkArtScenes() {
     return;
   }
   var expectedScenes = ["title", "map", "yudu_river", "yudu_night",
-    "xiangjiang_ford", "xiangjiang_dawn", "zunyi_hall", "zunyi_street",
+    "xiangjiang_ford", "xiangjiang_dawn", "xiangjiang_map",
+    "zunyi_hall", "zunyi_street",
     "jinsha_river", "jinsha_night", "luding_bridge", "luding_after",
     "grass_marsh", "grass_dawn", "wuqi_dawn", "wuqi_wall"];
-  if (art.SCENES.length !== expectedScenes.length) fail("C11", "SCENES 应为 16 个，实际 " + art.SCENES.length);
+  if (art.SCENES.length !== expectedScenes.length) fail("C11", "SCENES 应为 17 个，实际 " + art.SCENES.length);
   expectedScenes.forEach(function (id) {
     if (art.SCENES.indexOf(id) === -1) fail("C11", "SCENES 缺 " + id);
   });
@@ -371,16 +389,28 @@ function checkPreview() {
   var fontBlocks = readProject("style.css").match(/@font-face\s*\{[^}]*\}/g) || [];
   if (!fontBlocks.length) fail("C12", "style.css 没有 @font-face");
   fontBlocks.forEach(function (block) {
-    if (/url\(/.test(block)) fail("C12", "@font-face 用了 url()（本步不打包字体）");
-    if (!/local\(/.test(block)) fail("C12", "@font-face 缺 local()");
+    if (!/local\(/.test(block) && !/url\(/.test(block)) fail("C12", "@font-face 缺 local()/url()");
+    var urls = block.match(/url\(["']?([^"')]+)["']?\)/g) || [];
+    urls.forEach(function (item) {
+      var rel = /url\(["']?([^"')]+)["']?\)/.exec(item)[1];
+      if (rel.indexOf("./assets/fonts/") !== 0) fail("C12", "@font-face 字体路径不在 assets/fonts：" + rel);
+      if (!/\.woff2$/i.test(rel)) fail("C12", "@font-face 只允许 woff2 子集：" + rel);
+      if (!fs.existsSync(path.join(PROJECT_DIR, rel.slice(2)))) fail("C12", "字体文件缺失：" + rel);
+    });
   });
   var fontDir = path.join(PROJECT_DIR, "assets", "fonts");
-  if (fs.existsSync(fontDir)) {
-    fs.readdirSync(fontDir).forEach(function (name) {
-      if (/\.(woff2?|ttf|otf|eot)$/i.test(name)) fail("C12", "assets/fonts 混入字体文件：" + name);
+  if (!fs.existsSync(fontDir)) {
+    fail("C12", "缺 assets/fonts");
+  } else {
+    var fontFiles = fs.readdirSync(fontDir).filter(function (name) {
+      return /\.(woff2?|ttf|otf|eot)$/i.test(name);
+    });
+    if (fontFiles.length < 2) fail("C12", "assets/fonts 至少需要两套子集");
+    fontFiles.forEach(function (name) {
+      if (!/\.woff2$/i.test(name)) fail("C12", "assets/fonts 只允许 woff2：" + name);
     });
   }
-  notes.push("C12 OK 预览页 10 类组件唯一、只引 ../style.css、字体只用 local()（本版不打包）");
+  notes.push("C12 OK 预览页 10 类组件唯一、只引 ../style.css、字体为本地 woff2 子集");
 }
 
 // C13：序章节点图结构（步骤三出口：一章能从头播到尾）
@@ -924,7 +954,13 @@ function checkAudioAssets() {
     return stripComments(readProject(file));
   }).join("\n");
   var audioExt = /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)\b/i;
-  if (audioExt.test(code)) fail("C31", "JS 里出现音频文件引用");
+  var audioRefs = code.match(/["']([^"']+\.(?:mp3|wav|ogg|m4a|flac|aac|opus|weba))["']/gi) || [];
+  audioRefs.forEach(function (quoted) {
+    var rel = quoted.slice(1, -1);
+    if (rel.indexOf("./assets/audio/") !== 0) fail("C31", "音频引用不在 assets/audio：" + rel);
+    if (!fs.existsSync(path.join(PROJECT_DIR, rel.slice(2)))) fail("C31", "音频文件缺失：" + rel);
+    if (!/\.mp3$/i.test(rel)) fail("C31", "运行时音频只允许 mp3：" + rel);
+  });
   if (/\bnew\s+Audio\s*\(/.test(code)) fail("C31", "出现 new Audio(");
   JS_FILES.forEach(function (file) {
     if (file === "engine.js") return;
@@ -934,6 +970,7 @@ function checkAudioAssets() {
   var engine = stripComments(readProject("engine.js"));
   if (engine.indexOf("var Ctor = window.AudioContext || window.webkitAudioContext;") === -1) fail("C31", "缺 AudioContext 构造点");
   if ((engine.match(/new Ctor\(\)/g) || []).length !== 1) fail("C31", "engine.js 应只有一个 new Ctor() 创建点");
+  if (engine.indexOf("createMediaElementSource") === -1) fail("C31", "缺 createMediaElementSource");
   var html = readProject("index.html");
   if (/<audio\b/i.test(html)) fail("C31", "index.html 含 <audio>");
   if (audioExt.test(html)) fail("C31", "index.html 引用音频文件");
@@ -948,8 +985,11 @@ function checkAudioAssets() {
     });
   }
   walk(assetDir);
-  if (audioFiles.length) fail("C31", "assets 里有音频文件：" + audioFiles.map(function (file) { return path.basename(file); }).join(","));
-  notes.push("C31 OK 无音频文件、无 new Audio、AudioContext 只在 XB.audio");
+  if (audioFiles.length < 10) fail("C31", "assets 音频文件过少，实际 " + audioFiles.length);
+  audioFiles.forEach(function (file) {
+    if (!/\.mp3$/i.test(file)) fail("C31", "运行时音频只允许 mp3：" + path.basename(file));
+  });
+  notes.push("C31 OK 外置音频 " + audioFiles.length + " 个（mp3）、无 new Audio、AudioContext 只在 XB.audio");
 }
 
 // C32：手势解锁、可见性暂停、压缩器、无 setInterval
@@ -981,7 +1021,7 @@ function checkAudioBeds() {
     if (beds.indexOf(id) === -1) fail("C33", "BEDS 缺 " + id);
   });
   var map = XB.audio.BED_BY_SCENE;
-  if (!map || Object.keys(map).length !== 17) fail("C33", "BED_BY_SCENE 应为 17 项，实际 " + (map ? Object.keys(map).length : 0));
+  if (!map || Object.keys(map).length !== 18) fail("C33", "BED_BY_SCENE 应为 18 项，实际 " + (map ? Object.keys(map).length : 0));
   ["title", "map", "ending"].forEach(function (scene) {
     if (!map || !map[scene]) fail("C33", "BED_BY_SCENE 缺显式场景 " + scene);
   });
@@ -997,7 +1037,7 @@ function checkAudioBeds() {
   if (!map || map.luding_bridge !== "luding") fail("C33", "泸定桥应映射 luding");
   if (XB.audio.bedForScene("no_such_scene") !== "wind_title") fail("C33", "未知场景应回退 wind_title");
   if (XB.audio.CUES.length !== 12) fail("C33", "CUES 应为 12 个，实际 " + XB.audio.CUES.length);
-  notes.push("C33 OK 9 床 / 17 场景 / " + Object.keys(bgs).length + " 个剧情背景全覆盖 / 未知回退");
+  notes.push("C33 OK 9 床 / 18 场景 / " + Object.keys(bgs).length + " 个剧情背景全覆盖 / 未知回退");
 }
 
 // C34：设置接线，存档仍 11 键且不新增 audio 键
@@ -1006,15 +1046,18 @@ function checkAudioSettings() {
   if (XB.core.PERSIST_KEYS.length !== 11) fail("C34", "PERSIST_KEYS 应仍为 11 键，实际 " + XB.core.PERSIST_KEYS.length);
   if (XB.core.PERSIST_KEYS.indexOf("audio") !== -1) fail("C34", "PERSIST_KEYS 不应新增 audio");
   var settingsKeys = Object.keys(XB.core.DEFAULT_SETTINGS);
-  if (settingsKeys.length !== 6) fail("C34", "settings 应仍为 6 键，实际 " + settingsKeys.length);
+  var allowedSettings = ["textSpeed", "textScale", "volume", "musicVolume", "ambienceVolume", "muted", "reducedMotion", "skipSeen"];
+  if (settingsKeys.length !== allowedSettings.length) fail("C34", "settings 应为 8 键，实际 " + settingsKeys.length);
   settingsKeys.forEach(function (key) {
-    if (/audio|sound|music/.test(key)) fail("C34", "settings 不应新增音频键 " + key);
+    if (allowedSettings.indexOf(key) === -1) fail("C34", "settings 含未知键 " + key);
   });
   var engine = stripComments(readProject("engine.js"));
   if (engine.indexOf("XB.audio.applySettings(state.settings)") === -1) fail("C34", "applySettings 未接音频");
-  if (engine.indexOf("XB.audio.applySettings({ volume: state.settings.volume })") === -1) fail("C34", "音量滑块未实时应用");
+  if (engine.indexOf("XB.audio.applySettings({ volume: state.settings.volume })") === -1) fail("C34", "总音量滑块未实时应用");
+  if (engine.indexOf("XB.audio.applySettings({ musicVolume: state.settings.musicVolume })") === -1) fail("C34", "配乐滑块未实时应用");
+  if (engine.indexOf("XB.audio.applySettings({ ambienceVolume: state.settings.ambienceVolume })") === -1) fail("C34", "环境音滑块未实时应用");
   if (engine.indexOf("XB.fx.setReduced(state.settings.reducedMotion === true)") === -1) fail("C34", "applySettings 未接 fx reduced");
-  notes.push("C34 OK 音量实时接线、设置 6 键、存档 11 键、无 audio 持久键");
+  notes.push("C34 OK 总音量/配乐/环境音实时接线、设置 8 键、存档 11 键、无 audio 持久键");
 }
 
 // C35：特效层位置、样式、reduced 入口
@@ -1082,20 +1125,24 @@ function checkCredits() {
   if (!/刘子政/.test(credits)) fail("C37", "CREDITS.txt 缺制作署名");
   if (/<[^>]*姓名|TODO|待填|待补|<老师>|<姓名>/.test(credits)) fail("C37", "CREDITS.txt 仍有姓名/待填占位");
   var creditsBytes = Buffer.byteLength(credits, "utf8");
-  if (creditsBytes > 2048) fail("C37", "CREDITS.txt 超过 2KB（" + creditsBytes + " 字节）");
+  if (creditsBytes > 16384) fail("C37", "CREDITS.txt 超过 16KB（" + creditsBytes + " 字节）");
   if (credits.indexOf("虚构人物") === -1) fail("C37", "CREDITS.txt 缺虚构声明");
-  notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、./CREDITS.txt 链接");
+  ["OFL", "Wikimedia Commons", "CC BY-SA", "OpenGameArt"].forEach(function (needle) {
+    if (credits.indexOf(needle) === -1) fail("C37", "CREDITS.txt 缺素材授权字段 " + needle);
+  });
+  notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、字体/图像/音频授权、./CREDITS.txt 链接");
 }
 
 // C38：发布运行时无外部请求/模块（步骤八冻结）
 function checkReleaseRuntime() {
-  var files = ["index.html", "style.css"].concat(JS_FILES).concat(["CREDITS.txt"]);
+  var files = ["index.html", "style.css"].concat(JS_FILES);
   files.forEach(function (file) {
     var text = readProject(file);
     if (/https?:\/\//.test(text)) fail("C38", file + " 含 http(s) 外部地址");
     if (/\bfetch\s*\(|XMLHttpRequest|type\s*=\s*["']module/.test(text)) fail("C38", file + " 含外部加载/ES module");
   });
-  notes.push("C38 OK 六个运行时 + CREDITS 无 http(s)、无 fetch/XHR、无 type=module");
+  // CREDITS 是纯文本署名，允许出现来源 URL；它不参与运行时加载。
+  notes.push("C38 OK 六个运行时无 http(s)、无 fetch/XHR、无 type=module；CREDITS 仅文本署名");
 }
 
 checkCompile();

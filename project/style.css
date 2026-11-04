@@ -1,16 +1,18 @@
 /* 《向北》style.css —— 步骤二：视觉系统（令牌 + 组件壳 + 舞台）
    规格见 docs/visual-system.md 与 docs/ui-layout.md；组件规则里只允许 var()，禁止再写色值。 */
 
-/* ---------- 字体：只用 local()，不打包、不下载 ---------- */
+/* ---------- 字体：OFL 子集随包，系统字体兜底 ----------
+   子集只含游戏实际用字；缺字时回退系统宋体/黑体。
+   授权见 assets/fonts/OFL-Zhuque.txt 与 OFL-Smiley.txt。 */
 @font-face {
-  font-family: "XB Title";
-  src: local("Smiley Sans"), local("SmileySans-Oblique"), local("得意黑");
+  font-family: "XB Smiley";
+  src: url("./assets/fonts/smiley-game.woff2") format("woff2");
   font-display: swap;
 }
 
 @font-face {
-  font-family: "XB Body";
-  src: local("LXGW WenKai"), local("LXGWWenKai-Regular"), local("霞鹜文楷");
+  font-family: "XB Zhuque";
+  src: url("./assets/fonts/zhuque-game.woff2") format("woff2");
   font-display: swap;
 }
 
@@ -30,6 +32,21 @@
   --night-deep: #10161D;
   --scrim: rgba(16, 22, 29, 0.62);
   --overlay: rgba(16, 22, 29, 0.78);
+  --title-map-scrim: linear-gradient(90deg, rgba(11, 14, 19, 0.96) 0%, rgba(11, 14, 19, 0.9) 34%, rgba(11, 14, 19, 0.48) 58%, rgba(11, 14, 19, 0.04) 82%);
+  --chapter-photo-scrim: linear-gradient(90deg, rgba(11, 14, 19, 0.97) 0%, rgba(11, 14, 19, 0.9) 30%, rgba(11, 14, 19, 0.52) 56%, rgba(11, 14, 19, 0.08) 84%);
+  --codex-caption-scrim: linear-gradient(0deg, rgba(11, 14, 19, 0.82), transparent);
+  --title-photo-left-scrim: linear-gradient(90deg,
+    rgba(232, 225, 208, 0.82) 0%,
+    rgba(232, 225, 208, 0.58) 22%,
+    rgba(232, 225, 208, 0.18) 42%,
+    rgba(232, 225, 208, 0) 62%);
+  --title-photo-bottom-scrim: linear-gradient(to left,
+    rgba(16, 22, 29, 0.97) 0%,
+    rgba(16, 22, 29, 0.94) 14%,
+    rgba(16, 22, 29, 0.55) 20%,
+    rgba(16, 22, 29, 0) 30%);
+  --title-map-shadow: 0 1px 14px rgba(0, 0, 0, 0.65);
+  --title-sub-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
   --shadow: rgba(26, 23, 20, 0.18);
   --ink-a12: rgba(26, 23, 20, 0.12);
   --ink-a20: rgba(26, 23, 20, 0.2);
@@ -46,9 +63,10 @@
     repeating-linear-gradient(90deg, rgba(26, 23, 20, 0.012) 0 1px, transparent 1px 7px),
     radial-gradient(90% 70% at 20% 10%, rgba(241, 235, 221, 0.035), transparent 55%);
 
-  /* 字体 */
-  --font-title: "XB Title", "Smiley Sans", "得意黑", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
-  --font-body: "XB Body", "LXGW WenKai", "霞鹜文楷", "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
+  /* 字体：得意黑只给最大标题，其余用朱雀仿宋。 */
+  --font-display: "XB Smiley", "Smiley Sans", "得意黑", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-title: "XB Zhuque", "Zhuque Fangsong", "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
+  --font-body: "XB Zhuque", "Zhuque Fangsong", "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
   --font-num: "Consolas", "SFMono-Regular", "Courier New", monospace;
 
   /* 字号 / 行高 / 字距 */
@@ -126,7 +144,8 @@
 
 /* 低配 / 对照：强制走系统回退栈（?fonts=fallback 触发） */
 html.fonts-fallback {
-  --font-title: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-display: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-title: "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
   --font-body: "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
 }
 
@@ -171,6 +190,24 @@ body {
   z-index: var(--z-art);
   display: block;
   pointer-events: none;
+}
+
+/* 照片底缓慢推近；不改变布局，只在画布内部裁切。 */
+.stage-art.is-photo {
+  transform-origin: 50% 52%;
+  animation: xb-art-drift 28s ease-in-out infinite alternate;
+}
+
+@keyframes xb-art-drift {
+  from { transform: scale(1.015) translate3d(0, 0, 0); }
+  to { transform: scale(1.05) translate3d(-0.55%, -0.35%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-art.is-photo {
+    animation: none;
+    transform: none;
+  }
 }
 
 .scene {
@@ -276,7 +313,7 @@ a:focus-visible,
   left: 120px;
   top: 132px;
   margin: 0;
-  font-family: var(--font-title);
+  font-family: var(--font-display);
   font-size: var(--fs-title);
   font-weight: 400;
   line-height: var(--lh-title);
@@ -294,7 +331,7 @@ a:focus-visible,
   place-items: center;
   background: var(--cinnabar);
   color: var(--paper-hi);
-  font-family: var(--font-title);
+  font-family: var(--font-display);
   font-size: 32px;
   line-height: 1;
   border-radius: var(--radius);
@@ -358,6 +395,48 @@ a:focus-visible,
 .title-credits:focus-visible {
   outline: 2px solid var(--cinnabar);
   outline-offset: 2px;
+}
+
+/* 标题照片底：左侧压纸、右下压暗。
+   左压纸保证“向北”和菜单压在人物/山影上仍可读；右下压暗同时收住
+   AI 生成图右下角的水印，制作名单链接因此改用纸色。 */
+#scene-title::before,
+#scene-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#scene-title::before {
+  background: var(--title-photo-left-scrim);
+}
+
+#scene-title::after {
+  background: var(--title-photo-bottom-scrim);
+  background-size: 100% 150px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+.title-main,
+.title-seal,
+.title-sub,
+.title-menu,
+.title-version,
+.title-credits {
+  z-index: 1;
+}
+
+.title-credits {
+  color: var(--paper-hi);
+  text-shadow: 0 1px 2px var(--ink);
+}
+
+.title-credits:hover {
+  color: var(--paper-hi);
+  border-bottom-color: var(--cinnabar);
 }
 
 /* ---------- 地图画面 ---------- */
@@ -559,6 +638,12 @@ a:focus-visible,
   text-align: center;
   color: var(--cinnabar);
   animation: breathe 1.6s var(--ease-out) infinite;
+}
+
+/* 朱雀仿宋的 ▼ 在 14px 下会缩成小点：箭头单独走系统符号字体。 */
+.vn-next__mark {
+  font-family: "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", sans-serif;
+  font-size: 15px;
 }
 
 @keyframes breathe {
@@ -948,6 +1033,39 @@ a:focus-visible,
   letter-spacing: var(--ls-chapter);
 }
 
+/* 湘江章首：让 1934 年作战地图露出右半屏，标题压暗左半屏。
+   地图是照片底，不再铺纯夜色；其余章首仍用纯夜色。 */
+#vn-title-card.is-map {
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-left: 104px;
+  background: var(--title-map-scrim);
+}
+
+#vn-title-card.is-map .xb-title-card__chapter {
+  font-size: 36px;
+  letter-spacing: 6px;
+  text-shadow: var(--title-map-shadow);
+}
+
+#vn-title-card.is-map .xb-title-card__rule {
+  width: 280px;
+  background: var(--cinnabar);
+}
+
+#vn-title-card.is-map .xb-title-card__sub {
+  color: var(--paper-a72);
+  text-shadow: var(--title-sub-shadow);
+}
+
+/* 标题卡是透明地图/照片时，下面的 HUD 和空对话框会透出来。 */
+#scene-vn.is-title-card .vn-chapter,
+#scene-vn.is-title-card .vn-pause,
+#scene-vn.is-title-card .vn-dialogue {
+  visibility: hidden;
+}
+
 .xb-title-card__sub {
   margin: 0;
   font-size: var(--fs-note);
@@ -972,6 +1090,50 @@ a:focus-visible,
   color: var(--paper-hi);
   background: var(--cinnabar);
   border-radius: var(--radius);
+}
+
+/* 所有章首卡统一：照片铺满，左侧留出标题；地图卡沿用更暗的左侧压暗。 */
+#vn-title-card.has-photo {
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-left: 104px;
+  background-color: var(--night);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+#vn-title-card.has-photo:not(.is-map) {
+  background-image: var(--chapter-photo-scrim), var(--title-card-image);
+}
+
+#vn-title-card.has-photo.is-map {
+  background-image: var(--title-map-scrim), var(--title-card-image);
+}
+
+#vn-title-card.has-photo .xb-title-card__chapter {
+  font-size: 36px;
+  letter-spacing: 6px;
+  text-shadow: var(--title-map-shadow);
+}
+
+#vn-title-card.has-photo .xb-title-card__rule {
+  width: 280px;
+  background: var(--cinnabar);
+}
+
+#vn-title-card.has-photo .xb-title-card__sub {
+  color: var(--paper-a72);
+  text-shadow: var(--title-sub-shadow);
+}
+
+.xb-title-card__place {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--paper-a72);
+  text-shadow: var(--title-sub-shadow);
 }
 
 @keyframes xb-fade {
@@ -1815,6 +1977,83 @@ a:focus-visible,
   box-shadow: 4px 4px 0 var(--shadow);
 }
 
+/* 花名册：暂停菜单里的第三个面板，只读当前名册，不写新档。 */
+#vn-roster {
+  position: absolute;
+  left: 360px;
+  top: 80px;
+  width: 560px;
+  max-height: 560px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+.xb-roster__hint,
+.xb-roster__foot {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.xb-roster__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--border) solid var(--ink-a30);
+}
+
+.xb-roster__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-1);
+  border-bottom: var(--border) solid var(--ink-a30);
+}
+
+.xb-roster__name {
+  font-family: var(--font-title);
+  font-size: 19px;
+  letter-spacing: 2px;
+}
+
+.xb-roster__status {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+}
+
+.xb-roster__item.is-missed .xb-roster__name {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.xb-roster__item.is-missed .xb-roster__status {
+  color: var(--cinnabar);
+}
+
+.xb-roster__item.is-answered .xb-roster__status {
+  color: var(--ember);
+}
+
+.xb-roster__item.is-remote .xb-roster__status {
+  color: var(--ink);
+}
+
 .xb-settings__control {
   display: flex;
   align-items: center;
@@ -1855,6 +2094,41 @@ a:focus-visible,
 
 .xb-codex__badges {
   padding: 0 var(--space-5) var(--space-3);
+}
+
+.xb-codex__figure {
+  position: relative;
+  margin: 0 var(--space-5) var(--space-3);
+  overflow: hidden;
+  background: var(--night);
+  border: var(--border) solid var(--ink-a30);
+}
+
+.xb-codex__figure img {
+  display: block;
+  width: 100%;
+  height: 158px;
+  object-fit: cover;
+  filter: grayscale(1) sepia(0.12) contrast(1.04);
+}
+
+.xb-codex__figure figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px var(--space-3);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--paper-a72);
+  background: var(--codex-caption-scrim);
+}
+
+.xb-codex__asset-note {
+  margin: var(--space-2) var(--space-5) 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-muted);
 }
 
 .xb-codex__body {
@@ -2077,12 +2351,34 @@ a:focus-visible,
   position: relative;
   box-sizing: border-box;
   height: 140px;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) 96px;
   overflow: hidden;
   text-align: left;
   background: var(--paper);
   border: var(--border) solid var(--ink-a30);
   border-radius: var(--radius);
+}
+
+.xb-gallery__thumb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 82px;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) sepia(0.12) contrast(1.04);
+  opacity: 0.92;
+}
+
+.xb-gallery__card.is-locked .xb-gallery__thumb {
+  opacity: 0.38;
+}
+
+.xb-gallery__asset-note {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-muted);
 }
 
 .xb-gallery__card.is-unlocked {
@@ -2127,7 +2423,7 @@ a:focus-visible,
 
 .xb-gallery__card-state {
   position: absolute;
-  left: var(--space-4);
+  left: 96px;
   bottom: var(--space-3);
   font-size: 12px;
   letter-spacing: 1px;
@@ -2139,7 +2435,7 @@ a:focus-visible,
 }
 
 .xb-gallery__hint {
-  margin: auto 0 0;
+  margin: var(--space-2) 0 0;
   font-size: 12px;
   color: var(--ink-muted);
 }

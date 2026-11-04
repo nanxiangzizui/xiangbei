@@ -1,6 +1,6 @@
-# 《向北》发布记录（v1.0.0）
+# 《向北》发布记录（v1.0.0 历史 + v1.1.0 已部署）
 
-> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外。
+> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强与部署见 §10。
 > 状态源仍是 `.claude/CLAUDE.md`；测试历史见 `docs/test-record.md`，本文件不覆盖步骤七结论。
 
 ## 1. 版本与基线
@@ -129,3 +129,74 @@
 4. 验证：8 个文件哈希 8/8（engine/style 按 LF 规范化）；PDF SHA256 `f9355b39…` 精确一致；公网 live smoke 16/16。
 5. 更新流程：覆盖 `dist/site/` → 提交并 push `main` → 等 Pages 重建 → 用 `README.md` “线上自检”复检；不要上传仓库根目录或开发文件。
 6. 临时 token：`C:\Users\nanxiangzi\AppData\Local\Temp\xiangbei-gh-token.txt` 已于 2026-11-03 部署完成后删除（删除前 93 B）；token 不写入仓库、不写进本文件。建议用户在 GitHub 撤销该 fine-grained PAT。
+
+## 10. v1.1.0 素材/阅读增强（2026-11-04，已部署）
+
+> 本节记录 v1.1.0 的范围、交付物、回归与部署；§1–§9 保留为 v1.0.0 历史。公网自 2026-11-04 起为 v1.1.0，部署提交 `f8b2045`。
+
+### 10.1 范围
+
+| 项 | 内容 |
+|---|---|
+| 背景 | 12 张 1920×1080 双色调/版画化底图；湘江战役旧地图作第一章标题卡；1 张豆包 Seedream 生成的标题插画（虚构红军小战士/于都河，非史料人物/现场；右下角“豆包AI生成”水印已修补，底边另加暗部） |
+| 字体 | 随包 OFL 1.1 子集：`XB Smiley` 158,048 B + `XB Zhuque` 394,452 B；大标题/印章用得意黑，章节/正文/图鉴用朱雀仿宋；保留 `?fonts=fallback` |
+| 环境音 | 5 条 CC0 循环（风、河、雨、鸟、火），MP3；与既有 Web Audio 合成床叠加 |
+| 配乐 | 8 首 CC0/CC-BY 现代配乐，MP3 统一归一化 RMS≈0.10、peak≤0.95；musicBus 0.62、gains 1.5；file:// 直连回退并修正旧曲复响 |
+| 阅读/演出 | 6 张照片章首卡（日期/地点）、7 张图鉴缩略图 + 照片年代说明、照片 28s 缓慢推拉 + 预加载、总/配乐/环境三档音量、暂停花名册、file:// 1.4s 淡入淡出 |
+| 未做 | 第 8 项清理/兼容性专项（未用 `plate_loushan`、Chrome/Safari/真机补测、移动 WebP 变体）留到后续；不写成已完成 |
+
+### 10.2 交付物（已部署）
+
+| 项 | 路径 | 字节/数量 |
+|---|---|---:|
+| 发布站点 | `dist/site/` | 47 文件 / 27,888,240 B |
+| 离线包目录 | `dist/xiangbei-v1.1.0/` | 48 文件 / 27,890,417 B |
+| 离线 ZIP | `dist/xiangbei-v1.1.0-offline.zip` | 49 条目 / 27,347,934 B |
+| 设计说明 PDF | `dist/design-note.pdf` | 1 页 / 299,941 B |
+| 制作名单 | `project/CREDITS.txt` | 9,438 B |
+| 哈希清单 | `dist/SHA256SUMS.txt` | 97 文件 / 11,105 B（含 PDF/ZIP/site/package） |
+
+`python project/tools/release.py verify` 已通过：site 47 文件、package 48 文件、ZIP 49 条目、PDF 1 页、CREDITS 9,438 B。
+
+### 10.3 门禁与回归
+
+| 项 | 结果 |
+|---|---|
+| 语法 | `node --check` × 4 个 JS 通过 |
+| 构建自检 | `check-build.js` **38/38** |
+| 状态烟测 | `smoke.js` **46/46** |
+| 剧本红线 | `check-script.js docs/script` OK：7 剧本 / 禁用词 0 / 真实人物 0 / 结构完整 |
+| 阅读层专项 | Edge http **21/21**；照片卡、图鉴缩略图/年代说明、三档音量、花名册、file:// 标题/字体/图 |
+| 完整流程 http | 201.585 秒 / 405 行；四关均有结果；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求 |
+| 完整流程 file:// | 197.639 秒 / 406 行；5 卡 / 4 亮 / 7 名 / 0 划名；0 错误 |
+| 完整流程 844×390 | 207.978 秒 / 405 行；触摸；5 卡 / 4 亮 / 7 名 / 0 划名；0 错误 |
+| 四关 | **20/20**；门板 0.1s、弃物 1.0s、渡船 89.3s（12/18 趟，37 船工）、攀索 29.9s（16 过 / 6 暗） |
+| 章节卡 | **6/6** `has-photo`，地点与底图匹配；湘江为 `is-map` + `plate_xiangjiang_map.jpg` |
+| 移动阅读层 | 844×390 标题/章首卡/图鉴/花名册在舞台内；7 缩略图全部加载；花名册 7 行 + 返回可见 |
+
+证据目录：
+- http 完整流程 `docs/evidence/step-07/edge-http-20261104-181721`
+- file:// 完整流程 `docs/evidence/step-07/edge-file-20261104-182136`
+- 移动完整流程 `docs/evidence/step-07/edge-http-20261104-182136-mobile`
+- 四关 `docs/evidence/step-07/edge-http-20261104-minigames-unique`
+- 章节卡 `docs/evidence/step-07/edge-http-20261104-titlecards`
+- 移动阅读层 `docs/evidence/step-07/edge-mobile-20261104-feature`
+
+### 10.4 素材例外（必须如实说明）
+
+- **吴起底图**是 1967 年《人民画报》的陕北杨家岭窑洞村，不是吴起镇；作“陕北地域示意”，不是 1935 年现场。
+- **湘江底图**是湖南湘江边河镇，不是广西界首战场；只作时代氛围，不指认具体战场。第一章标题卡用 1934 年红军旧地图，是史料影像，不是战场照片。
+- **1967 年《人民画报》**的娄山关/泸定桥影像摄于 1967 年，不是 1935 年现场。
+- **遵义会议会址**照片摄于 2005 年，建筑经修缮；**遵义老城**图实际是红军遵义警备司令部旧址大门，不是街道。
+- **无 1930 年代历史录音**；环境音与配乐均为现代 CC0/CC-BY 录音/作曲，未冒充历史音频。
+- 标题插画由豆包 Seedream 生成，已去除右下角生成水印并在底边加暗部；画面人物与场景为虚构，不是史料人物/现场。授权与逐张署名见 `project/CREDITS.txt`、`docs/credits.md`、`resource/README.md`。
+
+### 10.5 部署状态（已执行）
+
+- **已部署**：2026-11-04 18:42 +08:00，`nanxiangzizui/xiangbei` 的 `main` / root 更新到 `f8b20451cd2ec42766ed6140c1391a44a9c72459`；公网 https://nanxiangzizui.github.io/xiangbei/ 已返回 v1.1.0 文件。
+- 部署方式：把 `dist/site/` 47 个文件与 `.nojekyll` 写入独立部署仓库 `dist/_gh-pages`，提交后 push；网站文件不包含 `project/`、`docs/`、`step/`、`tools/` 或测试证据。
+- 认证：使用 GitHub OAuth device flow（scope `public_repo`），token 只存在于部署进程内存，未写入仓库/文件；部署完成后建议用户在 GitHub Settings → Applications 撤销该 OAuth 授权。
+- 公网验证：用 `curl --resolve nanxiangzizui.github.io:443:185.199.108.153 --ssl-no-revoke` 绕过本机 DNS/CRL 问题；8 个关键文件 HTTP 200 且 SHA256 与本机 `dist/site` 一致——`index.html` 13,659 B、`plate_title.jpg` 529,043 B、`zhuque-game.woff2` 394,452 B、`shangri_river.mp3` 871,862 B、`plate_xiangjiang_map.jpg` 680,080 B、`smiley-game.woff2` 158,048 B、`CREDITS.txt` 9,438 B、`design-note.pdf` 299,941 B。
+- **未做**：v1.1.0 公网浏览器 live smoke、完整流程、四关、移动端、96/96 全用例均未在公网重跑；这些结果来自本地 `dist/site` / ZIP / 开发服务器，不能写成“公网完整流程通过”。
+- 回滚：如需回到 v1.0.0，把 `main` 退回 `7dbe2b4`；不要删除部署仓库历史。
+

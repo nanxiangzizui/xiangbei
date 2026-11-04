@@ -2,14 +2,15 @@
 
 > 本文件是视觉的唯一规格：设计令牌、字体、组件壳、画布契约、构图与性能预算。
 > 坐标只在 `docs/ui-layout.md`；存档只在 `docs/state-schema.md`；冲突时以「计划书 → .claude/CLAUDE.md → ui-layout/state-schema → 本文件」处理，不静默分叉。
-> 状态：步骤二定稿（2026-11-01）；步骤六追加动效令牌与特效层（2026-11-02）。步骤三–八只在本文件上追加，不改令牌含义。
+> 状态：步骤二定稿（2026-11-01）；步骤六追加动效令牌与特效层（2026-11-02）；2026-11-04 素材增强追加照片底图、OFL 子集字体与标题卡照片态。步骤三–八只在本文件上追加，不改令牌含义。
 
 ## 1. 目的与边界
 
-- 管：五色与派生色、字体栈与回退、字号/间距/层级令牌、10 类组件壳、单画布 art API、四场景构图、对比度与性能预算。
+- 管：五色与派生色、字体栈与回退、字号/间距/层级令牌、10 类组件壳、单画布 art API、17 场景底图、对比度与性能预算。
 - 不管：具体坐标（ui-layout）、存档字段（state-schema）、剧情文本（docs/script）、小游戏数值（minigame-tuning）、音频（步骤六）。
 - 原则：**组件只写壳**。本文件描述的 selected/timeout/locked 都是类名与静态标记；打字机、计时、旗标结算属于步骤三，图鉴正文与结局数据属于步骤五，粒子/转场属于步骤六。
-- 视觉母题：纸（纸白底 + 极淡纸纹）、墨（山形与剪影）、朱砂（印章与序号）、火（火把与暖窗）。版画只用线条与色块，不画人物正脸，不用图片素材。
+- 视觉母题：纸（纸白底 + 极淡纸纹）、墨（山形与剪影）、朱砂（印章与序号）、火（火把与暖窗）。版画只用线条与色块，不画人物正脸。
+- 2026-11-04 起：章节底图使用 CC/PD 照片，经灰度 + 双色调 + 颗粒 + 暗角处理成版画化 plate；标题页使用一张 AI 生成插画（虚构小战士，已标注非史料人物/现场）。原图不直接上屏，来源与 caveat 见 `project/CREDITS.txt`、`docs/credits.md`。
 
 ## 2. 色彩
 
@@ -65,14 +66,15 @@
 
 | 角色 | 令牌 | 栈 |
 |---|---|---|
-| 标题 | `--font-title` | "Smiley Sans","得意黑","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",sans-serif |
-| 正文 | `--font-body` | "LXGW WenKai","霞鹜文楷","Songti SC","SimSun","Noto Serif CJK SC",serif |
+| 展示/大标题 | `--font-display` | "XB Smiley","得意黑","Microsoft YaHei","PingFang SC",sans-serif |
+| 章节/正文/UI | `--font-title` / `--font-body` | "XB Zhuque","朱雀仿宋","Songti SC","SimSun","Noto Serif CJK SC",serif |
 | 数字 | `--font-num` | "Consolas","SFMono-Regular",monospace |
 
-- `@font-face` 只用 `src: local(...)`，`font-display: swap`；**不写 url()**，不打包字体文件，不下载字体，不引 CDN。
-- 本机缺少得意黑 / 霞鹜文楷时落到回退栈；验收按回退字体看，不按“装了字体才好看”。
-- `html.fonts-fallback`（由 `?fonts=fallback` 触发）把两个字体变量覆盖为系统回退，用于对照与低配验收。
-- 步骤八再做子集化 + `url(./assets/fonts/...)` + LICENSE；欠账记在 `docs/credits.md`。
+- **随包字体**：`project/assets/fonts/smiley-game.woff2`（得意黑 v2.0.1 子集，158,048 B）与 `zhuque-game.woff2`（朱雀仿宋 v0.212 子集，394,452 B），均为 OFL 1.1；`@font-face` 用相对 `url(./assets/fonts/...)`，`font-display: swap`。
+- 字体族名用 `XB Smiley` / `XB Zhuque`，不改 OFL 保留名；授权全文随包在 `project/assets/fonts/OFL-*.txt`，清单见 `docs/credits.md`。
+- 大标题「向北」用得意黑保持海报感；章节名、正文、选项、图鉴、按钮用朱雀仿宋，获得印刷/历史感。
+- `html.fonts-fallback`（由 `?fonts=fallback` 触发）把展示/正文变量覆盖为系统回退，用于对照与低配验收。
+- 朱雀的 ▼ 在 14px 下近似小点，`.vn-next__mark` 显式使用系统符号字体栈；不把箭头交给正文子集。
 
 ## 4. 尺寸与层级令牌
 
@@ -128,24 +130,27 @@
 ## 6. 画布（单张 stage-art）
 
 - 只有一张全屏 `canvas#stage-art`（1280×720，`z-index: var(--z-art)`，`pointer-events: none`，`aria-hidden="true"`），标题 / 地图 / VN 共用；不新增第二张背景画布。
-- API（`XB.art`）：`mount(canvas)`、`paint(canvas, sceneId)`、`resize(displayScale)`、`rng(seed)`，常量 `SCENES`。
-- 场景注册表：`title`、`map`、`yudu_river`、`yudu_night`；`story.js` 的 `bg` 必须是其中子集（C11 校验）。
+- API（`XB.art`）：`mount(canvas)`、`paint(canvas, sceneId)`、`resize(displayScale)`、`rng(seed)`、`preload(sceneId)`，常量 `SCENES`。
+- 场景注册表 17 项：`title`、`map`、`yudu_river`、`yudu_night`、`xiangjiang_ford`、`xiangjiang_dawn`、`xiangjiang_map`、`zunyi_hall`、`zunyi_street`、`jinsha_river`、`jinsha_night`、`luding_bridge`、`luding_after`、`grass_marsh`、`grass_dawn`、`wuqi_dawn`、`wuqi_wall`；`story.js` 的 `bg` 必须是其中子集（C11 校验）。
+- 底图：`PLATE_BY_SCENE` 把场景映射到 `assets/backgrounds/plate_*.jpg`；`getPlate` 懒加载 `Image`，加载完成重绘当前场景；`paint` 在图片 ready 时 `drawImage` cover-fit 并叠 `PLATE_TINT`（夜/晨），未 ready 或失败时回退原程序化 painter。`title` / `map` 仍为程序化，`title` 使用 `plate_title.jpg` 照片底。
 - 尺寸：`renderScale = clamp(舞台缩放 × devicePixelRatio, 1, 2)`；内部像素 = 1280×720 × renderScale；绘制坐标永远是 1280×720 设计坐标。
 - 绘制时机：`init` mount → `resize` → 各场景 render 时 paint；resize 用一次 `requestAnimationFrame` 合并；本步**不做** rAF 动画循环。
-- 失败兜底：`paint` 返回 false 或抛错 → engine `console.error` + 隐藏画布 + 一次性 toast「插画加载失败」，页面回落到 CSS 纸白/夜蓝底色，不白屏。
+- 失败兜底：单张底图加载失败只 `console.warn` 并继续用原程序化 painter，不白屏、不弹错；`paint` 整体返回 false 或抛错才由 engine `console.error` + 一次性 toast「插画加载失败」。
+- 性能：照片只解码一次，`drawImage` 在场景切换/加载完成时绘制，不放进 rAF 循环；28s 推拉由 canvas 的 CSS transform 完成，不逐帧重绘。
 - 种子：场景 id 字符串 → FNV-1a → mulberry32；同场景两次绘制路径一致，便于对比与回归。
 - 文字安全区：标题左 0–340 / y 0–620；地图左下 64,660 提示区；VN 底部 560–720 允许画深（被对话框覆盖）。
 
 | 场景 | 底 | 层序 | 不画 |
 |---|---|---|---|
-| title | 透明（纸纹透出） | 远山 .12 → 中山 .20 → 近山 .30 → 山脚 .45（x 780–1280）→ 芦苇 → 门板 760,120,360×480 | 人物、文字 |
-| map | 透明 | 6 条等高线 .06 → 远山 .10 → 近山 .18 | 站点、路线（SVG 保留） |
+| title | `plate_title.jpg`（AI 插画，虚构小战士/于都河） | 照片 cover → 左侧/底部纸色压暗 → DOM 标题与菜单 | 真实人物肖像、现代元素、文字 |
+| map | 透明（纸纹透出） | 6 条等高线 .06 → 远山 .10 → 近山 .18 | 站点、路线（SVG 保留） |
 | yudu_river | night→night-deep 渐变 | 远岸 420–470 → 浮桥 470–520 → 江面白线 520–720 → 雾 300–500 → 8 火把 → 顶部底片 0–90 | 人脸 |
 | yudu_night | night-deep→night 渐变 | 星点 ≤24 → 屋脊 500–620 → 树影 → 暖窗 930,520 → 顶部底片 | 人脸 |
 
 ## 7. 构图与安全区
 
-- 标题：标题块 120–340 宽、y 0–620 不被高对比图案压住；门板在 760 起，不越过 1280；版本行 32,680 下方留白。
+- 标题：标题块 120–340 宽、y 0–620 不被高对比图案压住；照片标题卡标题从 x=104 起，人物/门板在右侧；版本行 32,680 下方留白。
+- 章首照片卡：标题左对齐、正文在左 104–600；右侧留给照片主体；`is-map` 用更暗的左向压暗，保证地图在右半仍可读。
 - 地图：站点 132×64 按钮自带纸白高光底；左下 64,660 提示区留干净；插画只压右下。
 - VN：章节名 32,24 用纸白 + `--scrim` 底片 + 8×8 朱砂方块；对话框 60,560,1160×118 覆盖底部，背景可深。
 - 不画人物正脸；不写任何文字进画布（印章「北」由 DOM 的 span 负责）。
@@ -155,13 +160,13 @@
 | 项 | 判据 | 方式 |
 |---|---|---|
 | 三档不出界 | 1920×1080 / 1366×768 / 844×390 无滚动条、无裁切 | B1–B3 截图 + boundingBox |
-| 组件库 | 10 个 `data-ui` 可见、主要状态齐全、无外部素材 | B11/B12、C12 |
+| 组件库 | 10 个 `data-ui` 可见、主要状态齐全、素材均本地且授权 | B11/B12、C12 |
 | 字体回退 | `?fonts=fallback` 下标题/正文可读、不压印章 | B10 |
 | 对比度 | 按 §2.2；夜蓝无朱砂小字 | 计算 + 截图 |
 | 44px / 焦点 | 可点元素 ≥44×44；Tab 焦点双环可见；Enter/Space/Esc/触摸有效 | B13 |
-| 无外部素材 | 无图片/音频/外部字体/CDN；无字体文件 | C09/C12 |
+| 素材边界 | 图片/字体/音频只从 `assets/` 相对路径加载；无 CDN、无运行时外链、无未授权素材 | C09/C12/C31/C37 |
 | 单帧预算 | 单场景 paint <16ms（1280×720，DPR≤2） | T2.8 performance.now |
-| 静态 | 无每帧噪声、无入场动画 | 代码审查 |
+| 动态 | 照片底图 28s 缓慢推拉，不逐帧重绘；`prefers-reduced-motion` / 设置「减少动效」关闭；无持续噪声 | 代码审查 + 截图 |
 | 零错误 | Console 0 error、0 404 | B1–B14 |
 
 与 `docs/quality-bar.md` 对应：可读性 → §2.2/§4；可操作性 → §4 焦点与 44px；性能 → 本节单帧预算；无外部素材 → §3 + C09/C12。
@@ -181,3 +186,11 @@
 - 划名保留 `text-decoration: line-through` 作无动画回退；reduced 时墨线立即到 `scaleX(1)`，不依赖全局 `animation:none`。
 - 系统 reduced 与 `html.reduce-motion` 双入口都关闭 wipe/flash/shake；不把“减少动效”做成只关 CSS 不关 JS 的半套。
 - 特效层不新增背景画布；不改变 §6 的单画布契约。
+
+## 10. 素材增强（2026-11-04 追加）
+
+- 12 张 1920×1080 plate：11 张场景 + 1 张湘江地图；统一灰度、双色调、颗粒、暗角、顶部 HUD 压暗。原片为 CC/PD 或 AI 生成，逐张来源与 caveat 见 `docs/credits.md`。
+- 标题页 `plate_title.jpg` 是 AI 生成插画（豆包 Seedream），画的是虚构红军小战士背门板站在于都河渡口；**不是史料照片**，人物非真实人物。右下角生成水印已用同纹理补丁 + 暗角处理移除；处理脚本与 v1/v2 源文件在 `resource/title/`。
+- 照片不是 1935 年现场：1967 年《人民画报》图、2005/2011/2018/2023 年照片均只作“历史氛围示意”；湘江照片是湖南江边小镇，不是桂北界首渡口；吴起 plate 是 1967 年陕北杨家岭，不是吴起镇。游戏内图鉴/制作名单必须保留这些说明。
+- 所有 plate 只做氛围底，不承载正文；正文始终在纸白对话框内，照片暗部不压字。
+- 组件壳不新增第二个画布；图片只通过 `art.js` 的 `Image` 缓存进入 `#stage-art`，DOM 里只允许标题卡背景、图鉴/史实注缩略图。

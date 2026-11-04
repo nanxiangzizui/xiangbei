@@ -88,6 +88,7 @@
         <p id="vn-title-chapter" class="xb-title-card__chapter"></p>
         <div class="xb-title-card__rule"></div>
         <p id="vn-title-sub" class="xb-title-card__sub"></p>
+        <p id="vn-title-place" class="xb-title-card__place" hidden></p>
       </div>
 
       <!-- 分页量具：屏外，与正文同字号同宽，只用来量行数；不能 display:none -->
@@ -132,6 +133,7 @@
         <button type="button" class="pause-button" data-action="resume">继续</button>
         <button type="button" class="pause-button" data-action="open-settings">设置</button>
         <button type="button" class="pause-button" data-action="codex">史实图鉴</button>
+        <button type="button" class="pause-button" data-action="open-roster">花名册</button>
         <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
         <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
       </div>
@@ -161,6 +163,20 @@
           </div>
         </div>
         <div class="xb-settings__row">
+          <span class="xb-settings__label">配乐<small class="xb-settings__hint">背景音乐</small></span>
+          <div class="xb-settings__control">
+            <input id="set-music-volume" class="xb-range" type="range" min="0" max="100" step="5" value="100" aria-label="配乐音量">
+            <span id="set-music-volume-value" class="xb-settings__value">100</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
+          <span class="xb-settings__label">环境音<small class="xb-settings__hint">风、水、火</small></span>
+          <div class="xb-settings__control">
+            <input id="set-env-volume" class="xb-range" type="range" min="0" max="100" step="5" value="100" aria-label="环境音音量">
+            <span id="set-env-volume-value" class="xb-settings__value">100</span>
+          </div>
+        </div>
+        <div class="xb-settings__row">
           <span class="xb-settings__label">静音</span>
           <button type="button" id="set-muted" class="xb-switch" role="switch" aria-checked="false" aria-label="静音"></button>
         </div>
@@ -174,6 +190,14 @@
         </div>
         <button type="button" class="pause-button" data-action="close-settings">返回</button>
       </div>
+
+      <div id="vn-roster" class="xb-roster" role="dialog" aria-modal="true" aria-label="花名册" tabindex="-1" hidden>
+        <p class="pause-title">花名册</p>
+        <p class="xb-roster__hint">这一路上，名册里记下的人。</p>
+        <ol id="roster-list" class="xb-roster__list"></ol>
+        <p id="roster-foot" class="xb-roster__foot"></p>
+        <button type="button" class="pause-button" data-action="close-roster">返回</button>
+      </div>
     </div>
 
     <!-- 史实注：单张弹窗，四块（标题 / 类型 / 正文 / 出处）+ 争议行（ui-layout §7） -->
@@ -181,9 +205,11 @@
       <button type="button" id="codex-close" class="xb-modal__close" aria-label="关闭">×</button>
       <h2 id="codex-title" class="xb-modal__title"></h2>
       <div id="codex-badges" class="xb-codex__badges"></div>
+      <div id="codex-figure" class="xb-codex__figure" hidden></div>
       <div id="codex-body" class="xb-codex__body" tabindex="0"></div>
       <p id="codex-note" class="xb-codex__note" hidden></p>
       <p id="codex-source" class="xb-codex__source"></p>
+      <p id="codex-image-note" class="xb-codex__asset-note" hidden></p>
       <p class="xb-codex__disclaimer">人物虚构，非史料人物。</p>
     </div>
 
@@ -194,6 +220,7 @@
         <h2 id="gallery-title" class="xb-gallery__title">史实图鉴</h2>
         <p id="gallery-count" class="xb-gallery__count"></p>
         <div id="gallery-grid" class="xb-gallery__grid"></div>
+        <p class="xb-gallery__asset-note">照片说明：部分场景图为1967年或当代拍摄，作历史氛围示意，非1935年现场；来源与授权见制作名单。</p>
         <p class="xb-gallery__hint">已解锁的卡片可以打开；其余卡片在对应章节记入。</p>
       </div>
     </div>

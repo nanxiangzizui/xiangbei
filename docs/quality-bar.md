@@ -20,11 +20,11 @@
 
 | 项 | 预算 | 说明 |
 |---|---|---|
-| 首屏 | 4G 下 ≤1.5s | 无外部请求；本版字体不打包，系统回退 |
+| 首屏 | 4G 下目标 ≤1.5s；v1.1.0 未单独计时 | 标题图 + 两份字体子集；音乐在首次手势后才加载；不依赖 CDN |
 | JS | ≤150KB gzip | 6 个 js 文件合计 |
 | CSS | ≤30KB | 不含字体 |
-| 字体 | 0 字节（本版） | 不打包字体；local() 失败回退系统宋体/雅黑 |
-| 图片/音频 | 0 外部文件 | 全部程序化/Web Audio |
+| 字体 | 约 552KB（v1.1.0） | 两份 OFL 1.1 子集（得意黑 158KB + 朱雀仿宋 394KB）；失败回退系统宋体/雅黑 |
+| 图片/音频 | 本地素材包，懒加载 | 12 张底图 + 7 张缩略图 + 5 条环境循环 + 8 首配乐；总计约 27.9MB；底图按场景懒加载，音频首次手势后加载 |
 | 帧率 | 桌面 60fps；手机 ≥30fps | 小游戏 Canvas |
 | DPR | 上限 2；backing store 固定 1280×720 逻辑坐标 | 避免 3x 手机过度绘制；坐标换算用 getBoundingClientRect |
 | 动画 | transform/opacity | 不触发布局抖动 |
@@ -50,16 +50,16 @@
 ## 5. 质量闸门
 
 - T01–T38：P0 全过，含 T20 真人四次计时；T39–T51 见 §6 与 docs/test-record.md。
-- 音频：无音频文件；加载时 locked；首次手势后 ready；静音/音量刷新保留；peak<0.99；无 setInterval。
+- 音频：5 条 CC0 环境循环 + 8 首现代配乐 + 既有合成床/12 cue；加载时 locked；首次手势后 ready；总/配乐/环境三档音量与静音刷新保留；peak<0.99；无 setInterval。无 1930 年代历史录音，不冒充。
 - 动效：480ms 横擦、120ms 闪白、180ms 震动、420ms 划名；reduced 下全部立即完成；不阻挡输入。
 - 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:11 当真人。
-- 字体：本版**不打包**（官方源不可达）；`@font-face` 只 local()，回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体请求。
-- 发布包：`dist/site` 与离线 ZIP 只含六运行时 + CREDITS.txt + design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
-- 链接与视频：GitHub Pages 已上线 https://nanxiangzizui.github.io/xiangbei/ （2026-11-03，main / root，部署提交 `7dbe2b4`）；Cloudflare OAuth 未完成，未部署；演示视频经用户 2026-11-03 明确取消，不列为缺口。
+- 字体：v1.1.0 **随包**两份 OFL 1.1 子集（约 552KB），`@font-face` 用相对路径；失败回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体/CDN 请求。
+- 发布包：`dist/site` 与离线 ZIP 只含六运行时、`assets/`（底图/字体/音频）、CREDITS.txt、design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
+- 链接与视频：GitHub Pages 已上线 https://nanxiangzizui.github.io/xiangbei/ （v1.1.0，2026-11-04，main / root，部署提交 `f8b2045`；关键文件 HTTP 200 + SHA256 8/8）；Cloudflare OAuth 未完成，未部署；演示视频经用户 2026-11-03 明确取消，不列为缺口。
 - 4 个核心小游戏可独立进入（?minigame=…）；失败路径继续剧情、不重开；单关 60–90s（含 20s 结算）。
 - 7 张史实注可解锁；结局点名 + 7000 + 五卡。
 - 手机横屏可玩；断网 ZIP 可玩；Edge 完整流程通过；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受（不记为通过）。
-- 无 console 报错、无 404、无外部请求。
+- 无 console 报错、无 404、无外部 CDN 请求；素材均走本地相对路径。
 - 字体/素材授权清单在 docs/credits.md；标题页“制作名单”链接打开 project/CREDITS.txt，ZIP/site 内含 CREDITS.txt。
 
 ## 6. 步骤七实测（2026-11-02，Edge 156 headless）

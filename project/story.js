@@ -180,7 +180,7 @@
           { id: "p040", type: "line", speaker: "旁白", text: "北。" },
           { id: "p041", type: "line", speaker: "旁白", text: "画完，我用手掌按了按，让它干透。" },
           { id: "p042", type: "line", speaker: "旁白", text: "按完才想起，铅笔会写秃。路还长。" },
-          { id: "p043", type: "title", text: "第一章 · 湘江", sub: "一九三四年 · 冬" },
+          { id: "p043", type: "title", text: "第一章 · 湘江", sub: "一九三四年 · 冬", place: "桂北 · 湘江", bg: "xiangjiang_map" },
           { id: "p044", type: "codex", codexId: "yudu" },
           { id: "p900", type: "end", next: "xiangjiang" }
         ]
@@ -329,7 +329,7 @@
           { id: "x035", type: "line", speaker: "旁白", text: "我把名册合上。合上之前，我数了一遍剩下的名字。" },
           { id: "x036", type: "line", speaker: "旁白", text: "数到第三遍，才数清。" },
           { id: "x037", type: "line", speaker: "旁白", text: "数清以后，我在封皮上写了一个数。写完又涂掉了。" },
-          { id: "x038", type: "title", text: "第二章 · 遵义", sub: "一九三五年 · 一月" },
+          { id: "x038", type: "title", text: "第二章 · 遵义", sub: "一九三五年 · 一月", place: "黔北 · 遵义", bg: "zunyi_hall" },
           { id: "x039", type: "codex", codexId: "xiangjiang" },
           { id: "x900", type: "end", next: "zunyi" }
         ]
@@ -439,7 +439,7 @@
           { id: "z028", type: "line", speaker: "旁白", text: "我站在墙底下看了一会儿。" },
           { id: "z029", type: "line", speaker: "旁白", text: "三条记录里，我自己写的那条最短。" },
           { id: "z030", type: "line", speaker: "旁白", text: "第二天早上，队伍出发。那面墙上的纸还在。" },
-          { id: "z031", type: "title", text: "第三章 · 金沙江", sub: "一九三五年 · 五月" },
+          { id: "z031", type: "title", text: "第三章 · 金沙江", sub: "一九三五年 · 五月", place: "滇北 · 金沙江", bg: "jinsha_river" },
           { id: "z032", type: "codex", codexId: "zunyi" },
           { id: "z900", type: "end", next: "jinsha" }
         ]
@@ -558,7 +558,7 @@
           { id: "j028", type: "line", speaker: "旁白", text: "船离岸，他没有招手。他蹲下去，把船绳又系紧了一道。" },
           { id: "j029", type: "line", speaker: "旁白", text: "我们上了北岸，回头看不见船。" },
           { id: "j030", type: "line", speaker: "旁白", text: "只听见桨声，一下，一下，没有停。" },
-          { id: "j031", type: "title", text: "第四章 · 泸定", sub: "一九三五年 · 五月" },
+          { id: "j031", type: "title", text: "第四章 · 泸定", sub: "一九三五年 · 五月", place: "川西 · 大渡河", bg: "luding_bridge" },
           { id: "j032", type: "codex", codexId: "jinsha" },
           { id: "j900", type: "end", next: "luding" }
         ]
@@ -686,7 +686,7 @@
           { id: "l030", type: "line", speaker: "旁白", text: "那天夜里，我把“北”字重新描了一遍。" },
           { id: "l031", type: "line", speaker: "旁白", text: "铅笔头短得握不住，我用布条把它绑在手指上。" },
           { id: "l032", type: "line", speaker: "旁白", text: "描的时候，手没抖。" },
-          { id: "l033", type: "title", text: "第五章 · 草地", sub: "一九三五年 · 八月" },
+          { id: "l033", type: "title", text: "第五章 · 草地", sub: "一九三五年 · 八月", place: "川西北 · 松潘草地", bg: "grass_marsh" },
           { id: "l034", type: "codex", codexId: "luding" },
           { id: "l900", type: "end", next: "grass" }
         ]
@@ -791,7 +791,7 @@
           { id: "g026", type: "line", speaker: "旁白", text: "他把号擦干净，又塞回怀里，像塞回一件怕冷的东西。" },
           { id: "g027", type: "line", speaker: "旁白", text: "走出草地那天，前面有人喊：看见房子了。" },
           { id: "g028", type: "line", speaker: "旁白", text: "没有人跑。大家只是把脚步放快了一点。" },
-          { id: "g029", type: "title", text: "终章 · 吴起", sub: "一九三五年 · 十月" },
+          { id: "g029", type: "title", text: "终章 · 吴起", sub: "一九三五年 · 十月", place: "陕北 · 吴起镇", bg: "wuqi_dawn" },
           { id: "g030", type: "codex", codexId: "grass" },
           { id: "g900", type: "end", next: "wuqi" }
         ]
@@ -943,6 +943,8 @@
       {
         id: "yudu",
         title: "于都 · 长征第一渡",
+        image: "./assets/backgrounds/plate_yudu.jpg",
+        imageNote: "于都河照片摄于2011年，非1934年渡口现场。",
         type: "史实 ＋ 有不同说法",
         body:
           "1934年10月17日至21日拂晓，中央红军主力从于都出发，渡过于都河。河宽六百余米，最深处约二十米。五天里，五座浮桥在黄昏架上、天亮前拆掉，先后架设、拆除十五次。桥板是老百姓送来的门板、床板和寿材。渡口数量有不同说法：一说八个主要渡口，一说十个。",
@@ -952,6 +954,8 @@
       {
         id: "xiangjiang",
         title: "湘江 · 最惨烈的一战",
+        image: "./assets/backgrounds/plate_xiangjiang_map.jpg",
+        imageNote: "图为1934年红军在抢渡湘江前绘制的地图照片；非战役现场，渡口无同时期照片。",
         type: "史实 ＋ 有不同说法",
         body:
           "1934年11月底至12月初，中央红军在湘江两岸与国民党军激战七昼夜。出发时的八万六千余人，渡过湘江后锐减至三万余人。红五军团第三十四师奉命断后，掩护主力渡江，与十几倍于己的敌人鏖战四天五夜，几乎全部牺牲。师长陈树湘负伤被俘，在押送途中牺牲。过江的队伍里还抬着几只三百斤重的木箱，有人说里头是一台 X 光机；究竟有没有、何时丢下，有不同说法。",
@@ -961,6 +965,8 @@
       {
         id: "zunyi",
         title: "遵义 · 生死攸关的转折点",
+        image: "./assets/backgrounds/plate_zunyi_hall.jpg",
+        imageNote: "遵义会议会址照片摄于2005年，非1935年会议现场。",
         type: "史实",
         body:
           "1935年1月15日至17日，中共中央政治局扩大会议在遵义召开，连开三天。会议总结了第五次反“围剿”失败和长征初期的教训，改组了中央领导机构。此时中央红军约三万七千余人，比出发时的八万六千余人少了一大半。会议开在城里，城门外的哨兵照常换岗；对大多数战士来说，那三天只是“驻下来休整”，队伍里的变化是后来才慢慢看出来的。",
@@ -970,6 +976,8 @@
       {
         id: "jinsha",
         title: "金沙江 · 三十七个船工",
+        image: "./assets/backgrounds/plate_jinsha.jpg",
+        imageNote: "金沙江峡谷为当代照片，非皎平渡渡口现场。",
         type: "史实 ＋ 有不同说法",
         body:
           "1935年5月，中央红军在云南皎平渡渡过金沙江。三十七名船工用六条小船，七天七夜不停摆渡，人歇船不歇，5月9日渡完全军。后来在渡口立起纪念碑，碑上镌着三十七个名字或绰号。船工们立下规矩：排队上船，谁也不能挤。船数有不同说法，一说六条，一说七条。",
@@ -979,6 +987,8 @@
       {
         id: "luding",
         title: "泸定 · 十三根铁索",
+        image: "./assets/backgrounds/plate_luding.jpg",
+        imageNote: "泸定桥照片摄于1967年，非1935年夺桥现场。",
         type: "史实 ＋ 有不同说法",
         body:
           "1935年5月29日下午四时，红四团二十二名突击队员冒着火力，攀着十三根铁索爬过泸定桥。桥板已被抽去，后续部队边爬边铺桥板。此前，部队一昼夜奔袭二百四十余里。二十二个人里，有人过去了，有人没有。后来的纪念碑上，能查到的名字不全——有一部分人的姓名已经佚散，难以确定；二十二人里牺牲了几人，也有不同说法。",
@@ -988,6 +998,8 @@
       {
         id: "grass",
         title: "草地 · 班佑河畔",
+        image: "./assets/backgrounds/plate_grass.jpg",
+        imageNote: "草地照片为当代黄河第一湾，非松潘草地现场。",
         type: "史实 ＋ 回忆录",
         body:
           "1935年8月，红军进入松潘草地。那里没有道路，到处是黑水和沼泽，走七天才能到班佑。王平在回忆录里写到班佑河畔：他带人回去找掉队的战士，看见他们背靠背坐着，像是睡着了，已经没有气息。近八百人长眠在那里。进草地之前先翻夹金山，垭口海拔四千一百多米，高度有不同说法，本作只写“四千米以上”。草地的减员数字各方记载也不同，本作不写具体数字，只写走过的人。",
@@ -997,6 +1009,8 @@
       {
         id: "wuqi",
         title: "吴起 · 到陕北",
+        image: "./assets/backgrounds/plate_wuqi.jpg",
+        imageNote: "图为1967年《人民画报》所摄陕北杨家岭，非吴起镇。",
         type: "史实",
         body:
           "1935年10月19日，陕甘支队进入陕西吴起镇，长征到达陕北。从1934年10月到1935年10月，中央红军走了一年，行程二万五千里。出发时的八万六千余人，到陕北剩七千余人。一个月后，部队与红十五军团会合。吴起镇在黄土塬上，风大，水少，镇口的路是土路。",

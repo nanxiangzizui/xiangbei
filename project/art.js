@@ -9,10 +9,43 @@
 
   var SCENES = [
     "title", "map", "yudu_river", "yudu_night",
-    "xiangjiang_ford", "xiangjiang_dawn", "zunyi_hall", "zunyi_street",
+    "xiangjiang_ford", "xiangjiang_dawn", "xiangjiang_map",
+    "zunyi_hall", "zunyi_street",
     "jinsha_river", "jinsha_night", "luding_bridge", "luding_after",
     "grass_marsh", "grass_dawn", "wuqi_dawn", "wuqi_wall"
   ];
+
+  // 章节底图。照片先做双色调、颗粒与暗角，再在这里按场景套一层
+  // 极淡的夜色/晨光；加载失败时回落到下面的程序化版画。
+  var PLATE_BY_SCENE = {
+    title: "./assets/backgrounds/plate_title.jpg",
+    yudu_river: "./assets/backgrounds/plate_yudu.jpg",
+    yudu_night: "./assets/backgrounds/plate_yudu.jpg",
+    xiangjiang_ford: "./assets/backgrounds/plate_xiangjiang.jpg",
+    xiangjiang_dawn: "./assets/backgrounds/plate_xiangjiang.jpg",
+    xiangjiang_map: "./assets/backgrounds/plate_xiangjiang_map.jpg",
+    zunyi_hall: "./assets/backgrounds/plate_zunyi_hall.jpg",
+    zunyi_street: "./assets/backgrounds/plate_zunyi_street.jpg",
+    jinsha_river: "./assets/backgrounds/plate_jinsha.jpg",
+    jinsha_night: "./assets/backgrounds/plate_jinsha.jpg",
+    luding_bridge: "./assets/backgrounds/plate_luding.jpg",
+    luding_after: "./assets/backgrounds/plate_luding_after.jpg",
+    grass_marsh: "./assets/backgrounds/plate_grass.jpg",
+    grass_dawn: "./assets/backgrounds/plate_grass_dawn.jpg",
+    wuqi_dawn: "./assets/backgrounds/plate_wuqi.jpg",
+    wuqi_wall: "./assets/backgrounds/plate_wuqi.jpg"
+  };
+
+  var PLATE_TINT = {
+    yudu_night: "rgba(8, 12, 20, 0.30)",
+    jinsha_night: "rgba(8, 12, 20, 0.34)",
+    xiangjiang_dawn: "rgba(255, 214, 170, 0.07)",
+    grass_dawn: "rgba(232, 222, 202, 0.05)",
+    wuqi_dawn: "rgba(255, 208, 152, 0.08)",
+    luding_after: "rgba(240, 226, 198, 0.04)"
+  };
+
+  var plateImages = {};
 
   // 令牌缺失时才用：正常路径读 style.css 的 :root 变量
   var FALLBACK_PALETTE = {
@@ -130,15 +163,63 @@
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.clearRect(0, 0, W, H);
     var random = rng(sceneId);
+    var plate = getPlate(sceneId);
     try {
-      PAINTERS[sceneId](ctx, random, palette);
+      if (plate && plate.__ready) drawPlate(ctx, plate, sceneId);
+      else PAINTERS[sceneId](ctx, random, palette);
     } catch (err) {
       console.error("art.paint 失败: " + sceneId, err);
       return false;
     }
     ctx.globalAlpha = 1;
     canvas.dataset.scene = sceneId;
+    canvas.classList.toggle("is-photo", !!(plate && plate.__ready));
     return true;
+  }
+
+  // 只加载一次；加载完成后重绘当前场景，避免先看到程序图再突然换图。
+  function getPlate(sceneId) {
+    var src = PLATE_BY_SCENE[sceneId];
+    if (!src) return null;
+    var image = plateImages[src];
+    if (image) return image;
+    image = new Image();
+    image.decoding = "async";
+    image.onload = function () {
+      image.__ready = true;
+      if (currentCanvas && currentCanvas.dataset.scene) {
+        paint(currentCanvas, currentCanvas.dataset.scene);
+      }
+    };
+    image.onerror = function () {
+      console.warn("art: 背景图加载失败，回落到版画 " + src);
+    };
+    image.src = src;
+    plateImages[src] = image;
+    return image;
+  }
+
+  // 章首卡/下一章提前取图；重复调用只返回缓存，不重复请求。
+  function preload(sceneId) {
+    if (!PLATE_BY_SCENE[sceneId]) return null;
+    return getPlate(sceneId);
+  }
+
+  // 照片按 cover 铺满 1280×720；双色调已在生成阶段完成，这里只补时段色。
+  function drawPlate(ctx, image, sceneId) {
+    var sw = image.naturalWidth;
+    var sh = image.naturalHeight;
+    var cover = Math.max(W / sw, H / sh);
+    var dw = sw * cover;
+    var dh = sh * cover;
+    ctx.drawImage(image, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    var tint = PLATE_TINT[sceneId];
+    if (tint) {
+      ctx.save();
+      ctx.fillStyle = tint;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
   }
 
   // ---------- 通用笔触 ----------
@@ -1559,6 +1640,35 @@
     fillRect(ctx, 0, 690, W, 30, p.ink, 0.25);
   }
 
+  // 湘江章首地图的兜底：照片未到之前先给一块暗色桌面与几道铅笔路线。
+  function paintXiangjiangMap(ctx, random, p) {
+    var desk = ctx.createLinearGradient(0, 0, W, H);
+    desk.addColorStop(0, p.nightDeep);
+    desk.addColorStop(0.55, p.night);
+    desk.addColorStop(1, p.ink);
+    ctx.fillStyle = desk;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(820, 120);
+    ctx.strokeStyle = p.cinnabar;
+    ctx.globalAlpha = 0.32;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, 540);
+    ctx.bezierCurveTo(180, 430, 250, 470, 360, 330);
+    ctx.bezierCurveTo(460, 210, 560, 250, 700, 120);
+    ctx.stroke();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = p.paper;
+    for (var i = 0; i < 4; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo(20, 560 - i * 44);
+      ctx.bezierCurveTo(220, 470 - i * 30, 430, 420 + i * 12, 720, 250 - i * 22);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   var PAINTERS = {
     title: paintTitle,
     map: paintMap,
@@ -1566,6 +1676,7 @@
     yudu_night: paintNight,
     xiangjiang_ford: paintXiangjiangFord,
     xiangjiang_dawn: paintXiangjiangDawn,
+    xiangjiang_map: paintXiangjiangMap,
     zunyi_hall: paintZunyiHall,
     zunyi_street: paintZunyiStreet,
     jinsha_river: paintJinshaRiver,
@@ -1582,6 +1693,7 @@
     SCENES: SCENES,
     mount: mount,
     paint: paint,
+    preload: preload,
     resize: resize,
     rng: rng
   };

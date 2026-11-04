@@ -1,21 +1,24 @@
-# 《向北》音频与动效系统（步骤六）
+# 《向北》音频与动效系统（步骤六 + v1.1.0 素材增强）
 
-> 状态：步骤六实现规格（2026-11-02）。运行时文件只有 `project/engine.js` 内的 `XB.audio` 与 `XB.fx`；不新建 `audio.js` / `fx.js`，不引入音频文件、CDN、ES module 或 `fetch`。
+> 状态：步骤六实现规格（2026-11-02），v1.1.0（2026-11-04）补入外置环境声与配乐。运行时仍只有 `project/engine.js` 内的 `XB.audio` 与 `XB.fx`；不新建 `audio.js` / `fx.js`。外置音频只用 `<audio>` + `MediaElementSource`（或 `file://` 直连回退），不引入 CDN、ES module 或 `fetch`。
 > 声音是氛围与反馈，不是得分奖励：没有成功/失败音、没有 Game Over 音、没有战斗音效。
 
 ## 1. 边界与非目标
 
 - 管：环境床、交互 cue、原创五音动机、首次手势解锁、静音/音量、暂停/图鉴 duck、页面隐藏暂停、转场/闪白/震动/划名。
 - 不管：剧情节点、旗标、结局快照、小游戏结果结构（仍由 `story.js` / `engine.js` / `minigames.js` 现有契约负责）。
-- 不做：音频文件、语音、歌曲、自动播放、循环背景音乐文件、Web Audio 之外的音频 API。
+- 不做：语音、歌曲、自动播放、Web Audio 之外的音频 API。v1.0 不引入音频文件；v1.1.0 只引入已授权的 5 条环境声与 8 首配乐 MP3，并用 `<audio>` 接入。
 - 减少动效：系统 `prefers-reduced-motion: reduce` 与设置「减少动效」任一开启，都关闭转场/闪白/震动，划名立即到终态。
 
 ## 2. 信号图
 
     ambienceBus (0.35) ─┐
     sfxBus      (0.55) ─┼─→ masterGain ─→ DynamicsCompressor ─→ destination
-    musicBus    (0.40) ─┘        │
+    musicBus    (0.62) ─┘        │
                                  └─ debug 时另接 AnalyserNode（只读峰值）
+
+    外置 <audio> ──(http/https: MediaElementSource → 对应 bus)──┘
+                  └─(file://: 直连扬声器，volume 由设置/duck 计算)
 
 - `masterGain` 目标值：`muted ? 0 : 0.87 × volume`；所有增益变化用 `setTargetAtTime(value, now, 0.04)`，不做硬切。
 - 压缩器：threshold −14 dB、knee 10、ratio 4、attack 0.003s、release 0.25s，防止多 cue 叠加削波。
@@ -39,7 +42,7 @@
 
 映射规则：
 
-- `BED_BY_SCENE` 共 17 项：14 个剧情背景 + `title` / `map` / `ending`；未知场景回退 `wind_title` 并只警告一次。
+- `BED_BY_SCENE` 共 18 项：15 个剧情背景 + `title` / `map` / `ending`；未知场景回退 `wind_title` 并只警告一次。
 - 场景切换由 `renderTitle` / `renderMap` / `renderVn` / `renderEnding` 调 `XB.audio.setScene`；不在小游戏循环里切床。
 - 同一场景重复渲染不重启动；小游戏覆盖层不换床。
 
@@ -85,8 +88,9 @@
 - 不支持 Web Audio 时：`supported=false`，toast「本机无法播放声音，游戏可继续」，不阻断游戏。
 - 页面隐藏：`visibilitychange` → `suspend()`，VN 未暂停则打开暂停；回到可见 `resume()`。
 - 暂停 duck 0.3；史实注/图鉴 duck 0.45；两者同时取更小值；关闭后恢复 1。
-- 静音/音量沿用现有 `settings.volume` / `settings.muted`，不新增存档键；存档仍是 11 键、`SAVE_VERSION=1`。
-- 音量滑块实时调 `XB.audio.applySettings({volume})`，同时 `saveNow()`；静音走统一 `applySettings`。
+- 音量分三层：`settings.volume`（总音量）、`settings.musicVolume`（配乐）、`settings.ambienceVolume`（环境音）；静音仍由 `settings.muted` 统管。2026-11-04 新增后两个键，旧档按 1 补齐；顶层 `PERSIST_KEYS` 仍是 11 键、`SAVE_VERSION=1`。
+- `ambienceBus`/`musicBus` 的实际增益乘各自独立音量：`0.35×ambienceVolume`、`0.62×musicVolume`；总音量再乘 `muted?0:0.87×volume`。
+- 三个滑块 `input` 实时调 `XB.audio.applySettings({volume,musicVolume,ambienceVolume})` 并 `saveNow()`；静音走统一 `applySettings`。设置面板共八行，面板 440 高可滚。
 
 ## 7. 动效层
 
@@ -134,5 +138,16 @@
 - `?debug=1` 面板追加：`audio=locked|ready|suspended|off`、`bed=`、`duck=`、`beds=`（同时 voice 数）、`peak=`（Analyser 峰值，保留 3 位）。
 - `?fx=wipe|flash|shake|strike`：只用于手工看动效；不写档、不进正式 UI。
 - 工具：check-build C31–C36；smoke S41–S46；负例 N9–N12。浏览器 B45–B56 见 `docs/evidence/step-06/run-log.md`。
-- 无音频文件：C31 扫描 `assets/` 与运行时引用；`AudioContext` 只在 `engine.js` 的 `XB.audio` 创建一次。
+- 外置音频：C31 扫描 `assets/` 与运行时引用，当前为 13 个 MP3（5 环境 + 8 配乐）；`AudioContext` 只在 `engine.js` 的 `XB.audio` 创建一次。
 - 主观听感（是否刺耳、是否盖住文字）必须真人听一遍；headless 只能验证连接、状态、峰值与计时，不能替代耳朵。
+
+## 10. v1.1.0：外置环境声与配乐
+
+- 5 条环境声：`wind/river/rain/birds/fire`，全部 MP3，位于 `project/assets/audio/ambience/`；按 `ENV_BY_SCENE` 权重叠加，仍受 `ambienceBus`、duck、静音与音量控制。
+- 8 首配乐：`shangri_river/oriental/a_bitter_hope/visions_of_freedom/sunrise_dynasty/final_heros_monologue/misty_mountains/frozen_orchard`，位于 `project/assets/audio/music/`；按 `MUSIC_BY_SCENE` 一章一首，标题/结局用 Shangri River，草地/雪山用 Misty Mountains。
+- 9 张合成 BEDS、12 个 cue 与五音动机保留；外置层是底噪与配乐，不替代原有事件反馈。合成床最多 2 条，外置层不占这个上限。
+- 配乐接入前统一归一化到约 `RMS 0.10`，峰值上限 `0.95`；`MUSIC_DEFS.gain = 1.5`，使 Web Audio 与 `file://` 直连两种路径的响度一致。曲目只做整体增益，不改旋律与结构。
+- `file://` 下若 `createMediaElementSource` 失败，回退 `<audio>` 直连：`directEnvLevel` / `directMusicLevel` 按 `0.35×ambienceVolume` / `0.62×musicVolume` 的 bus 等价系数、`0.87×volume`、duck 计算 `el.volume`，并仍然响应静音、暂停与三档音量。
+- 直连路径换曲用 1.4s `fadeDirectElement` 淡入淡出，旧曲 1600ms 后暂停；只有 `audioState.musicCurrent` 能恢复音量，避免旧曲取消静音时复响。
+- 所有外置文件均为现代录音/现代配乐，不是 1930 年代原声；授权与出处见 `project/CREDITS.txt`、`docs/credits.md`、`resource/README.md`。
+- 不自动播放：仍由首次 pointerdown/keydown 的 `unlockAudio` 创建/恢复 `AudioContext` 后才启动外置层。

@@ -192,10 +192,11 @@ check("S11", "背景指令落在四处换景", function () {
   assertEqual(nodeById("p031").bg, "yudu_river", "p031.bg");
   assertEqual(nodeById("p039a").bg, "yudu_night", "p039a.bg");
   assertEqual(nodeById("p039b").bg, "yudu_night", "p039b.bg");
+  assertEqual(nodeById("p043").bg, "xiangjiang_map", "p043.bg");
   var others = chapter().nodes.filter(function (node) {
-    return node.bg && ["p001", "p006", "p031", "p039a", "p039b"].indexOf(node.id) === -1;
+    return node.bg && ["p001", "p006", "p031", "p039a", "p039b", "p043"].indexOf(node.id) === -1;
   });
-  assertEqual(others.length, 0, "不该有第五处 bg");
+  assertEqual(others.length, 0, "不该有第六处 bg");
 });
 
 check("S12", "前 20 句与剧本源逐字一致", function () {
@@ -265,8 +266,8 @@ check("S16", "rng 同种子同序列、异种子不同", function () {
 });
 
 check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
-  assertEqual(XB.art.SCENES.length, 16, "SCENES 数量");
-  ["title", "map", "yudu_river", "yudu_night", "xiangjiang_ford", "zunyi_hall", "jinsha_river", "luding_bridge", "grass_marsh", "wuqi_dawn", "wuqi_wall"].forEach(function (id) {
+  assertEqual(XB.art.SCENES.length, 17, "SCENES 数量");
+  ["title", "map", "yudu_river", "yudu_night", "xiangjiang_ford", "xiangjiang_map", "zunyi_hall", "jinsha_river", "luding_bridge", "grass_marsh", "wuqi_dawn", "wuqi_wall"].forEach(function (id) {
     assert(XB.art.SCENES.indexOf(id) !== -1, "SCENES 缺 " + id);
   });
   XB.story.chapters.forEach(function (item) {
@@ -276,7 +277,7 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "十条旗标与六项设置默认值", function () {
+check("S18", "十条旗标与八项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
   assertEqual(Object.keys(flags).sort(), ["choice.jinsha.trips", "choice.xiangjiang.abandoned", "choice.zunyi.admit", "choice.zunyi.missed", "fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
   assertEqual(flags["item.door"], false, "item.door");
@@ -289,7 +290,7 @@ check("S18", "十条旗标与六项设置默认值", function () {
   assertEqual(flags["choice.zunyi.missed"], 0, "missed");
   assertEqual(flags["choice.zunyi.admit"], 0, "admit");
   assertEqual(flags["choice.jinsha.trips"], 0, "trips");
-  assertEqual(Object.keys(XB.core.DEFAULT_SETTINGS).sort(), ["muted", "reducedMotion", "skipSeen", "textScale", "textSpeed", "volume"], "设置键");
+  assertEqual(Object.keys(XB.core.DEFAULT_SETTINGS).sort(), ["ambienceVolume", "musicVolume", "muted", "reducedMotion", "skipSeen", "textScale", "textSpeed", "volume"], "设置键");
   assertEqual(XB.core.DEFAULT_SETTINGS.textSpeed, 30, "textSpeed");
   assertEqual(XB.core.DEFAULT_SETTINGS.textScale, 1, "textScale");
 });
@@ -687,14 +688,14 @@ check("S42", "原创五音动机频率与顺序", function () {
   assertEqual(motif.map(function (note) { return note.dur; }), [0.45, 0.25, 0.45, 0.25, 0.90], "时值");
 });
 
-check("S43", "14 个剧情背景全部有床", function () {
+check("S43", "15 个剧情背景全部有床", function () {
   var bgs = {};
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
       if (node.bg) bgs[node.bg] = true;
     });
   });
-  assertEqual(Object.keys(bgs).length, 14, "剧情背景数");
+  assertEqual(Object.keys(bgs).length, 15, "剧情背景数");
   Object.keys(bgs).forEach(function (bg) {
     assert(XB.audio.BED_BY_SCENE[bg], "缺床 " + bg);
   });
