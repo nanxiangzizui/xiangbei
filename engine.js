@@ -36,6 +36,8 @@
     textSpeed: 30,
     textScale: 1,
     volume: 0.6,
+    musicVolume: 1,
+    ambienceVolume: 1,
     muted: false,
     reducedMotion: false,
     skipSeen: false
@@ -402,6 +404,8 @@
     settings.textSpeed = Math.round(clamp(settings.textSpeed, 10, 60));
     settings.textScale = TEXT_SCALES.indexOf(settings.textScale) === -1 ? 1 : settings.textScale;
     settings.volume = clamp(settings.volume, 0, 1);
+    settings.musicVolume = clamp(settings.musicVolume, 0, 1);
+    settings.ambienceVolume = clamp(settings.ambienceVolume, 0, 1);
     state.settings = settings;
 
     var chapterIds = ((XB.story && XB.story.chapters) || []).map(function (item) {
@@ -736,6 +740,74 @@
     }
   };
 
+  // 外置环境声与配乐：只走 HTMLAudioElement -> MediaElementSource -> 既有总线，
+  // 不引入 fetch/XHR/ES module；file:// 离线包同样可用。
+  var ENV_DEFS = {
+    wind: { src: "./assets/audio/ambience/wind_loop.mp3", gain: 1.15 },
+    river: { src: "./assets/audio/ambience/river_loop.mp3", gain: 1.0 },
+    rain: { src: "./assets/audio/ambience/rain_loop.mp3", gain: 1.0 },
+    birds: { src: "./assets/audio/ambience/birds_loop.mp3", gain: 0.7 },
+    fire: { src: "./assets/audio/ambience/fire_loop.mp3", gain: 1.25 }
+  };
+
+  // 场景权重：1 为基准；风声、火声在对应章节抬得更高。
+  var ENV_BY_SCENE = {
+    title: { wind: 0.9 },
+    map: { wind: 0.8 },
+    yudu_river: { river: 0.9, birds: 0.5 },
+    yudu_night: { river: 0.55, wind: 0.6 },
+    xiangjiang_ford: { river: 1.0, wind: 0.55 },
+    xiangjiang_dawn: { river: 0.8, birds: 0.25 },
+    xiangjiang_map: { wind: 0.45 },
+    zunyi_hall: { wind: 0.6, birds: 0.15 },
+    zunyi_street: { wind: 0.7, birds: 0.15 },
+    jinsha_river: { river: 1.15, wind: 0.5 },
+    jinsha_night: { river: 0.85, wind: 0.65 },
+    luding_bridge: { river: 1.2, wind: 0.9, fire: 1.0 },
+    luding_after: { river: 0.8, wind: 0.55, fire: 0.35 },
+    grass_marsh: { wind: 1.25, rain: 0.45 },
+    grass_dawn: { wind: 1.1, rain: 0.2 },
+    wuqi_dawn: { wind: 1.0, birds: 0.2 },
+    wuqi_wall: { wind: 0.85, birds: 0.15 },
+    ending: { wind: 0.7 }
+  };
+
+  var MUSIC_DEFS = {
+    shangri_river: { src: "./assets/audio/music/shangri_river.mp3", gain: 1.5 },
+    oriental: { src: "./assets/audio/music/oriental.mp3", gain: 1.5 },
+    a_bitter_hope: { src: "./assets/audio/music/a_bitter_hope.mp3", gain: 1.5 },
+    visions_of_freedom: { src: "./assets/audio/music/visions_of_freedom.mp3", gain: 1.5 },
+    sunrise_dynasty: { src: "./assets/audio/music/sunrise_dynasty.mp3", gain: 1.5 },
+    final_heros_monologue: { src: "./assets/audio/music/final_heros_monologue.mp3", gain: 1.5 },
+    misty_mountains: { src: "./assets/audio/music/misty_mountains.mp3", gain: 1.5 },
+    frozen_orchard: { src: "./assets/audio/music/frozen_orchard.mp3", gain: 1.5 }
+  };
+
+  // file:// 下 Chromium/Safari 可能把外置音频视为跨源，MediaElementSource 会静音；
+  // 此时退回 <audio> 直连，音量由设置/duck 手动计算。
+  var DIRECT_EXTERNAL = typeof location !== "undefined" && location.protocol === "file:";
+
+  var MUSIC_BY_SCENE = {
+    title: "shangri_river",
+    map: "shangri_river",
+    yudu_river: "oriental",
+    yudu_night: "oriental",
+    xiangjiang_ford: "a_bitter_hope",
+    xiangjiang_dawn: "a_bitter_hope",
+    xiangjiang_map: "a_bitter_hope",
+    zunyi_hall: "visions_of_freedom",
+    zunyi_street: "visions_of_freedom",
+    jinsha_river: "sunrise_dynasty",
+    jinsha_night: "sunrise_dynasty",
+    luding_bridge: "final_heros_monologue",
+    luding_after: "final_heros_monologue",
+    grass_marsh: "misty_mountains",
+    grass_dawn: "misty_mountains",
+    wuqi_dawn: "frozen_orchard",
+    wuqi_wall: "frozen_orchard",
+    ending: "shangri_river"
+  };
+
   var BED_BY_SCENE = {
     title: "wind_title",
     map: "wind_title",
@@ -743,6 +815,7 @@
     yudu_night: "yudu",
     xiangjiang_ford: "xiangjiang",
     xiangjiang_dawn: "xiangjiang",
+    xiangjiang_map: "xiangjiang",
     zunyi_hall: "zunyi",
     zunyi_street: "zunyi",
     jinsha_river: "jinsha",
@@ -772,7 +845,12 @@
   var audioState = {
     ctx: null,
     supported: null,
-    settings: { volume: DEFAULT_SETTINGS.volume, muted: DEFAULT_SETTINGS.muted },
+    settings: {
+      volume: DEFAULT_SETTINGS.volume,
+      musicVolume: DEFAULT_SETTINGS.musicVolume,
+      ambienceVolume: DEFAULT_SETTINGS.ambienceVolume,
+      muted: DEFAULT_SETTINGS.muted
+    },
     ambienceBus: null,
     sfxBus: null,
     musicBus: null,
@@ -784,6 +862,11 @@
     bedId: null,
     voices: [],
     fading: [],
+    env: {},
+    envStarted: false,
+    music: {},
+    musicCurrent: null,
+    externalWarned: false,
     duck: 1,
     lastCue: {},
     warned: false,
@@ -798,6 +881,38 @@
 
   function audioToast(message) {
     if (typeof toast === "function") toast(message);
+  }
+
+  function externalMasterLevel() {
+    return audioState.settings.muted ? 0 : 0.87 * audioState.settings.volume;
+  }
+
+  function directEnvLevel(id) {
+    var weights = ENV_BY_SCENE[audioState.sceneId] || { wind: 0.5 };
+    var target = ENV_DEFS[id].gain * (weights[id] || 0);
+    target *= audioState.settings.ambienceVolume;
+    return clampAudio(target * 0.35 * externalMasterLevel() * audioState.duck, 0, 1);
+  }
+
+  function directMusicLevel(entry) {
+    return clampAudio(entry.base * 0.62 * audioState.settings.musicVolume * externalMasterLevel() * audioState.duck, 0, 1);
+  }
+
+  function applyDirectExternalLevels() {
+    Object.keys(audioState.env).forEach(function (id) {
+      var voice = audioState.env[id];
+      if (voice.direct) voice.el.volume = directEnvLevel(id);
+    });
+    Object.keys(audioState.music).forEach(function (id) {
+      var entry = audioState.music[id];
+      if (!entry.direct) return;
+      if (entry.fadeRaf) {
+        cancelAnimationFrame(entry.fadeRaf);
+        entry.fadeRaf = 0;
+      }
+      // 只给当前曲目音量；淡出中的旧曲目保持静音，避免取消静音时两首同时响。
+      entry.el.volume = entry === audioState.musicCurrent ? directMusicLevel(entry) : 0;
+    });
   }
 
   function getNoiseBuffer() {
@@ -825,13 +940,13 @@
     compressor.connect(ctx.destination);
 
     var ambience = ctx.createGain();
-    ambience.gain.value = 0.35;
+    ambience.gain.value = 0.35 * audioState.settings.ambienceVolume;
     ambience.connect(master);
     var sfx = ctx.createGain();
     sfx.gain.value = 0.55;
     sfx.connect(master);
     var music = ctx.createGain();
-    music.gain.value = 0.40;
+    music.gain.value = 0.62 * audioState.settings.musicVolume;
     music.connect(master);
 
     if (debugEnabled) {
@@ -847,6 +962,201 @@
     audioState.sfxBus = sfx;
     audioState.musicBus = music;
     audioState.duck = 1;
+  }
+
+  function warnExternalAudio(message) {
+    if (audioState.externalWarned) return;
+    audioState.externalWarned = true;
+    console.warn("[audio] " + message);
+  }
+
+  function createAudioElement(def) {
+    var el = document.createElement("audio");
+    el.src = def.src;
+    el.loop = true;
+    el.preload = "auto";
+    // 直连模式先静音，等总线级算好再起播，避免起播爆音。
+    el.volume = DIRECT_EXTERNAL ? 0 : 1;
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function playExternalElement(el, label) {
+    var result = el.play();
+    if (result && result.catch) {
+      result.catch(function (error) {
+        warnExternalAudio(label + "未能播放：" + (error && error.message ? error.message : "未知原因"));
+      });
+    }
+  }
+
+  function startEnvVoice(id) {
+    var def = ENV_DEFS[id];
+    var el = createAudioElement(def);
+    var source = null;
+    var direct = DIRECT_EXTERNAL;
+    if (!direct) {
+      try {
+        source = audioState.ctx.createMediaElementSource(el);
+      } catch (error) {
+        warnExternalAudio("环境声接入失败，改用直连：" + id + " " + error.message);
+        direct = true;
+      }
+    }
+    var entry = { id: id, el: el, source: source, gain: null, direct: direct, base: def.gain };
+    if (direct) {
+      el.volume = 0;
+    } else {
+      var gain = audioState.ctx.createGain();
+      gain.gain.value = 0;
+      source.connect(gain);
+      gain.connect(audioState.ambienceBus);
+      entry.gain = gain;
+    }
+    audioState.env[id] = entry;
+    playExternalElement(el, "环境声 " + id + " ");
+    if (direct) el.volume = directEnvLevel(id);
+  }
+
+  function startExternalAudio() {
+    if (audioState.envStarted || !audioState.ctx) return false;
+    audioState.envStarted = true;
+    Object.keys(ENV_DEFS).forEach(startEnvVoice);
+    return true;
+  }
+
+  function setEnvironment(sceneId) {
+    if (!audioState.ctx) return false;
+    var weights = ENV_BY_SCENE[sceneId] || { wind: 0.5 };
+    var now = audioState.ctx.currentTime;
+    Object.keys(audioState.env).forEach(function (id) {
+      var voice = audioState.env[id];
+      if (voice.direct) {
+        voice.el.volume = directEnvLevel(id);
+        return;
+      }
+      var target = ENV_DEFS[id].gain * (weights[id] || 0);
+      voice.gain.gain.setTargetAtTime(target, now, 0.6);
+    });
+    return true;
+  }
+
+  function getMusicEntry(id) {
+    if (audioState.music[id]) return audioState.music[id];
+    var def = MUSIC_DEFS[id];
+    if (!def) return null;
+    var el = createAudioElement(def);
+    var source = null;
+    var direct = DIRECT_EXTERNAL;
+    if (!direct) {
+      try {
+        source = audioState.ctx.createMediaElementSource(el);
+      } catch (error) {
+        warnExternalAudio("配乐接入失败，改用直连：" + id + " " + error.message);
+        direct = true;
+      }
+    }
+    var entry = { id: id, el: el, source: source, gain: null, direct: direct, base: def.gain };
+    if (direct) {
+      el.volume = 0;
+    } else {
+      var gain = audioState.ctx.createGain();
+      gain.gain.value = 0;
+      source.connect(gain);
+      gain.connect(audioState.musicBus);
+      entry.gain = gain;
+    }
+    audioState.music[id] = entry;
+    return entry;
+  }
+
+  // file:// 直连模式没有 GainNode，只能手写淡入淡出；取消旧动画，避免两首歌同时被写音量。
+  function fadeDirectElement(entry, target, duration) {
+    if (!entry || !entry.direct || !entry.el) return;
+    if (entry.fadeRaf) cancelAnimationFrame(entry.fadeRaf);
+    var from = entry.el.volume;
+    var start = performance.now();
+    function tick(now) {
+      var t = Math.min(1, (now - start) / duration);
+      entry.el.volume = clampAudio(from + (target - from) * t, 0, 1);
+      if (t < 1) entry.fadeRaf = requestAnimationFrame(tick);
+      else entry.fadeRaf = 0;
+    }
+    entry.fadeRaf = requestAnimationFrame(tick);
+  }
+
+  function setMusic(sceneId) {
+    if (!audioState.ctx) return false;
+    var id = MUSIC_BY_SCENE[sceneId] || null;
+    if (!id) {
+      if (audioState.musicCurrent) {
+        var previous = audioState.musicCurrent;
+        if (previous.direct) {
+          fadeDirectElement(previous, 0, 1.4);
+        } else {
+          var previousNow = audioState.ctx.currentTime;
+          previous.gain.gain.cancelScheduledValues(previousNow);
+          previous.gain.gain.setTargetAtTime(0.0001, previousNow, 0.5);
+        }
+        audioState.musicCurrent = null;
+        window.setTimeout(function () {
+          if (audioState.musicCurrent !== previous) {
+            previous.el.pause();
+            previous.el.currentTime = 0;
+          }
+        }, 1600);
+      }
+      return true;
+    }
+    var entry = getMusicEntry(id);
+    if (!entry) return false;
+    if (audioState.musicCurrent === entry) return true;
+    var old = audioState.musicCurrent;
+    var now = audioState.ctx.currentTime;
+    // 先切当前曲目，再淡出旧曲；否则设置音量时 applyDirectExternalLevels 会把旧曲又提起来。
+    audioState.musicCurrent = entry;
+    if (old) {
+      if (old.direct) {
+        fadeDirectElement(old, 0, 1.4);
+      } else {
+        old.gain.gain.cancelScheduledValues(now);
+        old.gain.gain.setTargetAtTime(0.0001, now, 0.5);
+      }
+      window.setTimeout(function () {
+        if (audioState.musicCurrent !== old) {
+          old.el.pause();
+          old.el.currentTime = 0;
+        }
+      }, 1600);
+    }
+    entry.el.currentTime = 0;
+    if (entry.direct) entry.el.volume = 0;
+    playExternalElement(entry.el, "配乐 " + id + " ");
+    if (entry.direct) {
+      fadeDirectElement(entry, directMusicLevel(entry), 1.4);
+    } else {
+      entry.gain.gain.cancelScheduledValues(now);
+      entry.gain.gain.setValueAtTime(0.0001, now);
+      entry.gain.gain.linearRampToValueAtTime(entry.base, now + 1.4);
+    }
+    return true;
+  }
+
+  function pauseExternalAudio() {
+    Object.keys(audioState.env).forEach(function (id) {
+      audioState.env[id].el.pause();
+    });
+    if (audioState.musicCurrent) audioState.musicCurrent.el.pause();
+  }
+
+  function resumeExternalAudio() {
+    Object.keys(audioState.env).forEach(function (id) {
+      playExternalElement(audioState.env[id].el, "环境声 " + id + " ");
+    });
+    if (audioState.musicCurrent) {
+      playExternalElement(audioState.musicCurrent.el, "配乐 " + audioState.musicCurrent.id + " ");
+    }
   }
 
   function unlockAudio() {
@@ -878,6 +1188,7 @@
     buildAudioGraph();
     applyAudioSettings(audioState.settings);
     if (audioState.ctx.state === "suspended") resumeAudio();
+    startExternalAudio();
     if (audioState.sceneId) setScene(audioState.sceneId);
     return true;
   }
@@ -885,11 +1196,16 @@
   function applyAudioSettings(next) {
     if (next) {
       if (next.volume !== undefined) audioState.settings.volume = clampAudio(next.volume, 0, 1);
+      if (next.musicVolume !== undefined) audioState.settings.musicVolume = clampAudio(next.musicVolume, 0, 1);
+      if (next.ambienceVolume !== undefined) audioState.settings.ambienceVolume = clampAudio(next.ambienceVolume, 0, 1);
       if (next.muted !== undefined) audioState.settings.muted = !!next.muted;
     }
     if (!audioState.ctx || !audioState.masterGain) return false;
-    var target = audioState.settings.muted ? 0 : 0.87 * audioState.settings.volume;
-    audioState.masterGain.gain.setTargetAtTime(target, audioState.ctx.currentTime, 0.04);
+    var now = audioState.ctx.currentTime;
+    audioState.masterGain.gain.setTargetAtTime(externalMasterLevel(), now, 0.04);
+    audioState.ambienceBus.gain.setTargetAtTime(0.35 * audioState.settings.ambienceVolume * audioState.duck, now, 0.04);
+    audioState.musicBus.gain.setTargetAtTime(0.62 * audioState.settings.musicVolume * audioState.duck, now, 0.04);
+    applyDirectExternalLevels();
     return true;
   }
 
@@ -993,6 +1309,8 @@
       console.warn("[audio] 未知场景，回落 title：" + sceneId);
     }
     audioState.sceneId = sceneId;
+    setEnvironment(sceneId);
+    setMusic(sceneId);
     return setBed(hasScene ? BED_BY_SCENE[sceneId] : BED_BY_SCENE.title);
   }
 
@@ -1006,8 +1324,9 @@
     audioState.duck = clampAudio(level, 0, 1);
     if (!audioState.ctx) return false;
     var now = audioState.ctx.currentTime;
-    audioState.ambienceBus.gain.setTargetAtTime(0.35 * audioState.duck, now, 0.08);
-    audioState.musicBus.gain.setTargetAtTime(0.40 * audioState.duck, now, 0.08);
+    audioState.ambienceBus.gain.setTargetAtTime(0.35 * audioState.settings.ambienceVolume * audioState.duck, now, 0.08);
+    audioState.musicBus.gain.setTargetAtTime(0.62 * audioState.settings.musicVolume * audioState.duck, now, 0.08);
+    applyDirectExternalLevels();
     return true;
   }
 
@@ -1177,6 +1496,7 @@
 
   function suspendAudio() {
     if (!audioState.ctx || audioState.ctx.state !== "running") return false;
+    pauseExternalAudio();
     var result = audioState.ctx.suspend();
     if (result && result.catch) {
       result.catch(function (error) {
@@ -1190,10 +1510,14 @@
     if (!audioState.ctx) return false;
     if (audioState.ctx.state !== "suspended") return true;
     var result = audioState.ctx.resume();
-    if (result && result.catch) {
-      result.catch(function (error) {
+    if (result && result.then) {
+      result.then(function () {
+        resumeExternalAudio();
+      }).catch(function (error) {
         console.warn("[audio] resume 未完成", error);
       });
+    } else {
+      resumeExternalAudio();
     }
     return true;
   }
@@ -1224,6 +1548,8 @@
       scene: audioState.sceneId,
       bed: audioState.bedId,
       duck: audioState.duck,
+      env: Object.keys(audioState.env),
+      music: audioState.musicCurrent ? audioState.musicCurrent.id : null,
       activeBeds: audioState.voices.length + audioState.fading.length,
       volume: audioState.settings.volume,
       muted: audioState.settings.muted,
@@ -1407,6 +1733,36 @@
   var AUTO_DELAY_MS = 1200;
   var SKIP_DELAY_MS = 120;
   var TITLE_CARD_MS = 1200;
+
+  // 章首卡直接用照片做 CSS 背景，不再依赖画布；键是 story 里的 bg 场景名。
+  var TITLE_CARD_BG = {
+    yudu_river: "./assets/backgrounds/plate_yudu.jpg",
+    yudu_night: "./assets/backgrounds/plate_yudu.jpg",
+    xiangjiang_ford: "./assets/backgrounds/plate_xiangjiang.jpg",
+    xiangjiang_map: "./assets/backgrounds/plate_xiangjiang_map.jpg",
+    zunyi_hall: "./assets/backgrounds/plate_zunyi_hall.jpg",
+    zunyi_street: "./assets/backgrounds/plate_zunyi_street.jpg",
+    jinsha_river: "./assets/backgrounds/plate_jinsha.jpg",
+    jinsha_night: "./assets/backgrounds/plate_jinsha.jpg",
+    luding_bridge: "./assets/backgrounds/plate_luding.jpg",
+    luding_after: "./assets/backgrounds/plate_luding_after.jpg",
+    grass_marsh: "./assets/backgrounds/plate_grass.jpg",
+    grass_dawn: "./assets/backgrounds/plate_grass_dawn.jpg",
+    wuqi_dawn: "./assets/backgrounds/plate_wuqi.jpg",
+    wuqi_wall: "./assets/backgrounds/plate_wuqi.jpg"
+  };
+
+  // 图鉴列表用 480×270 小图，避免打开图鉴时一次拉 7 张 1920 原图。
+  var CODEX_THUMBS = {
+    yudu: "./assets/backgrounds/thumbs/codex_yudu.jpg",
+    xiangjiang: "./assets/backgrounds/thumbs/codex_xiangjiang.jpg",
+    zunyi: "./assets/backgrounds/thumbs/codex_zunyi.jpg",
+    jinsha: "./assets/backgrounds/thumbs/codex_jinsha.jpg",
+    luding: "./assets/backgrounds/thumbs/codex_luding.jpg",
+    grass: "./assets/backgrounds/thumbs/codex_grass.jpg",
+    wuqi: "./assets/backgrounds/thumbs/codex_wuqi.jpg"
+  };
+
   var TOAST_MS = 2500;
   var STATION_WIDTH = 132;
   var STATION_HEIGHT = 64;
@@ -1476,6 +1832,7 @@
     "vn-title-card",
     "vn-title-chapter",
     "vn-title-sub",
+    "vn-title-place",
     "vn-measure",
     "vn-settings",
     "set-speed",
@@ -1483,15 +1840,24 @@
     "set-scale",
     "set-volume",
     "set-volume-value",
+    "set-music-volume",
+    "set-music-volume-value",
+    "set-env-volume",
+    "set-env-volume-value",
     "set-muted",
     "set-motion",
     "set-skip",
+    "vn-roster",
+    "roster-list",
+    "roster-foot",
     "codex",
     "codex-title",
     "codex-badges",
+    "codex-figure",
     "codex-body",
     "codex-note",
     "codex-source",
+    "codex-image-note",
     "codex-close",
     "codex-gallery",
     "gallery-close",
@@ -1979,7 +2345,10 @@
         startInteract(found.node);
         break;
       case "title":
-        showTitleCard(found.node.text, found.node.sub, advanceVn);
+        showTitleCard(found.node.text, found.node.sub, advanceVn, {
+          bg: found.node.bg,
+          place: found.node.place
+        });
         break;
       case "codex":
         openCodex(found.node.codexId, { unlock: true, onClose: advanceVn });
@@ -2097,7 +2466,14 @@
     vnRun.charIndex = vnRun.pageChars.length;
     els.vnText.textContent = vnRun.pages[vnRun.pageIndex] || "";
     var lastPage = vnRun.pageIndex >= vnRun.pages.length - 1;
-    els.vnNext.textContent = lastPage ? "▼" : "▼ " + (vnRun.pageIndex + 1) + "/" + vnRun.pages.length;
+    els.vnNext.textContent = "";
+    var mark = document.createElement("span");
+    mark.className = "vn-next__mark";
+    mark.textContent = "▼";
+    els.vnNext.appendChild(mark);
+    if (!lastPage) {
+      els.vnNext.appendChild(document.createTextNode(" " + (vnRun.pageIndex + 1) + "/" + vnRun.pages.length));
+    }
     if (skipEnabled && vnRun.seen) scheduleAdvance(SKIP_DELAY_MS);
     else if (autoEnabled) scheduleAdvance(AUTO_DELAY_MS);
   }
@@ -3103,13 +3479,30 @@
 
   /* ---------------- 标题卡与史实注 ---------------- */
 
-  function showTitleCard(text, sub, onClose) {
+  function showTitleCard(text, sub, onClose, options) {
+    options = options || {};
+    var bg = options.bg || null;
+    var place = options.place || "";
+    var plate = TITLE_CARD_BG[bg] || null;
+    var isMap = bg === "xiangjiang_map";
     XB.audio.cue("chapter");
     titleCardState.open = true;
     titleCardState.onClose = onClose || null;
     els.vnTitleChapter.textContent = text || "";
     els.vnTitleSub.textContent = sub || "";
     els.vnTitleSub.hidden = !sub;
+    els.vnTitlePlace.textContent = place;
+    els.vnTitlePlace.hidden = !place;
+    els.vnTitleCard.classList.toggle("has-photo", !!plate);
+    els.vnTitleCard.classList.toggle("is-map", isMap);
+    if (plate) {
+      els.vnTitleCard.style.setProperty("--title-card-image", 'url("' + plate + '")');
+      if (XB.art && XB.art.preload) XB.art.preload(bg);
+    } else {
+      els.vnTitleCard.style.removeProperty("--title-card-image");
+    }
+    var vnScene = els.vnTitleCard.parentElement;
+    if (vnScene) vnScene.classList.add("is-title-card");
     els.vnTitleCard.hidden = false;
     els.vnToolbar.hidden = true;
     cancelAuto();
@@ -3125,6 +3518,12 @@
     clearTimeout(titleCardState.timer);
     titleCardState.timer = 0;
     els.vnTitleCard.hidden = true;
+    els.vnTitleCard.classList.remove("has-photo", "is-map");
+    els.vnTitleCard.style.removeProperty("--title-card-image");
+    els.vnTitlePlace.textContent = "";
+    els.vnTitlePlace.hidden = true;
+    var vnScene = els.vnTitleCard.parentElement;
+    if (vnScene) vnScene.classList.remove("is-title-card");
     var callback = titleCardState.onClose;
     titleCardState.onClose = null;
     if (callback) callback();
@@ -3164,6 +3563,23 @@
         badge.textContent = text;
         els.codexBadges.append(badge);
       });
+
+    els.codexFigure.textContent = "";
+    if (card.image) {
+      var image = document.createElement("img");
+      image.src = card.image;
+      image.alt = card.title + " 场景示意";
+      var caption = document.createElement("figcaption");
+      caption.textContent = "场景示意";
+      els.codexFigure.append(image, caption);
+      els.codexFigure.hidden = false;
+      els.codexImageNote.textContent = card.imageNote ||
+        "照片说明：部分场景图为1967年或当代拍摄，作历史氛围示意，非1935年现场。";
+      els.codexImageNote.hidden = false;
+    } else {
+      els.codexFigure.hidden = true;
+      els.codexImageNote.hidden = true;
+    }
 
     els.codexBody.textContent = "";
     var paragraph = document.createElement("p");
@@ -3224,6 +3640,12 @@
       if (!unlocked) button.setAttribute("aria-disabled", "true");
       button.setAttribute("aria-label", card.title + (unlocked ? "，已解锁" : "，未解锁，" + galleryGateLabel(card)));
 
+      var thumb = document.createElement("img");
+      thumb.className = "xb-gallery__thumb";
+      thumb.src = CODEX_THUMBS[card.id] || "";
+      thumb.alt = "";
+      thumb.loading = "lazy";
+      thumb.decoding = "async";
       var order = document.createElement("span");
       order.className = "xb-gallery__card-order";
       order.textContent = index + 1 < 10 ? "0" + (index + 1) : String(index + 1);
@@ -3235,7 +3657,7 @@
       var gate = document.createElement("span");
       gate.className = "xb-gallery__card-state";
       gate.textContent = unlocked ? "已记入" : galleryGateLabel(card);
-      button.append(order, title, type, gate);
+      button.append(thumb, order, title, type, gate);
       els.galleryGrid.append(button);
     });
   }
@@ -3321,7 +3743,7 @@
     saveExists = true;
     showTitleCard("序章 · 于都", "一九三四年 · 十月", function () {
       renderVn(currentNode(state));
-    });
+    }, { bg: "yudu_river", place: "赣南 · 于都河" });
   }
 
   function resumeGame() {
@@ -3380,7 +3802,7 @@
 
   function setSoloPauseButtons(hidden) {
     if (!els.pauseMenu) return;
-    ["pause-map", "pause-title"].forEach(function (action) {
+    ["pause-map", "pause-title", "open-roster"].forEach(function (action) {
       var button = els.pauseMenu.querySelector('[data-action="' + action + '"]');
       if (button) button.hidden = hidden;
     });
@@ -3473,6 +3895,7 @@
     els.pause.hidden = false;
     els.pauseMenu.hidden = false;
     els.vnSettings.hidden = true;
+    els.vnRoster.hidden = true;
     var first = els.pauseMenu.querySelector("button");
     if (first) first.focus();
   }
@@ -3483,6 +3906,7 @@
     refreshAudioDuck();
     els.pause.hidden = true;
     els.vnSettings.hidden = true;
+    els.vnRoster.hidden = true;
     els.pauseMenu.hidden = false;
     if (vnRun.typing && vnRun.paused) {
       vnRun.paused = false;
@@ -3497,6 +3921,7 @@
 
   function openSettings() {
     els.pauseMenu.hidden = true;
+    els.vnRoster.hidden = true;
     els.vnSettings.hidden = false;
     syncSettingsUI();
     els.setSpeed.focus();
@@ -3504,6 +3929,68 @@
 
   function closeSettings() {
     els.vnSettings.hidden = true;
+    els.pauseMenu.hidden = false;
+    var first = els.pauseMenu.querySelector("button");
+    if (first) first.focus();
+  }
+
+  // 花名册只读现有数据：点名前的名字一律“在册”，点名后才显示应/未应，避免提前剧透。
+  function renderRoster() {
+    var ended = !!(state.ending && Array.isArray(state.ending.names) && state.ending.names.length);
+    var rows = ended
+      ? state.ending.names
+      : rollcallEntries().map(function (entry) {
+          return { id: entry.id, name: entry.name, status: "unknown" };
+        });
+    var labels = {
+      self: "在",
+      remote: "在别的连",
+      player: "你替他答了",
+      missed: "未应",
+      unknown: "在册"
+    };
+    els.rosterList.textContent = "";
+    var missed = 0;
+    rows.forEach(function (entry) {
+      var li = document.createElement("li");
+      li.className = "xb-roster__item";
+      if (entry.status === "missed") {
+        li.classList.add("is-missed");
+        missed += 1;
+      } else if (entry.status === "player") {
+        li.classList.add("is-answered");
+      } else if (entry.status === "remote") {
+        li.classList.add("is-remote");
+      }
+      var name = document.createElement("span");
+      name.className = "xb-roster__name";
+      name.textContent = entry.name;
+      var status = document.createElement("span");
+      status.className = "xb-roster__status";
+      status.textContent = labels[entry.status] || labels.unknown;
+      li.append(name, status);
+      els.rosterList.append(li);
+    });
+    if (!ended) {
+      els.rosterFoot.textContent = "点名之后，这里会记下谁应了，谁没有。";
+    } else if (missed > 0) {
+      els.rosterFoot.textContent = "还有 " + missed + " 个名字，没有人应。";
+    } else {
+      els.rosterFoot.textContent = "所有名字都有人应。";
+    }
+  }
+
+  function openRoster() {
+    renderRoster();
+    els.pauseMenu.hidden = true;
+    els.vnSettings.hidden = true;
+    els.vnRoster.hidden = false;
+    els.vnRoster.scrollTop = 0;
+    els.vnRoster.focus();
+  }
+
+  function closeRoster() {
+    els.vnRoster.hidden = true;
     els.pauseMenu.hidden = false;
     var first = els.pauseMenu.querySelector("button");
     if (first) first.focus();
@@ -3531,6 +4018,18 @@
       state.settings.volume = Number(els.setVolume.value) / 100;
       els.setVolumeValue.textContent = els.setVolume.value;
       XB.audio.applySettings({ volume: state.settings.volume });
+      saveNow();
+    });
+    els.setMusicVolume.addEventListener("input", function () {
+      state.settings.musicVolume = Number(els.setMusicVolume.value) / 100;
+      els.setMusicVolumeValue.textContent = els.setMusicVolume.value;
+      XB.audio.applySettings({ musicVolume: state.settings.musicVolume });
+      saveNow();
+    });
+    els.setEnvVolume.addEventListener("input", function () {
+      state.settings.ambienceVolume = Number(els.setEnvVolume.value) / 100;
+      els.setEnvVolumeValue.textContent = els.setEnvVolume.value;
+      XB.audio.applySettings({ ambienceVolume: state.settings.ambienceVolume });
       saveNow();
     });
     els.setScale.addEventListener("click", function (event) {
@@ -3569,6 +4068,10 @@
     els.setSpeedValue.textContent = settings.textSpeed + " 字/秒";
     els.setVolume.value = String(Math.round(settings.volume * 100));
     els.setVolumeValue.textContent = String(Math.round(settings.volume * 100));
+    els.setMusicVolume.value = String(Math.round(settings.musicVolume * 100));
+    els.setMusicVolumeValue.textContent = String(Math.round(settings.musicVolume * 100));
+    els.setEnvVolume.value = String(Math.round(settings.ambienceVolume * 100));
+    els.setEnvVolumeValue.textContent = String(Math.round(settings.ambienceVolume * 100));
     Array.prototype.forEach.call(els.setScale.querySelectorAll("[data-scale]"), function (button) {
       button.setAttribute("aria-pressed", Number(button.dataset.scale) === settings.textScale ? "true" : "false");
     });
@@ -3700,6 +4203,11 @@
         event.preventDefault();
         return;
       }
+      if (state && state.paused && els.vnRoster && !els.vnRoster.hidden) {
+        closeRoster();
+        event.preventDefault();
+        return;
+      }
       if (state && state.paused) {
         closePause();
         event.preventDefault();
@@ -3806,6 +4314,12 @@
         break;
       case "close-settings":
         closeSettings();
+        break;
+      case "open-roster":
+        openRoster();
+        break;
+      case "close-roster":
+        closeRoster();
         break;
       case "pause-map":
         closePause();
