@@ -1,5 +1,5 @@
 《向北》—— 一块门板，两万五千里
-版本 v1.1.0-dev · 2026-11-04 · 素材增强版（未部署）
+版本 v1.1.1 · 2026-11-05 · 慢网/竖屏适配版（发布包；公网部署见 README.md）
 课程项目，非商业使用
 
 【制作】
@@ -23,8 +23,9 @@
 
 【图像】
 来源：Wikimedia Commons（http://commons.wikimedia.org/）与用户本地 AI 生成。
-12 张场景/地图底图 + 1 张标题插画位于 assets/backgrounds/，均为 1920×1080 JPEG。
-图鉴/史实注缩略图由上述底图裁切为 480×270 JPEG，位于 assets/backgrounds/thumbs/，不再单独署名。
+12 张场景/地图底图 + 1 张标题插画位于 assets/backgrounds/，原图为 1920×1080 JPEG。
+运行包优先使用 assets/backgrounds/webp/ 下的 1600×900 WebP；慢网占位图为 assets/backgrounds/placeholders/ 下的 480×270 WebP；原 JPEG 保留兜底。
+图鉴/史实注缩略图由上述底图裁切为 480×270 JPEG，位于 assets/backgrounds/thumbs/；占位图与缩略图均不再单独署名。
 12 张场景底图经过裁切、去色、双色调、颗粒、暗角与顶部压暗处理，属于改编作品；
 它们不是“1935 年现场照片”，而是氛围底图；具体年代/地点见每条说明。
 CC BY-SA 底图的改编版按相同协议共享。

@@ -132,7 +132,7 @@
 - 只有一张全屏 `canvas#stage-art`（1280×720，`z-index: var(--z-art)`，`pointer-events: none`，`aria-hidden="true"`），标题 / 地图 / VN 共用；不新增第二张背景画布。
 - API（`XB.art`）：`mount(canvas)`、`paint(canvas, sceneId)`、`resize(displayScale)`、`rng(seed)`、`preload(sceneId)`，常量 `SCENES`。
 - 场景注册表 17 项：`title`、`map`、`yudu_river`、`yudu_night`、`xiangjiang_ford`、`xiangjiang_dawn`、`xiangjiang_map`、`zunyi_hall`、`zunyi_street`、`jinsha_river`、`jinsha_night`、`luding_bridge`、`luding_after`、`grass_marsh`、`grass_dawn`、`wuqi_dawn`、`wuqi_wall`；`story.js` 的 `bg` 必须是其中子集（C11 校验）。
-- 底图：`PLATE_BY_SCENE` 把场景映射到 `assets/backgrounds/plate_*.jpg`；`getPlate` 懒加载 `Image`，加载完成重绘当前场景；`paint` 在图片 ready 时 `drawImage` cover-fit 并叠 `PLATE_TINT`（夜/晨），未 ready 或失败时回退原程序化 painter。`title` / `map` 仍为程序化，`title` 使用 `plate_title.jpg` 照片底。
+- 底图：`PLATE_BASE_BY_SCENE` 把场景映射到基名；先加载 `assets/backgrounds/placeholders/plate_*.webp`（480×270）占位，再加载 `assets/backgrounds/webp/plate_*.webp`（1600×900），失败回退 `assets/backgrounds/plate_*.jpg`（1920×1080），再失败才回退原程序化 painter。`paint` 在图片 ready 时 `drawImage` cover-fit 并叠 `PLATE_TINT`（夜/晨）；占位图阶段给 `#stage-art` 加 `is-placeholder`。`title` / `map` 仍为程序化，`title` 使用 `plate_title` 照片底。
 - 尺寸：`renderScale = clamp(舞台缩放 × devicePixelRatio, 1, 2)`；内部像素 = 1280×720 × renderScale；绘制坐标永远是 1280×720 设计坐标。
 - 绘制时机：`init` mount → `resize` → 各场景 render 时 paint；resize 用一次 `requestAnimationFrame` 合并；本步**不做** rAF 动画循环。
 - 失败兜底：单张底图加载失败只 `console.warn` 并继续用原程序化 painter，不白屏、不弹错；`paint` 整体返回 false 或抛错才由 engine `console.error` + 一次性 toast「插画加载失败」。
@@ -142,7 +142,7 @@
 
 | 场景 | 底 | 层序 | 不画 |
 |---|---|---|---|
-| title | `plate_title.jpg`（AI 插画，虚构小战士/于都河） | 照片 cover → 左侧/底部纸色压暗 → DOM 标题与菜单 | 真实人物肖像、现代元素、文字 |
+| title | `plate_title`（1600 WebP + 480 占位；AI 插画，虚构小战士/于都河） | 照片 cover → 左侧/底部纸色压暗 → DOM 标题与菜单 | 真实人物肖像、现代元素、文字 |
 | map | 透明（纸纹透出） | 6 条等高线 .06 → 远山 .10 → 近山 .18 | 站点、路线（SVG 保留） |
 | yudu_river | night→night-deep 渐变 | 远岸 420–470 → 浮桥 470–520 → 江面白线 520–720 → 雾 300–500 → 8 火把 → 顶部底片 0–90 | 人脸 |
 | yudu_night | night-deep→night 渐变 | 星点 ≤24 → 屋脊 500–620 → 树影 → 暖窗 930,520 → 顶部底片 | 人脸 |
@@ -189,8 +189,8 @@
 
 ## 10. 素材增强（2026-11-04 追加）
 
-- 12 张 1920×1080 plate：11 张场景 + 1 张湘江地图；统一灰度、双色调、颗粒、暗角、顶部 HUD 压暗。原片为 CC/PD 或 AI 生成，逐张来源与 caveat 见 `docs/credits.md`。
-- 标题页 `plate_title.jpg` 是 AI 生成插画（豆包 Seedream），画的是虚构红军小战士背门板站在于都河渡口；**不是史料照片**，人物非真实人物。右下角生成水印已用同纹理补丁 + 暗角处理移除；处理脚本与 v1/v2 源文件在 `resource/title/`。
+- 12 张底图：11 张场景 + 1 张湘江地图；运行包用 1600×900 WebP（另配 480×270 WebP 占位图），原 1920×1080 JPEG 保留为不支持 WebP 时的兜底。统一灰度、双色调、颗粒、暗角、顶部 HUD 压暗；逐张来源与 caveat 见 `docs/credits.md`。
+- 标题页 `plate_title` 是 AI 生成插画（豆包 Seedream），画的是虚构红军小战士背门板站在于都河渡口；**不是史料照片**，人物非真实人物。右下角生成水印已用同纹理补丁 + 暗角处理移除；处理脚本与 v1/v2 源文件在 `resource/title/`。
 - 照片不是 1935 年现场：1967 年《人民画报》图、2005/2011/2018/2023 年照片均只作“历史氛围示意”；湘江照片是湖南江边小镇，不是桂北界首渡口；吴起 plate 是 1967 年陕北杨家岭，不是吴起镇。游戏内图鉴/制作名单必须保留这些说明。
 - 所有 plate 只做氛围底，不承载正文；正文始终在纸白对话框内，照片暗部不压字。
 - 组件壳不新增第二个画布；图片只通过 `art.js` 的 `Image` 缓存进入 `#stage-art`，DOM 里只允许标题卡背景、图鉴/史实注缩略图。

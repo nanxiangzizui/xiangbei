@@ -17,24 +17,39 @@
 
   // 章节底图。照片先做双色调、颗粒与暗角，再在这里按场景套一层
   // 极淡的夜色/晨光；加载失败时回落到下面的程序化版画。
-  var PLATE_BY_SCENE = {
-    title: "./assets/backgrounds/plate_title.jpg",
-    yudu_river: "./assets/backgrounds/plate_yudu.jpg",
-    yudu_night: "./assets/backgrounds/plate_yudu.jpg",
-    xiangjiang_ford: "./assets/backgrounds/plate_xiangjiang.jpg",
-    xiangjiang_dawn: "./assets/backgrounds/plate_xiangjiang.jpg",
-    xiangjiang_map: "./assets/backgrounds/plate_xiangjiang_map.jpg",
-    zunyi_hall: "./assets/backgrounds/plate_zunyi_hall.jpg",
-    zunyi_street: "./assets/backgrounds/plate_zunyi_street.jpg",
-    jinsha_river: "./assets/backgrounds/plate_jinsha.jpg",
-    jinsha_night: "./assets/backgrounds/plate_jinsha.jpg",
-    luding_bridge: "./assets/backgrounds/plate_luding.jpg",
-    luding_after: "./assets/backgrounds/plate_luding_after.jpg",
-    grass_marsh: "./assets/backgrounds/plate_grass.jpg",
-    grass_dawn: "./assets/backgrounds/plate_grass_dawn.jpg",
-    wuqi_dawn: "./assets/backgrounds/plate_wuqi.jpg",
-    wuqi_wall: "./assets/backgrounds/plate_wuqi.jpg"
+  // 场景 → 底图基名。同一张图服务多个时段（夜/晨），时段差异由 PLATE_TINT 补。
+  var PLATE_BASE_BY_SCENE = {
+    title: "plate_title",
+    yudu_river: "plate_yudu",
+    yudu_night: "plate_yudu",
+    xiangjiang_ford: "plate_xiangjiang",
+    xiangjiang_dawn: "plate_xiangjiang",
+    xiangjiang_map: "plate_xiangjiang_map",
+    zunyi_hall: "plate_zunyi_hall",
+    zunyi_street: "plate_zunyi_street",
+    jinsha_river: "plate_jinsha",
+    jinsha_night: "plate_jinsha",
+    luding_bridge: "plate_luding",
+    luding_after: "plate_luding_after",
+    grass_marsh: "plate_grass",
+    grass_dawn: "plate_grass_dawn",
+    wuqi_dawn: "plate_wuqi",
+    wuqi_wall: "plate_wuqi"
   };
+
+  // 三档路径：480 占位图先到（先让人看到对的山河），1600 WebP 随后替换；
+  // 极老浏览器不认 WebP 时再回退到原来的 1920 JPEG。
+  var PLATE_FULL_DIR = "./assets/backgrounds/webp/";
+  var PLATE_THUMB_DIR = "./assets/backgrounds/placeholders/";
+  var PLATE_FALLBACK_DIR = "./assets/backgrounds/";
+
+  function plateSrc(sceneId, kind) {
+    var base = PLATE_BASE_BY_SCENE[sceneId];
+    if (!base) return null;
+    if (kind === "thumb") return PLATE_THUMB_DIR + base + ".webp";
+    if (kind === "fallback") return PLATE_FALLBACK_DIR + base + ".jpg";
+    return PLATE_FULL_DIR + base + ".webp";
+  }
 
   var PLATE_TINT = {
     yudu_night: "rgba(8, 12, 20, 0.30)",
@@ -46,6 +61,7 @@
   };
 
   var plateImages = {};
+  var thumbImages = {};
 
   // 令牌缺失时才用：正常路径读 style.css 的 :root 变量
   var FALLBACK_PALETTE = {
@@ -163,9 +179,21 @@
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.clearRect(0, 0, W, H);
     var random = rng(sceneId);
-    var plate = getPlate(sceneId);
+    var fullSrc = plateSrc(sceneId, "full");
+    var plate = fullSrc ? plateImages[fullSrc] : null;
+    var thumb = null;
+    if (!plate || !plate.__ready) {
+      thumb = getThumb(sceneId);
+      // 占位图先走；它到了再请求大图，避免两个请求在慢网里互抢。
+      if (!plate && (!thumb || thumb.__ready || thumb.__failed)) {
+        plate = getPlate(sceneId);
+      }
+    }
+    var fullReady = !!(plate && plate.__ready && !plate.__failed);
+    var thumbReady = !!(thumb && thumb.__ready && !thumb.__failed);
     try {
-      if (plate && plate.__ready) drawPlate(ctx, plate, sceneId);
+      if (fullReady) drawPlate(ctx, plate, sceneId);
+      else if (thumbReady) drawPlate(ctx, thumb, sceneId);
       else PAINTERS[sceneId](ctx, random, palette);
     } catch (err) {
       console.error("art.paint 失败: " + sceneId, err);
@@ -173,26 +201,68 @@
     }
     ctx.globalAlpha = 1;
     canvas.dataset.scene = sceneId;
-    canvas.classList.toggle("is-photo", !!(plate && plate.__ready));
+    canvas.classList.toggle("is-photo", fullReady || thumbReady);
+    canvas.classList.toggle("is-placeholder", (fullReady || thumbReady) && !fullReady);
     return true;
   }
 
-  // 只加载一次；加载完成后重绘当前场景，避免先看到程序图再突然换图。
+  function repaintScene() {
+    if (!currentCanvas) return;
+    var sceneId = currentCanvas.dataset.scene;
+    if (sceneId) paint(currentCanvas, sceneId);
+  }
+
+  // 480 占位图：先给构图，再让 1600 WebP 替换。缓存按 src 去重。
+  function getThumb(sceneId) {
+    var src = plateSrc(sceneId, "thumb");
+    if (!src) return null;
+    var image = thumbImages[src];
+    if (image) return image;
+    image = new Image();
+    image.decoding = "async";
+    if ("fetchPriority" in image) image.fetchPriority = "high";
+    image.onload = function () {
+      image.__ready = true;
+      repaintScene();
+      getPlate(sceneId);
+    };
+    image.onerror = function () {
+      image.__failed = true;
+      console.warn("art: 占位图加载失败，直接取大图 " + src);
+      getPlate(sceneId);
+      repaintScene();
+    };
+    image.src = src;
+    thumbImages[src] = image;
+    return image;
+  }
+
+  // 1600 WebP；失败时回退原来的 1920 JPEG，再失败才回落到程序化版画。
   function getPlate(sceneId) {
-    var src = PLATE_BY_SCENE[sceneId];
+    var src = plateSrc(sceneId, "full");
     if (!src) return null;
     var image = plateImages[src];
     if (image) return image;
     image = new Image();
     image.decoding = "async";
+    if ("fetchPriority" in image) image.fetchPriority = "high";
     image.onload = function () {
       image.__ready = true;
-      if (currentCanvas && currentCanvas.dataset.scene) {
-        paint(currentCanvas, currentCanvas.dataset.scene);
-      }
+      repaintScene();
     };
     image.onerror = function () {
+      if (!image.__triedFallback) {
+        image.__triedFallback = true;
+        var fallback = plateSrc(sceneId, "fallback");
+        if (fallback) {
+          console.warn("art: WebP 背景失败，回退 JPEG " + src);
+          image.src = fallback;
+          return;
+        }
+      }
+      image.__failed = true;
       console.warn("art: 背景图加载失败，回落到版画 " + src);
+      repaintScene();
     };
     image.src = src;
     plateImages[src] = image;
@@ -201,8 +271,11 @@
 
   // 章首卡/下一章提前取图；重复调用只返回缓存，不重复请求。
   function preload(sceneId) {
-    if (!PLATE_BY_SCENE[sceneId]) return null;
-    return getPlate(sceneId);
+    var fullSrc = plateSrc(sceneId, "full");
+    if (!fullSrc) return null;
+    var full = plateImages[fullSrc];
+    if (full && !full.__failed) return full;
+    return getThumb(sceneId);
   }
 
   // 照片按 cover 铺满 1280×720；双色调已在生成阶段完成，这里只补时段色。

@@ -11,13 +11,13 @@
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **v1.1.0 已上线**（GitHub Pages，2026-11-04；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `f8b2045`）；关键文件 HTTP 200 + SHA256 8/8 一致 |
-| 发布站点 | `dist/site/` | v1.1.0 已生成并验证；47 个文件，27,888,240 B；与线上部署文件一致 |
-| 离线 ZIP | `dist/xiangbei-v1.1.0-offline.zip` | v1.1.0 已生成并验证；49 个条目，27,347,934 B；根目录 `xiangbei-v1.1.0/` |
-| 一页设计说明 | `dist/design-note.pdf` | A4 一页，299,941 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
+| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **v1.1.1 已上线**（GitHub Pages，2026-11-05；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `88771d3`）；关键文件 HTTP 200 + SHA256 7/7 一致 |
+| 发布站点 | `dist/site/` | v1.1.1 已生成并验证；73 个文件，31,356,254 B；与线上部署文件一致 |
+| 离线 ZIP | `dist/xiangbei-v1.1.1-offline.zip` | v1.1.1 已生成并验证；75 个条目，30,818,357 B；根目录 `xiangbei-v1.1.1/` |
+| 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
-| 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,438 B |
-| 字体清单 | `docs/credits.md` + `project/assets/fonts/OFL-*.txt` | v1.1.0 随包两份 OFL 1.1 子集（约 552 KB）；公网 v1.1.0 同步包含 |
+| 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,667 B |
+| 字体清单 | `docs/credits.md` + `project/assets/fonts/OFL-*.txt` | v1.1.1 随包两份 OFL 1.1 子集（约 552 KB）；公网 v1.1.1 同步包含 |
 
 > `dist/` 是交付产物，默认不提交到 Git；仓库保留可复现的 `project/tools/release.py` 与文档。
 
@@ -25,8 +25,8 @@
 
 ### 直接打开（离线）
 
-1. 解压 `dist/xiangbei-v1.1.0-offline.zip`。
-2. 双击 `xiangbei-v1.1.0/index.html`。
+1. 解压 `dist/xiangbei-v1.1.1-offline.zip`。
+2. 双击 `xiangbei-v1.1.1/index.html`。
 3. 没有网络也能玩。Edge 下 `file://` 的 `localStorage` 可用；若浏览器禁止，游戏会提示“本局无法存档”，仍可继续，不白屏。
 
 ### 本地静态服务（更接近线上）
@@ -41,7 +41,7 @@ python -m http.server 8080
 
 ### 线上地址与重新上传
 
-**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.0 于 2026-11-04 上线，部署提交 `f8b2045`）。
+**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.1 于 2026-11-05 上线，部署提交 `88771d3`）。
 
 重新上传：把 `dist/site/` 与 `.nojekyll` 更新到 `main`，Pages 会自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
@@ -108,7 +108,21 @@ python -m http.server 8080
 | fps | 桌面标题 60.0 / 攀索 60.0；移动标题 60.0 / 攀索 48.7（最低 29.9，p95 33.4ms） |
 | 移动 844×390 | 标题、对话、ending、制作名单、四关独立入口与触摸 通过；发布包只改标题页链接与 style.css，未改六运行时逻辑；完整移动流程沿用步骤七 200.9 秒 / 406 行 |
 
-### v1.1.0 发布包（2026-11-04，已部署）
+### v1.1.1 发布包（2026-11-05，已部署）
+
+| 项 | 结果 |
+|---|---|
+| `node --check` 四个 JS | 通过 |
+| `check-build.js` / `smoke.js` | **38/38** / **46/46** |
+| 慢网底图 | 480×270 WebP 占位图先出（本地 32ms；公网首页 1.75s 进入 `is-photo is-placeholder`），1600×900 WebP 随后替换（公网 3.28s 全图）；12 场景逐一验证 |
+| 竖屏 | 390×844 显示“请把手机横过来”与“在浏览器打开”；844×390 正常进入 693×390 舞台 |
+| 七场景 | 于都 / 湘江 / 遵义 / 金沙江 / 泸定 / 草地 / 吴起均到 `is-photo`；0 console error / failed request |
+| 公网 | 标题页 1.74s 可交互；占位图 1.75s / 全图 3.28s；7 个关键文件 HTTP 200 + SHA256 一致；0 console error / pageerror / 404 |
+| `release.py verify` | OK：site 73 文件 / package 74 文件 / ZIP 75 条目 / PDF 1 页 / CREDITS 9,667 B |
+
+`dist/SHA256SUMS.txt` 覆盖 149 个文件。公网只做了标题页 / 竖屏 / 关键文件与 7 个文件哈希，**没有重跑公网完整流程、四关或 96/96**。
+
+### v1.1.0 发布包（2026-11-04，历史）
 
 | 项 | 结果 |
 |---|---|
@@ -123,14 +137,14 @@ python -m http.server 8080
 | 六张章节卡 | 湘江地图、遵义、金沙江、泸定、草地、吴起均 `has-photo`，地点与底图匹配；0 console error / 404；证据 `docs/evidence/step-07/edge-http-20261104-titlecards` |
 | `release.py verify` | OK：site 47 文件 / package 48 文件 / ZIP 49 条目 / PDF 1 页 / CREDITS 9,438 B |
 
-`dist/SHA256SUMS.txt` 覆盖 97 个文件（PDF、ZIP、site 与 package）。`dist/site` 与 v1.1.0 ZIP 与本次线上部署文件一致；公网只做了关键文件 HTTP 200 + SHA256 比对，**没有重跑公网完整流程**。
+`dist/SHA256SUMS.txt` 覆盖 149 个文件（PDF、ZIP、site 与 package）。`dist/site` 与 v1.1.1 ZIP 与本次线上部署文件一致；公网只做了关键文件 HTTP 200 + SHA256 比对，**没有重跑公网完整流程**。
 
 ### 已知例外（不写成通过）
 
 - **Chrome 未安装、Safari 无设备**：P0 环境例外，2026-11-02 用户接受；本版未补测。
 - **真机触摸**：只做 844×390 触摸模拟；真机未验（X3）。
 - **音频听感 / 真实后台/锁屏**：Web Audio 路由、9 床/12 cue、暂停 duck、visibility 模拟通过；真机耳机听感与真实切后台仍 carry（X4/X5）。
-- **字体**：v1.1.0 公网随包 OFL 1.1 子集（`XB Smiley` / `XB Zhuque`，约 552 KB），仍保留系统回退；v1.0.0 的“不打包”记录只作历史。
+- **字体**：v1.1.1 公网随包 OFL 1.1 子集（`XB Smiley` / `XB Zhuque`，约 552 KB），仍保留系统回退；v1.0.0 的“不打包”记录只作历史。
 - **制作名单移动热区**：逻辑 100×44，桌面实测 45 逻辑 / 48 CSS px；844×390 缩放下物理 41.2×24.4 CSS px，低于 44，按步骤七 B16 同类例外记录，不重排标题（X12）。
 - **X7 计时版本**：四次真人计时中 C/D 的版本注记缺失；不把自动化 191 秒当真人。
 - **X8 访谈**：试玩为联合访谈，用户已接受 P0 例外；不写成 3 份独立问卷。
@@ -142,9 +156,9 @@ python -m http.server 8080
 ## 字体、素材、史料
 
 - **字体（2026-11-04 素材增强）**：随包 OFL 1.1 子集；大标题/印章用得意黑 Smiley Sans（`XB Smiley`），章节/正文/图鉴用朱雀仿宋 Zhuque Fangsong（`XB Zhuque`）；回退 Microsoft YaHei / Songti SC / SimSun。授权原文在 `project/assets/fonts/OFL-*.txt`。
-- **图像**：程序化版画 + 12 张 1920×1080 双色调场景底图（CC BY / CC BY-SA / PD / CC0；湘江地图作第一章标题卡）+ 1 张豆包 Seedream 生成的标题插画（虚构红军小战士与于都河渡口，非史料人物/现场）；逐张署名与“不是 1935 年现场”说明见 `docs/credits.md`。不使用未授权影视/游戏素材。
+- **图像**：程序化版画 + 12 张双色调场景底图（1600×900 WebP + 480×270 占位图，JPEG 兜底；CC BY / CC BY-SA / PD / CC0；湘江地图作第一章标题卡）+ 1 张豆包 Seedream 生成的标题插画（虚构红军小战士与于都河渡口，非史料人物/现场）；逐张署名与“不是 1935 年现场”说明见 `docs/credits.md`。不使用未授权影视/游戏素材。
 - **音频**：既有 Web Audio 合成 9 张环境床、12 个短 cue、原创五音动机 D4–F4–G4–A4–C5；新增 5 条 CC0 环境录音与 8 首 CC0/CC-BY 现代配乐；无历史录音冒充，不自动播放，首次点击后解锁。
-- **素材版状态**：代码与 `project/assets/` 已接入；v1.1.0 `dist/site`、离线 ZIP 与设计说明已生成、`release.py verify` 通过；2026-11-04 已部署到 GitHub Pages（`f8b2045`）。Edge headless 的 `http://` 与 `file://` 已验证字体/背景/音频/照片卡/图鉴/花名册。
+- **素材版状态**：代码与 `project/assets/` 已接入；v1.1.1 `dist/site`、离线 ZIP 与设计说明已生成、`release.py verify` 通过；2026-11-05 已部署到 GitHub Pages（`88771d3`）。Edge headless 的 `http://` 与 `file://` 已验证字体/背景/音频/照片卡/图鉴/花名册；公网已验证标题占位图/全图与竖屏提示。
 - **史料**：A1–A7 / S1–S15 见 `docs/sources.md`；每条至少 2 个出处，2026-11-03 复核链接。争议（X 光机、22 勇士姓名/牺牲人数、金沙江船数、于都渡口数、草地减员、夹金山高度）标注“有不同说法”。《七根火柴》《金色的鱼钩》是小说，不作为史料。
 
 ## 目录
@@ -165,8 +179,8 @@ project/
   tools/                    开发期脚本（不进运行时）
 dist/                       交付产物（默认不提交）
   site/                     上传用站点
-  xiangbei-v1.1.0/          ZIP 根目录
-  xiangbei-v1.1.0-offline.zip
+  xiangbei-v1.1.1/          ZIP 根目录
+  xiangbei-v1.1.1-offline.zip
   design-note.pdf
   SHA256SUMS.txt
 ```
@@ -176,15 +190,15 @@ dist/                       交付产物（默认不提交）
 制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
 完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
 
-## 线上自检（2026-11-04，v1.1.0）
+## 线上自检（2026-11-05，v1.1.1）
 
-> 本次公网只做关键文件 HTTP 200 + SHA256 比对（8/8：index、标题图、两份字体、湘江地图、配乐、CREDITS、PDF）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
+> 本次公网做了关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏浏览器检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
 
 - [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
 - [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [ ] 四关入口（`?minigame=door|abandon|boat|climb`）与七张图鉴。
-- [ ] 手机横屏 844×390 可玩；竖屏提示。
+- [x] 手机竖屏显示“请把手机横过来”与“在浏览器打开”；横屏 844×390 已本地测。
 - [ ] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS（v1.1.0 公网未跑浏览器 smoke，待人工复检）。
 - [ ] 不暴露 docs/、step/、tools/、.git/、evidence。
 

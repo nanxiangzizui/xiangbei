@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build, verify and hash the static release for 《向北》 v1.1.0.
+"""Build, verify and hash the static release for 《向北》 v1.1.1.
 
 Usage:
   python project/tools/release.py stage
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "project"
 DIST = ROOT / "dist"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 SITE = DIST / "site"
 PKG = DIST / f"xiangbei-v{VERSION}"
 ZIP = DIST / f"xiangbei-v{VERSION}-offline.zip"
@@ -45,7 +45,7 @@ RUNTIME = [
 SITE_EXTRA = ["CREDITS.txt", "design-note.pdf"]
 PKG_EXTRA = ["CREDITS.txt", "README.txt", "design-note.pdf"]
 TEXT_SUFFIXES = {".html", ".css", ".js", ".txt"}
-FIXED_DATE = (2026, 11, 4, 0, 0, 0)
+FIXED_DATE = (2026, 11, 5, 0, 0, 0)
 
 REQUIRED_ASSETS = [
     "assets/backgrounds/plate_title.jpg",
@@ -60,6 +60,30 @@ REQUIRED_ASSETS = [
     "assets/backgrounds/plate_grass.jpg",
     "assets/backgrounds/plate_grass_dawn.jpg",
     "assets/backgrounds/plate_wuqi.jpg",
+    "assets/backgrounds/webp/plate_title.webp",
+    "assets/backgrounds/webp/plate_yudu.webp",
+    "assets/backgrounds/webp/plate_xiangjiang.webp",
+    "assets/backgrounds/webp/plate_xiangjiang_map.webp",
+    "assets/backgrounds/webp/plate_zunyi_hall.webp",
+    "assets/backgrounds/webp/plate_zunyi_street.webp",
+    "assets/backgrounds/webp/plate_luding.webp",
+    "assets/backgrounds/webp/plate_luding_after.webp",
+    "assets/backgrounds/webp/plate_jinsha.webp",
+    "assets/backgrounds/webp/plate_grass.webp",
+    "assets/backgrounds/webp/plate_grass_dawn.webp",
+    "assets/backgrounds/webp/plate_wuqi.webp",
+    "assets/backgrounds/placeholders/plate_title.webp",
+    "assets/backgrounds/placeholders/plate_yudu.webp",
+    "assets/backgrounds/placeholders/plate_xiangjiang.webp",
+    "assets/backgrounds/placeholders/plate_xiangjiang_map.webp",
+    "assets/backgrounds/placeholders/plate_zunyi_hall.webp",
+    "assets/backgrounds/placeholders/plate_zunyi_street.webp",
+    "assets/backgrounds/placeholders/plate_luding.webp",
+    "assets/backgrounds/placeholders/plate_luding_after.webp",
+    "assets/backgrounds/placeholders/plate_jinsha.webp",
+    "assets/backgrounds/placeholders/plate_grass.webp",
+    "assets/backgrounds/placeholders/plate_grass_dawn.webp",
+    "assets/backgrounds/placeholders/plate_wuqi.webp",
     "assets/backgrounds/thumbs/codex_yudu.jpg",
     "assets/backgrounds/thumbs/codex_xiangjiang.jpg",
     "assets/backgrounds/thumbs/codex_zunyi.jpg",

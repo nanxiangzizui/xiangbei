@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>向北</title>
   <link rel="icon" href="data:,">
+  <!-- 片头占位图先发：慢网下先给构图，再由 1600 WebP 替换 -->
+  <link rel="preload" as="image" href="./assets/backgrounds/placeholders/plate_title.webp" type="image/webp" fetchpriority="high">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -231,6 +233,7 @@
 
   <div id="orientation">
     <p>请把手机横过来</p>
+    <p class="orientation-hint">如果转动手机没有反应，请点右上角菜单，选择“在浏览器打开”。</p>
   </div>
 
   <!-- 顺序固定：art → story → minigames → engine；全部经典 script，不用 module -->

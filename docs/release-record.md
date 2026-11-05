@@ -1,4 +1,4 @@
-# 《向北》发布记录（v1.0.0 历史 + v1.1.0 已部署）
+# 《向北》发布记录（v1.0.0 历史 + v1.1.0 / v1.1.1 已部署）
 
 > 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强与部署见 §10。
 > 状态源仍是 `.claude/CLAUDE.md`；测试历史见 `docs/test-record.md`，本文件不覆盖步骤七结论。
@@ -199,4 +199,44 @@
 - 公网验证：用 `curl --resolve nanxiangzizui.github.io:443:185.199.108.153 --ssl-no-revoke` 绕过本机 DNS/CRL 问题；8 个关键文件 HTTP 200 且 SHA256 与本机 `dist/site` 一致——`index.html` 13,659 B、`plate_title.jpg` 529,043 B、`zhuque-game.woff2` 394,452 B、`shangri_river.mp3` 871,862 B、`plate_xiangjiang_map.jpg` 680,080 B、`smiley-game.woff2` 158,048 B、`CREDITS.txt` 9,438 B、`design-note.pdf` 299,941 B。
 - **未做**：v1.1.0 公网浏览器 live smoke、完整流程、四关、移动端、96/96 全用例均未在公网重跑；这些结果来自本地 `dist/site` / ZIP / 开发服务器，不能写成“公网完整流程通过”。
 - 回滚：如需回到 v1.0.0，把 `main` 退回 `7dbe2b4`；不要删除部署仓库历史。
+
+
+## 11. v1.1.1 慢网/竖屏适配（2026-11-05，已部署）
+
+### 11.1 范围与改动
+
+- 底图三档：480×270 WebP 占位图（先出）→ 1600×900 WebP（替换）→ 1920 JPEG（兜底）；标题占位图 16,754 B，由 `index.html` 预加载。
+- `art.js` 增加 `PLATE_FULL_DIR` / `PLATE_THUMB_DIR` / `PLATE_FALLBACK_DIR` 与 `plateSrc(sceneId, kind)`；`getThumb` 先加载缩略图，再加载大图；大图失败回退 JPEG，再失败回退程序化版画。
+- 竖屏遮罩加提示：“如果转动手机没有反应，请点右上角菜单，选择‘在浏览器打开’。”
+- `release.py` 的 `REQUIRED_ASSETS` 增列 12 张 1600 WebP 与 12 张 480 占位图。
+
+### 11.2 构建与部署
+
+| 项 | 结果 |
+|---|---|
+| 发布站点 | `dist/site` 73 文件 / 31,356,254 B |
+| 离线包 | `dist/xiangbei-v1.1.1` 74 文件 / 31,358,431 B |
+| 离线 ZIP | 75 条目 / 30,818,357 B |
+| 设计说明 | 1 页 / 303,713 B / 含 ToUnicode |
+| CREDITS | 9,667 B |
+| SHA256SUMS | 149 文件 |
+
+- **已部署**：2026-11-05 18:35 +08:00，`nanxiangzizui/xiangbei` 的 `main` / root 更新到 `88771d3f1baee74e8adfdfa51679924dbb00ac53`；公网 https://nanxiangzizui.github.io/xiangbei/ 已返回 v1.1.1 文件。
+- 部署方式：将 `dist/site/` 73 个文件与 `.nojekyll` 写入独立部署仓库 `dist/_gh-pages`，提交后 push；网站文件不含 `project/`、`docs/`、`step/`、`tools/` 或测试证据。
+
+### 11.3 验证
+
+- `node --check` 4/4；`check-build.js` 38/38；`smoke.js` 46/46；`check-script.js` OK；`release.py verify` OK。
+- 本地 7 个章节场景（于都/湘江/遵义/金沙江/泸定/草地/吴起）全部到达 `is-photo`；0 console error / failed request。
+- 本地慢网模拟：占位图约 32ms 出现，1600 WebP 约 5s 替换；390×844 竖屏提示、844×390 横屏舞台、`file://` 标题/字体/底图均通过。
+- 公网浏览器：标题页 1.74s 可交互；占位图 1.75s（`is-photo is-placeholder`），全图 3.28s（`is-photo`）；两份字体加载成功；0 console error / pageerror / 404。
+- 公网竖屏：390×844 显示“请把手机横过来”和“在浏览器打开”；横屏 844×390 已在本地发布包验证。
+- 公网关键文件 7/7 HTTP 200 + SHA256 与 `dist/site` 一致：`index.html` 14,000 B、标题占位图 16,754 B、标题大图 175,126 B、`zhuque-game.woff2` 394,452 B、`shangri_river.mp3` 871,862 B、`CREDITS.txt` 9,667 B、`design-note.pdf` 303,713 B。
+- 证据：`docs/evidence/step-07/responsive-20261105/`、`docs/evidence/step-07/live-v1.1.1/`。
+
+### 11.4 未做与回滚
+
+- **未做**：公网完整流程、四关、移动端完整流程、96/96 全用例没有在公网重跑；本地也未因“只改底图加载”重跑 200 秒完整流程。以上结果不能写成“公网完整流程通过”。
+- 回滚：如需回到 v1.1.0，把 `main` 退回 `f8b2045`；不要删除部署仓库历史。
+
 
