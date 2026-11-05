@@ -223,6 +223,7 @@
 
 - **已部署**：2026-11-05 18:35 +08:00，`nanxiangzizui/xiangbei` 的 `main` / root 更新到 `88771d3f1baee74e8adfdfa51679924dbb00ac53`；公网 https://nanxiangzizui.github.io/xiangbei/ 已返回 v1.1.1 文件。
 - 部署方式：将 `dist/site/` 73 个文件与 `.nojekyll` 写入独立部署仓库 `dist/_gh-pages`，提交后 push；网站文件不含 `project/`、`docs/`、`step/`、`tools/` 或测试证据。
+- 源码：本地源码提交 `0290d58940d0c30d1f71bdeb9d0c891d9d94426c`，tag `v1.1.1`；未配置源码远程，部署仓库单独推送。
 
 ### 11.3 验证
 
