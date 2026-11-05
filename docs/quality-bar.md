@@ -55,7 +55,7 @@
 - 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:11 当真人。
 - 字体：v1.1.1 **随包**两份 OFL 1.1 子集（约 552KB），`@font-face` 用相对路径；失败回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体/CDN 请求。
 - 发布包：`dist/site` 与离线 ZIP 只含六运行时、`assets/`（底图/字体/音频）、CREDITS.txt、design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
-- 链接与视频：GitHub Pages 已上线 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，2026-11-05，main / root，部署提交 `88771d3`；关键文件 HTTP 200 + SHA256 7/7）；Cloudflare OAuth 未完成，未部署；演示视频经用户 2026-11-03 明确取消，不列为缺口。
+- 链接与视频：Netlify 主站已上线 https://xiangbei.netlify.app/ （v1.1.1，2026-11-05，`dist/site` 静态直传；标题 2.0s 出占位图，开始→序章正常，0 console error / 0 404）；GitHub Pages 备用 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，2026-11-05，main / root，部署提交 `88771d3`；关键文件 HTTP 200 + SHA256 7/7）；Cloudflare OAuth 未完成，未部署；演示视频经用户 2026-11-03 明确取消，不列为缺口。
 - 4 个核心小游戏可独立进入（?minigame=…）；失败路径继续剧情、不重开；单关 60–90s（含 20s 结算）。
 - 7 张史实注可解锁；结局点名 + 7000 + 五卡。
 - 手机横屏可玩；断网 ZIP 可玩；Edge 完整流程通过；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受（不记为通过）。
@@ -89,7 +89,7 @@
 | 发布站点完整流程 | 191.1s / 407 line；四关均有结果；5 卡/4 亮/7 名；0 console error/pageerror/404/外部请求 | PASS |
 | 离线 ZIP（file:// + 断网） | 191.1s / 408 line；四关均有结果；0 console error/pageerror/404/外部请求 | PASS |
 | 全用例 | 96/96 | PASS |
-| 公网 live smoke | GitHub Pages 16/16；8/8 文件哈希一致（engine/style 按 LF 规范化） | PASS（仅冒烟，未重跑完整流程） |
+| 公网 live smoke | Netlify 标题/序章：0 console error / 0 404；GitHub Pages 16/16；8/8 文件哈希一致（engine/style 按 LF 规范化） | PASS（仅冒烟，未重跑完整流程） |
 | 发布专项 | 桌面 22/22；移动 22/22 | PASS（移动热区例外 X12） |
 | 字体 | 无字体请求；正文回退 Songti SC/SimSun/Noto Serif CJK SC；字体 0 字节 | PASS |
 | 制作名单 | 新标签打开；键盘 2px 朱砂焦点；桌面逻辑 45px / CSS 48px | PASS |

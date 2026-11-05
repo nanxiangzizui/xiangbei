@@ -11,8 +11,9 @@
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接 | https://nanxiangzizui.github.io/xiangbei/ | **v1.1.1 已上线**（GitHub Pages，2026-11-05；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `88771d3`）；关键文件 HTTP 200 + SHA256 7/7 一致 |
-| 发布站点 | `dist/site/` | v1.1.1 已生成并验证；73 个文件，31,356,254 B；与线上部署文件一致 |
+| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.1.1 已上线**（Netlify，2026-11-05；用户认领 `xiangbei` 站点；静态直传 `dist/site`）；标题 2.0s 出占位图，开始→序章正常，0 console error / 0 404；完整流程未在公网重跑 |
+| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | v1.1.1 已上线（GitHub Pages，2026-11-05；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `88771d3`）；关键文件 HTTP 200 + SHA256 7/7 一致 |
+| 发布站点 | `dist/site/` | v1.1.1 已生成并验证；73 个文件，31,356,254 B；与 Netlify 站点同包（`index.html` 多 326 B Netlify 注入注释） |
 | 离线 ZIP | `dist/xiangbei-v1.1.1-offline.zip` | v1.1.1 已生成并验证；75 个条目，30,818,357 B；根目录 `xiangbei-v1.1.1/` |
 | 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
@@ -41,9 +42,11 @@ python -m http.server 8080
 
 ### 线上地址与重新上传
 
-**线上**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.1 于 2026-11-05 上线，部署提交 `88771d3`）。
+**线上（主）**：https://xiangbei.netlify.app/ （Netlify，2026-11-05 静态直传 `dist/site`；Netlify 会在 `index.html` 注入约 326 B 说明注释，其余文件与 `dist/site` 同包）。
 
-重新上传：把 `dist/site/` 与 `.nojekyll` 更新到 `main`，Pages 会自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
+**线上（备）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.1 部署提交 `88771d3`）。
+
+重新上传：Netlify 主站需在 Netlify 后台/CLI 用账号重新上传 `dist/site`；GitHub Pages 备站仍把 `dist/site/` 与 `.nojekyll` 更新到 `main` 自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
 ## 操作
 
@@ -192,14 +195,15 @@ dist/                       交付产物（默认不提交）
 
 ## 线上自检（2026-11-05，v1.1.1）
 
-> 本次公网做了关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏浏览器检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
+> Netlify 主站（`https://xiangbei.netlify.app/`）做了标题/序章浏览器检查：标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；GitHub 备站做关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
 
 - [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
 - [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [ ] 四关入口（`?minigame=door|abandon|boat|climb`）与七张图鉴。
 - [x] 手机竖屏显示“请把手机横过来”与“在浏览器打开”；横屏 844×390 已本地测。
-- [ ] 控制台 0 error / 0 404；Network 无外部请求；硬刷新不缓存旧 JS（v1.1.0 公网未跑浏览器 smoke，待人工复检）。
+- [x] Netlify 标题/序章：0 console error / 0 404；无外部请求。
+- [ ] 完整流程中 0 error / 0 404；硬刷新不缓存旧 JS（公网完整流程未跑）。
 - [ ] 不暴露 docs/、step/、tools/、.git/、evidence。
 
 自检结果填回 `docs/release-record.md` §10/§5；未做的项写“未验证”，不写“通过”。

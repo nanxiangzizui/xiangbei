@@ -3,7 +3,7 @@
 > 版本 v1.1.1 · 2026-11-05 · 课程项目，非商业使用。
 > 本文件与 `project/CREDITS.txt`、`docs/design-note.md`、`README.md` 的口径一致；发布记录见 `docs/release-record.md`。
 > 2026-11-04 素材增强：12 张场景/地图底图 + 1 张 AI 标题插画、朱雀/得意黑 OFL 子集、5 条环境录音 + 8 首配乐；同日已部署到 GitHub Pages（`f8b2045`）。
-> 2026-11-05 慢网/竖屏适配：480 WebP 占位图先出、1600 WebP 替换、JPEG 兜底；竖屏提示“在浏览器打开”；公网更新为 v1.1.1（部署提交见 README.md）。
+> 2026-11-05 慢网/竖屏适配：480 WebP 占位图先出、1600 WebP 替换、JPEG 兜底；竖屏提示“在浏览器打开”；公网更新为 v1.1.1（部署提交见 README.md）。同日另部署 Netlify 主站 https://xiangbei.netlify.app/（`dist/site` 静态直传；GitHub Pages 保留备用）。
 
 ## 1. 字体
 
@@ -137,7 +137,7 @@
 - 编辑器：VS Code；浏览器：Edge 156（步骤七实测）；Chrome/Safari 为环境例外。
 - 本地服务：`python -m http.server 8080 --directory project`；离线：直接打开 `index.html`。
 - 测试：Node 24 + Playwright 1.64（仅测试，不进运行时）；静态检查 `check-build.js` / `smoke.js` / `check-script.js`。
-- 部署：GitHub Pages（main / root）；v1.0.0 于 2026-11-03 上线（`7dbe2b4`），v1.1.0 于 2026-11-04 上线（`f8b2045`），v1.1.1 于 2026-11-05 上线（`88771d3`）。
+- 部署：GitHub Pages（main / root）；v1.0.0 于 2026-11-03 上线（`7dbe2b4`），v1.1.0 于 2026-11-04 上线（`f8b2045`），v1.1.1 于 2026-11-05 上线（`88771d3`）。2026-11-05 另部署 Netlify 主站 https://xiangbei.netlify.app/（用户认领 `xiangbei`；`dist/site` 静态直传，未走 Git）；GitHub Pages 保留为备用。
 - 版本：Git，`main`；每步 tag；不提交 ZIP/MP4/完整字体/密钥。
 
 ## 6. 制作名单

@@ -240,4 +240,13 @@
 - **未做**：公网完整流程、四关、移动端完整流程、96/96 全用例没有在公网重跑；本地也未因“只改底图加载”重跑 200 秒完整流程。以上结果不能写成“公网完整流程通过”。
 - 回滚：如需回到 v1.1.0，把 `main` 退回 `f8b2045`；不要删除部署仓库历史。
 
+## 12. Netlify 主站（2026-11-05，已上线）
+
+- **公网**：https://xiangbei.netlify.app/ （用户认领的 Netlify 站点，站点名 `xiangbei`；2026-11-05 上线）。
+- **部署方式**：把 `dist/site/` 73 个文件静态直传 Netlify（先以 `netlify deploy --allow-anonymous` 生成可认领站点，用户用 GitHub 登录认领后改为公开并命名 `xiangbei`）；不经过 Git，不使用构建命令。
+- **与发布包差异**：Netlify 在 `index.html` 注入约 326 B 的托管说明注释（`index.html` 14,326 B vs `dist/site` 14,000 B）；其他关键文件体积一致。
+- **验证**：标题页约 2.0s 出 480×270 占位图；点击“开始”进入序章，文本“1934年10月17日，于都河上起雾。”正确；0 console error / 0 404；无密码页。
+- **未做**：公网完整流程、四关、移动完整流程、96/96 全用例未在 Netlify 重跑；这些结果仍来自本地发布包。完整流程/公网四关不能写成“已通过”。
+- **维护**：Netlify 站点由用户账号持有；后续更新需用 Netlify 账号/CLI 重新上传 `dist/site`。GitHub Pages 备站仍为 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，部署提交 `88771d3`）。
+
 
