@@ -751,6 +751,7 @@ a:focus-visible,
   display: none;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   padding: 24px;
   background: var(--night);
   color: var(--paper);
@@ -758,6 +759,19 @@ a:focus-visible,
   font-size: var(--fs-note);
   letter-spacing: 2px;
   text-align: center;
+}
+
+#orientation p {
+  margin: 0;
+}
+
+.orientation-hint {
+  max-width: 320px;
+  margin-top: 14px;
+  color: var(--paper-a72);
+  font-size: var(--fs-small);
+  line-height: 1.7;
+  letter-spacing: 1px;
 }
 
 @media (orientation: portrait) and (max-width: 900px) {
