@@ -7,23 +7,25 @@
 
 | 顺序 | 章节 id | 前缀 | 节点 | line | choice | multichoice | interact | result | title | codex | end | 下一章 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | prologue | p | 52 | 45 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | xiangjiang |
+| 1 | prologue | p | 50 | 43 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | xiangjiang |
 | 2 | xiangjiang | x | 51 | 44 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | zunyi |
-| 3 | zunyi | z | 33 | 26 | 3 | 0 | 0 | 1 | 1 | 1 | 1 | jinsha |
+| 3 | zunyi | z | 30 | 23 | 3 | 0 | 0 | 1 | 1 | 1 | 1 | jinsha |
 | 4 | jinsha | j | 42 | 36 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | luding |
-| 5 | luding | l | 41 | 36 | 2 | 0 | 0 | 0 | 1 | 1 | 1 | grass |
-| 6 | grass | g | 35 | 30 | 2 | 0 | 0 | 0 | 1 | 1 | 1 | wuqi |
-| 7 | wuqi | w | 49 | 45 | 1 | 0 | 1 | 0 | 0 | 1 | 1 | ending |
-| — | 合计 | — | **303** | **262** | **13** | **2** | **2** | **4** | **6** | **7** | **7** | — |
+| 5 | luding | l | 46 | 40 | 3 | 0 | 0 | 0 | 1 | 1 | 1 | grass |
+| 6 | grass | g | 47 | 39 | 4 | 0 | 0 | 0 | 1 | 1 | 2 | wuqi / coda |
+| 7 | wuqi | w | 56 | 52 | 1 | 0 | 1 | 0 | 0 | 1 | 1 | ending |
+| 8 | coda（隐藏） | c | 12 | 8 | 0 | 0 | 1 | 0 | 1 | 1 | 1 | ending |
+| — | 合计 | — | **334** | **285** | **16** | **2** | **3** | **4** | **7** | **8** | **8** | — |
 
 - 七章全部 `playable: true`；序章 p900 → 湘江 x001，逐章直落，不要求玩家回地图。
+- 第八个 `coda` 是隐藏章（`hidden: true`，不进地图、不弹解锁），只有草地里 `strain.dying` 时经 g899 进入；c012 → ending。
 - 终章 w900 的 `next` 是字符串 `"ending"`，不是章节 id；`finishChapter` 在这里写 ending 快照并切 `scene:"ending"`。
 - 章节背景：于都 `yudu_river/yudu_night`；湘江 `xiangjiang_ford/xiangjiang_dawn`；遵义 `zunyi_hall/zunyi_street`；金沙江 `jinsha_river/jinsha_night`；泸定 `luding_bridge/luding_after`；草地 `grass_marsh/grass_dawn`；吴起 `wuqi_dawn/wuqi_wall`。ending 背景用 `wuqi_wall`。
 
 ## 2. 节点 id 规则
 
-- 章前缀：`prologue=p`、`xiangjiang=x`、`zunyi=z`、`jinsha=j`、`luding=l`、`grass=g`、`wuqi=w`。
-- 顺序号 `001–899`；分支正文用主序号加 `a`/`b`（如 `p039a`/`p039b`、`x025a`/`x025b`），同一位置两条互斥节点各带 `when`。
+- 章前缀：`prologue=p`、`xiangjiang=x`、`zunyi=z`、`jinsha=j`、`luding=l`、`grass=g`、`wuqi=w`、`coda=c`。
+- 顺序号 `001–899`；分支正文用主序号加 `a`/`b`（如 `p039a`/`p039b`、`x025a`/`x025b`），同一位置两条互斥节点各带 `when`。v1.3.0 的危机节点用 `x` 后缀（`l019x`/`g018x`/`g026x`），死亡/存活分支用 `a`/`d` 后缀。
 - `900` 保留给章末 `end`；`p900`→`xiangjiang`、`x900`→`zunyi`、`z900`→`jinsha`、`j900`→`luding`、`l900`→`grass`、`g900`→`wuqi`、`w900`→`ending`。
 - 章节节点是按序扁平数组，不用树/栈；条件分支只靠节点 `when` 过滤，运行期永远从当前下标往后找第一个可见节点。
 - `p001–p044` 的 id 已冻结；条件行只允许新增 `a/b` 节点，不重排。

@@ -1,9 +1,10 @@
-# 《向北》存档与旗标（v1.4 · 选择回写）
+# 《向北》存档与旗标（v1.5 · 人物命运四路线，v1.3.0-dev）
 
 > 唯一存档键：`xiangbei.save.v1`；所有读写 try/catch；旗标只增不改名，改名必须迁移。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > 2026-11-05 v1.2.0-dev：删除四个小游戏，新增行囊五件 `item.*`、湘江六样 `choice.xiangjiang.take.*`、金沙江先渡谁三个镜像布尔；顶层 `PERSIST_KEYS` 仍是 11 键，`SAVE_VERSION` 仍为 1，不升键名。
 > `lights_lost` 与 `choice.jinsha.trips` 只为读旧档保留：继续参与默认值/夹取/白名单，但 v1.2.0-dev 的剧情不再写、结算页不再显示。
+> **v1.5 已实现（v1.3.0-dev，2026-11-06）**：新增 `had.door` / `fate.*` / `strain` 共 9 个旗标（含派生 `fate.all.dead`，25 → 34）、ending 路线字段与 `xiangbei.roster.v1`；见 §9。顶层仍 11 键，`SAVE_VERSION` 仍为 1。
 
 ## 1. 存档 JSON（示例）
 
@@ -50,7 +51,16 @@
         "choice.luding.names": "B",
         "choice.grass.share": true,
         "choice.grass.pot": true,
-        "choice.wuqi.door": false
+        "choice.wuqi.door": false,
+        "had.door": true,
+        "strain": 0,
+        "strain.hurt": false,
+        "strain.dying": false,
+        "fate.feimao.dead": false,
+        "fate.zaowang.dead": false,
+        "fate.dongsheng.dead": false,
+        "fate.lin.dead": false,
+        "fate.all.dead": false
       },
       "inventory": {
         "door": true,
@@ -89,6 +99,12 @@
       "settings": {},
       "unlockedChapters": ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"],
       "ending": {
+        "route": "sidao",
+        "routeTitle": "四道划痕",
+        "routeLede": "名册上四道划痕。门板立在墙根，正面朝外。",
+        "fate": { "feimao": "dead", "zaowang": "dead", "dongsheng": "dead", "lin": "alive" },
+        "strain": 0,
+        "recorded": true,
         "stats": { "companyStart": 104, "companyEnd": 19, "redStart": 86000, "redEnd": 7000 },
         "names": [
           { "id": "he", "name": "何指导员", "status": "remote" },
@@ -97,10 +113,10 @@
           { "id": "zhou", "name": "老周", "status": "missed" },
           { "id": "zaowang", "name": "灶王", "status": "missed" },
           { "id": "feimao", "name": "飞毛腿", "status": "missed" },
-          { "id": "dongsheng", "name": "冬生", "status": "self" }
+          { "id": "dongsheng", "name": "冬生", "status": "missed" }
         ],
         "answered": 0,
-        "missed": 3,
+        "missed": 4,
         "cards": [
           { "id": "ideal", "lit": true, "line": "最冷的那一夜，你还留着火。" },
           { "id": "sacrifice", "lit": false, "line": "你按命令过了江。" },
@@ -117,9 +133,9 @@
 |---|---|---|
 | version | 1 | 存档格式版本；v1.2.0-dev 不升版本 |
 | scene | title | 当前场景：title/map/vn/ending（共 4 个）；多选、结算、图鉴都是 vn 的子视图，不单列 scene |
-| chapterId | prologue | 当前章 id（prologue/xiangjiang/zunyi/jinsha/luding/grass/wuqi） |
+| chapterId | prologue | 当前章 id（prologue/xiangjiang/zunyi/jinsha/luding/grass/wuqi/coda；coda 只在空页路线出现） |
 | nodeId | null | 当前节点 id（字符串，如 "p010"）或 null；数字下标已废弃，见 §6 |
-| flags | 默认 25 项 | 见 §3；缺省按 false/0 处理 |
+| flags | 默认 34 项 | 见 §3；缺省按 false/0 处理 |
 | inventory.items | [] | 行囊件 id；序章 p024 写 roster/pencil + 已选三件 |
 | choices | [] | 选择记录；错误卡与五卡文案从这里取 |
 | codex | [] | 已解锁史实注 id |
@@ -139,7 +155,7 @@
 
 ## 3. 旗标全表
 
-### 3.1 默认 25 项（载入时补齐）
+### 3.1 默认 25 项（v1.2 基线；v1.5 新增 9 项见 §3.3）
 
 | 键 | 类型 | 默认 | 写入处 | 读取处 |
 |---|---|---|---|---|
@@ -167,7 +183,7 @@
 | choice.jinsha.main | boolean | false | j024 A 先渡主力 | j024a/j026a/j029a 回写 |
 | choice.jinsha.wounded | boolean | false | j024 B 先渡伤员 | j024b/j026b/j029b 回写 |
 | choice.jinsha.kettle | boolean | false | j024 C 先渡炊事班 | j024c/j026c/j029c 回写 |
-| choice.luding.door | boolean | false | l019 A=true 铺桥；B=false 抱着 | l019a/b、l021a/c；五卡备注 |
+| choice.luding.door | boolean | false | l019 A=true 铺桥；B/C=false（抱着门板走） | l019a/b、l019c/d、l021a/c；五卡备注 |
 
 ### 3.2 剧情/记忆旗标（缺失按 false 或未选读）
 
@@ -198,14 +214,14 @@
 
 - 读取时按默认值深合并：顶层键缺失取默认值，`settings` 逐键合并（不能用 `Object.assign` 浅合并，否则旧档会整块覆盖新默认键）；缺字段不报错、不崩。
 - 旗标在 JSON 里是**扁平的带点键**（`flags["item.door"]`），不是嵌套对象；写读都走 `XB.core.setFlag(state, path, value)`，不要在别处拼键名。
-- 载入时补齐 25 个默认旗标：item.door / item.pot / item.medicine / item.barley / item.homepot / item.raincloth / item.shoes；load / trust / fire / lights_lost；choice.xiangjiang.abandoned；choice.xiangjiang.take 六项；choice.zunyi.missed / choice.zunyi.admit；choice.jinsha.trips；choice.jinsha.main / wounded / kettle；choice.luding.door。其余 `memory.*` / `choice.*` 缺失按 false/未选读。
-- **写入白名单**（`set:` 只能用这些键，越界在 check-build 与 smoke 里直接失败）：`item.door`、`item.pot`、`item.medicine`、`item.barley`、`item.homepot`、`item.raincloth`、`item.shoes`、`load`、`trust`、`fire`、`lights_lost`、`memory.*`、`choice.*`。`ending.*`、`card.*`、`unlockedChapters` 只由引擎写；`choice.xiangjiang.abandoned` 这个 list flag 也只由多选结算写。
+- 载入时补齐 34 个默认旗标：上列 25 项 + 3.3 的 9 项（had.door、strain 与四项派生、三个危机 fate.*、fate.all.dead）。其余 `memory.*` / `choice.*` 缺失按 false/未选读。
+- **写入白名单**（`set:` 只能用这些键，越界在 check-build 与 smoke 里直接失败）：`item.*`、`load`、`trust`、`fire`、`lights_lost`、`strain`、`had.door`、`fate.feimao.dead`、`fate.zaowang.dead`、`fate.dongsheng.dead`、`memory.*`、`choice.*`。四个派生键、`ending.*`、`card.*`、`unlockedChapters` 只由引擎写；`choice.xiangjiang.abandoned` 这个 list flag 也只由多选结算写。
 - **不要混用 `item.pot` 与 `item.homepot`**：`item.pot` 是草地“灶王的小锅”，`item.homepot` 是序章行囊“家里的铁锅”。旧档 `inventory.items` 里的 `pot` 只在没有 `item.homepot` 键时回填为 `item.homepot=true`，不覆盖草地选择。
 - `inventory.door` 是 `flags["item.door"]` 的**镜像**：`setFlag` 写 `item.door` 时同步，载入时以 `flags` 为准重算；两处不一致视为坏档。
 - `inventory.items` 合法 id 只有 `roster`、`pencil`、`medicine`、`barley`、`pot`、`raincloth`、`shoes`；门板单独存 `inventory.door`。湘江六样只进 `choice.xiangjiang.take.*` 与 `choice.xiangjiang.abandoned`，不进 inventory.items。
 - `choice.xiangjiang.abandoned` 新档只由 x015 的“留在岸上”三项写入，最多 6 个；引擎仍接受旧档的 `door` id（v1.1.1 弃物关可能留下门板），排序固定 xray,press,files,medkit,radio,silver,door。**只开这一个 list flag**，不做通用数组。
 - `choice.jinsha.trips` clamp 0–18；`choice.zunyi.missed` clamp 0–1；`choice.zunyi.admit` clamp 0–3；`lights_lost` clamp 0–22。
-- 选项日志 `choices[]` 每条固定五个字段：`{chapter, nodeId, option, text, timedOut}`；单选 `option` 是 A/B/C，多选固定 `"MULTI"`，`text` 是已选名称用“、”连接；`timedOut=false`。只保留最近 64 条。遵义三条 choice 不写 record，靠 `set` 累计，日志仍逐条记录。
+- 选项日志 `choices[]` 每条固定五个字段：`{chapter, nodeId, option, text, timedOut}`；单选 `option` 是 A/B/C/D，多选固定 `"MULTI"`，`text` 是已选名称用“、”连接；`timedOut=false`。只保留最近 64 条。遵义三条 choice 不写 record，靠 `set` 累计，日志仍逐条记录。结局结算前清空 `choices`（见 §5）。
 - 金沙江 `j024` 同时写字符串 `choice.jinsha.priority` 与三个镜像布尔；`evalWhen` 只认布尔，分支节点读镜像，五卡读字符串。三镜像互斥，选中项 true、另两项 false。
 - 旗标只增不改名；改名必须写迁移函数（见 §6）。
 - 不在 flags 里存大段文本；文本进 `story.js`。
@@ -214,15 +230,40 @@
 - `trust` 与 `fire` 的上下限：0–6 / 0–100，写入时 clamp；`load` 取整且 ≥0。
 - `codex` 只保留 `story.codex` 里已知的 id，其余丢弃（防止旧档塞进未知项）。
 
+### 3.3 人物命运旗标（9 项，25 → 34）
+
+| 键 | 类型 | 默认 | 写入处 | 读取处 |
+|---|---|---|---|---|
+| had.door | boolean | false | 序章 p021 A=true（带门板）/ B=false | qiaoban 标题“桥板/石墙”；终章分支 |
+| strain | number | 0 | 每次危机救人 +1，clamp 0–3 | 路线判定；派生 |
+| strain.hurt | boolean | false | 派生：strain≥2 | 剧本条件（备用） |
+| strain.dying | boolean | false | 派生：strain=3 | 草地 g899 进 coda；g029/g030/w030/w031 守卫 |
+| fate.feimao.dead | boolean | false | 泸定 l019/l019x 不救 true；铺桥/喂药 false | 泸定后 l022–l026 守卫；点名 |
+| fate.zaowang.dead | boolean | false | 草地 g018x D 不救 true；救 false | 草地死亡段守卫；点名 |
+| fate.dongsheng.dead | boolean | false | 草地 g026x D 不救 true；救 false | 草地尾声；点名；吴起 |
+| fate.lin.dead | boolean | false | 派生：strain≥2 且 strain<3 | 吴起 w006c/w014c/w015d/w016d/w022a；点名 |
+| fate.all.dead | boolean | false | 派生：三个危机全 dead | 吴起 w027b/w027c 互斥 |
+
+- 9 项都进 `FLAG_DEFAULTS`；`strain` 进 `FLAG_KEYS` 与 `FLAG_LIMITS=[0,3]`，`had.door` 进 `FLAG_KEYS`；`fate.*` 走 `FLAG_PREFIXES`。
+- `syncDerivedFlags(state)` 只写 `strain.hurt`、`strain.dying`、`fate.lin.dead`、`fate.all.dead`；调用点：`applySet` 末尾、`applyMultiChoice` 末尾、`normalize` 合完 flags 后。
+- 剧本 `set` 只写 `strain` 与三个危机 `fate.*.dead`；四个派生键由引擎写，剧本只读。
+- 不新增 `route` 旗标：路线只在 `buildEnding` 算一次，写进快照。
+- 不新增 `saves` 旗标：`saves = 3 - 三个危机 dead`，在 `buildEnding` 现算。
+
 ## 4. ending 快照
 
-- 形状：`{stats, names, answered, missed, cards}`；只允许这 5 个顶层键。
-- `stats` 固定 4 键：`companyStart=104`、`companyEnd=19`、`redStart=86000`、`redEnd=7000`。
-- `names` 固定 7 项：`he/ximei/lin/zhou/zaowang/feimao/dongsheng`；每条 `{id,name,status}`，status 只允许 `self/remote/player/missed`。
-- `answered`、`missed` 都是 0–3 的整数；只统计老周/灶王/飞毛腿三人的替答与漏答。
+- 形状：`{stats, names, answered, missed, cards, route, routeTitle, routeLede, fate, strain, recorded}`；只允许这 11 个顶层键。
+- `stats` 固定 4 键：`companyStart=104`、`companyEnd`（kongye=18，其余=19）、`redStart=86000`、`redEnd=7000`。**companyEnd 在 stats 内，不是顶层。**
+- `names` 普通路线 7 项，空页 8 项（多“满崽”）；每条 `{id,name,status}`，status 只允许 `self/remote/player/missed`；可选 `answeredBy` 为 `"dongsheng"` 或 `"you"`。
+- 空页满崽：`status:"absent"`、`answeredBy:"dongsheng"`；点名时自动代答，结算保留 answeredBy，计入 answered，不计 missed。
+- `answered`、`missed` 都是 0–8 的整数；普通路线统计老周/灶王/飞毛腿/林先生/冬生，空页再加满崽。
+- `route` 只允许 `sidao/menban/qiaoban/kongye/legacy`；`legacy` 只给 v1.2 旧 ending 快照补写，不重算。
+- `fate` 固定 4 键：`feimao/zaowang/dongsheng/lin`，值为 `dead/alive`；与 `strain` 一起复制快照，供图鉴/调试读。
+- `strain` 0–3；`recorded` 表示本局是否已写入 `xiangbei.roster.v1`，防重复。
+- `routeTitle`/`routeLede` 是结算页路线行；qiaoban 且 `had.door=false` 时用“石墙”/“字写在石墙上。你到了吴起。”。
 - `cards` 固定 5 项，id 固定 `ideal/sacrifice/truth/overall/people`；每项只有 `{id, lit, line}`，不存额外文案。
-- 快照由 `buildEnding(state)` 在 w900 一次写入；`normalize` 对多键、缺键、未知 status 直接判 `issue:"ending"`；不写 `card.*`。
-- 实测全答快照 JSON 1338B，整档 1518B，低于 4096B。
+- 快照由 `buildEnding(state)` 在 wuqi w900 或 coda c012 一次写入；`normalize` 对多键、缺键、未知 status/route 直接判 `issue:"ending"`；不写 `card.*`。
+- 结算前 `finishChapter` 先清空 `state.choices`，再 buildEnding/save：选择日志会把整档推过 4096B，而结局快照已含全部决定。
 
 ## 5. 保存点与体积
 
@@ -230,9 +271,10 @@
 - 刷新/关闭恢复到当前 beat，不回退到章节开头。
 - 保存点：进入新章、每个单选结算（含超时）、每段多选结算应用后、结算面板继续、记名/点名交互结束、设置变更（含总音量/配乐/环境音三个滑块实时写入）、结局生成、标题卡关闭、史实注关闭（同时写入 `codex`）。
 - 多选中间态**不写档**：选了但没按确认，刷新回该多选开头，从 `item.*` / `take.*` 旗标回显已确认的结果；确认后立即落档。
-- 点名中间态**不写档**：刷新回 w026 开头重念；ending 快照在点名结束时先写 names/answered/missed，w900 再补 stats/cards。
+- 点名中间态**不写档**：刷新回 w026（空页 c006）开头重念；ending 快照在点名结束时先写 names/answered/missed，w900/c012 再补 stats/cards/route。
 - `paused`（暂停）、打字机进度、`seenNodes`（跳过已读）是运行时状态：**不写存档**，刷新后回到节点开头。
 - 存档失败（隐私模式/配额满/`file://` 受限）只提示“本次无法保存”，不白屏、不中断游戏。
+- 结局落档前清空 `choices`：v1.3.0-dev 实测完整日志会让整档到 4267B，超过 4096B；清空后正常落档，结局快照不受影响。名册写失败只提示“本机无法保存名册，本局仍可继续”。
 
 ## 6. 迁移
 
@@ -244,6 +286,14 @@
   - 旧档若**一个** `item.medicine/barley/homepot/raincloth/shoes` 键都没有，从 `inventory.items` 反推：medicine/barley/pot/raincloth/shoes → 对应 `item.*`（`pot` 只回填 `item.homepot`，不覆盖 `item.pot`）。
   - 旧档若**一个** `choice.xiangjiang.take.*` 键都没有，且 `choice.xiangjiang.abandoned` 非空，则 take 布尔 = 该 id 不在 abandoned 里（留下的为 false，带走的为 true）。
   - 新档只要已有任一 `item.*` 或 `take.*` 键，就不再反推，避免刷新把玩家刚取消的选择补回来。
+- **2026-11-06 v1.3.0-dev 旧档迁移**（仍 v1，不升键名）：
+  - 所有旧档补 `had.door`：`choice.prologue.door===true || item.door===true || choice.luding.door===true`。
+  - 旧 ending 快照缺 `route`：补 `route:"legacy"`、`routeTitle:"旧档"`、`routeLede:""`，不重算路线；缺 `fate/strain/recorded` 按默认补。
+  - 停在吴起章：`fate.feimao.dead=true`、`fate.zaowang.dead=true`、`fate.dongsheng.dead=false`、`strain=1`，toast“旧存档按原路线继续”。
+  - 已过泸定 l022：`fate.feimao.dead=true`、`strain=0`。
+  - 已过草地 g019：`fate.zaowang.dead=true`。
+  - 更早：全默认；新危机照常触发。
+  - 旧档带门板且行囊物资 >1 **不裁剪**（O1 未执行）；停在 p024 的旧档按 `maxWhen` 重新取舍，不删玩家数据。
 - 读到数字 `nodeId` 的旧开发存档：备份为 `xiangbei.save.v1.bad` 后重置默认存档，提示“存档与当前版本不匹配，已重置”。
 - 读取到更高版本：备份为 `xiangbei.save.v1.bak`，提示“存档来自更新版本，已备份”，允许重置。
 - 解析失败或结构校验不通过（未知 scene、未知 chapter、找不到 nodeId、ending 不完整）：统一备份 `.bad`，重置默认存档；不静默丢弃，不白屏。
@@ -254,7 +304,7 @@
 - `?debug=1`：右上角显示 scene/chapterId/nodeId/flags 摘要/ending/save 字节，以及 `audio=locked|ready|suspended|off`、`bed=`、`duck=`、`beds=`、`peak=`；不显示在正式版。
 - `?fx=wipe|flash|shake|strike`：手工触发一次动效，用于核对转场/闪白/震动/划名；不写档。
 - `?reset=1`：清空存档并回标题。
-- `?chapter=<id>&node=<id>`：直接落到七章任一节点；**不补章末记忆、不跳章末**，用于逐章测试。
+- `?chapter=<id>&node=<id>`：直接落到八章任一节点（含隐藏 coda）；**不补章末记忆、不跳章末**，用于逐章测试。
 - `?fonts=fallback`：强制系统字体回退，用于核对字体授权失败路径。
 - v1.2.0-dev 已删除 `?minigame=`、`?trust=`、`?door=`、`?fire=`、`?lights=` 四个小游戏专用调试参数；输入未知参数不报错、不改变状态。
 - 调试参数在正式版保留但隐藏；不写进 UI。
@@ -266,3 +316,52 @@
 - `ending.cards` 是数组，每项 `{id, lit, line}`，顺序固定 `ideal,sacrifice,truth,overall,people`；不写 `card.*`。
 - 7 张史实注 id：yudu、xiangjiang、zunyi、jinsha、luding、grass、wuqi。
 - 人物 flag：memory.zhou、memory.he、memory.ximei、memory.dongsheng、memory.zaowang、memory.feimao、memory.lin、memory.zhang、memory.door、memory.luding_unknown、memory.rollcall_missed_any。
+
+## 9. v1.5 已实现（v1.3.0-dev，2026-11-06）
+
+> 本节是 `docs/ending-routes.md` 的存档落地口径；已实现并测试。键名仍 `xiangbei.save.v1`，顶层仍 11 键，只加旗标与 ending 字段。
+
+### 9.1 新增旗标（9 项，25 → 34）
+
+实际实现比设计稿多一个 `fate.all.dead`：`evalWhen` 不支持 `||`，吴起 `w027b`（三个名字）与 `w027c`（四个名字）需要互斥。完整表见 §3.3。
+
+- `FLAG_KEYS` 加 `strain`、`had.door`；`FLAG_PREFIXES = ["memory.","choice.","fate."]`；`FLAG_LIMITS.strain = [0,3]`。
+- `syncDerivedFlags(state)` 在 `applySet` 末尾、`applyMultiChoice` 末尾、`normalize` 合完 flags 后调用；只写 `strain.hurt/strain.dying/fate.lin.dead/fate.all.dead`，幂等。
+- 不新增 `route` / `saves` 旗标：路线与 saves 只在 `buildEnding` 现算。
+- 剧本 `when` 只用布尔键 + `!` + `&&`；不写比较、字符串、`||`。
+
+### 9.2 ending 快照
+
+- 11 键：`stats/names/answered/missed/cards/route/routeTitle/routeLede/fate/strain/recorded`；`companyEnd` 收进 `stats`，不是顶层。
+- `route`：`sidao/menban/qiaoban/kongye`，旧快照补 `legacy`；`fate` 四键值为 `dead/alive`。
+- `names` 普通 7 项、空页 8 项；满崽 `absent + answeredBy:"dongsheng"`。
+- `sacrifice` 卡条件 `route==="kongye" || choice.xiangjiang.hold`；kongye 亮句“你把自己，留在了草地尽头。”。
+- 结算页路线行：`routeTitle + " · " + routeLede`；qiaoban 且 `had.door=false` 用“石墙”。
+
+### 9.3 名册回廊（独立键）
+
+- 键：`xiangbei.roster.v1`；`{version:1, pages:[{route,title,at,companyEnd,names,note}]}`。
+- 每页 7 或 8 行；最多 8 页，超出丢最早一页；只记应到/未到/替答，不记分数、不记百分比。
+- `ending.recorded` 防同一局重复写；写入失败提示“本机无法保存名册，本局仍可继续”，不白屏。
+- 标题菜单“名册”入口；无新场景，复用 `xb-gallery` 面板；空页也记一页。
+
+### 9.4 旧档迁移（已验证）
+
+| 旧档位置 | 迁移 |
+|---|---|
+| 所有旧档 | 补 `had.door = choice.prologue.door || item.door || choice.luding.door` |
+| `scene:"ending"` | 直接读快照；无 `route` 补 `legacy/旧档/""`，不重算 |
+| `wuqi` 章 | `feimao.dead=true`、`zaowang.dead=true`、`dongsheng.dead=false`、`strain=1`；toast |
+| 泸定 `l022` 及以后 | `feimao.dead=true`、`strain=0` |
+| 草地 `g019` 及以后 | `zaowang.dead=true` |
+| 更早 | 全默认；新危机照常触发 |
+
+- 迁移在 `normalize` 内；保留未知键；`SAVE_VERSION` 不升；旧档带板物资 >1 不裁剪。
+
+### 9.5 验收（实测）
+
+- `normalize` 后 34 旗标齐全，`strain` 夹取 0–3，四个派生键一致。
+- 四路线 ending 快照齐：sidao strain0/companyEnd19、menban strain1/19、qiaoban strain2 或 1/19、kongye strain3/18/8 名。
+- 名册最多 8 页、同局不重复；四页回廊 28 行可读。
+- 旧档 v1.2 三处（吴起/泸定/草地）均落档并提示，不误判路线、不白屏。
+- 自动化：migration 17/17、timeout 14/14、routes 44/44、coda 19/19。

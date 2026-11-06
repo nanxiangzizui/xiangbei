@@ -71,10 +71,20 @@
     "choice.jinsha.main": false,
     "choice.jinsha.wounded": false,
     "choice.jinsha.kettle": false,
-    "choice.luding.door": false
+    "choice.luding.door": false,
+    // v1.3.0 人物命运：三次救人危机的生死、救了几次的消耗、序章有没有带门板。
+    "fate.feimao.dead": false,
+    "fate.zaowang.dead": false,
+    "fate.dongsheng.dead": false,
+    "fate.lin.dead": false,
+    "fate.all.dead": false,
+    "had.door": false,
+    strain: 0,
+    "strain.hurt": false,
+    "strain.dying": false
   };
 
-  // 数值旗标的上限下限：fire 是火种，trust 是民心（0–6 段），load 是行囊格数。
+  // 数值旗标的上限下限：fire 是火种，trust 是民心（0–6 段），load 是行囊格数，strain 是救人的消耗。
   var FLAG_LIMITS = {
     fire: [0, 100],
     trust: [0, 6],
@@ -82,7 +92,8 @@
     lights_lost: [0, 22],
     "choice.zunyi.missed": [0, 1],
     "choice.zunyi.admit": [0, 3],
-    "choice.jinsha.trips": [0, 18]
+    "choice.jinsha.trips": [0, 18],
+    strain: [0, 3]
   };
 
   // 剧情只允许写这些旗标：ending/card/unlockedChapters 由引擎自己管。
@@ -101,7 +112,9 @@
     "choice.xiangjiang.abandoned",
     "choice.zunyi.missed",
     "choice.zunyi.admit",
-    "choice.jinsha.trips"
+    "choice.jinsha.trips",
+    "strain",
+    "had.door"
   ];
 
   // 唯一允许的 list flag：弃物留下清单。顺序也是存档与结果页的排序。
@@ -125,7 +138,11 @@
     radio: "choice.xiangjiang.take.radio",
     silver: "choice.xiangjiang.take.silver"
   };
-  var FLAG_PREFIXES = ["memory.", "choice."];
+  // fate.* 由三次救人危机写生死；strain 是救人消耗，had.door 记“序章带过门板”。
+  var FLAG_PREFIXES = ["memory.", "choice.", "fate."];
+  // 引擎派生布尔：只由 syncDerivedFlags 写，剧本只读。fate.all.dead 让吴起“四个人的名字”不用 OR。
+  var DERIVED_FLAGS = ["fate.lin.dead", "fate.all.dead", "strain.hurt", "strain.dying"];
+  var BOOLEAN_FLAGS = ["had.door", "fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead"].concat(DERIVED_FLAGS);
   var CHOICE_LOG_LIMIT = 64;
   var TEXT_SCALES = [1, 1.15, 1.3];
 
@@ -179,6 +196,58 @@
     }
   }
 
+  function hasOwn(object, key) {
+    return Object.prototype.hasOwnProperty.call(object, key);
+  }
+
+  // 旧档迁移按“节点在章内的位置”判断，不写死章节号。
+  function passedNode(state, chapterId, markerId) {
+    var chapter = chapterById(chapterId);
+    var current = chapterById(state.chapterId);
+    if (!chapter || !current) return false;
+    if (current.id !== chapter.id) return current.order > chapter.order;
+    if (state.nodeId === null) return state.scene === "map";
+    var nodes = chapter.nodes || [];
+    var at = -1;
+    var marker = -1;
+    for (var i = 0; i < nodes.length; i += 1) {
+      if (nodes[i].id === state.nodeId) at = i;
+      if (nodes[i].id === markerId) marker = i;
+    }
+    return at !== -1 && marker !== -1 && at >= marker;
+  }
+
+  // v1.2 旧档没有 fate.*：按“停在哪儿”补生死，不反推“救过谁”，避免把旧档误判成新路线。
+  function migrateLegacyFate(state, save) {
+    var source = isPlainObject(save.flags) ? save.flags : {};
+    var flags = state.flags;
+    if (!hasOwn(source, "had.door")) {
+      flags["had.door"] = source["choice.prologue.door"] === true ||
+        flags["item.door"] === true ||
+        flags["choice.luding.door"] === true;
+    }
+    if (hasOwn(source, "fate.feimao.dead")) return null;
+    if (state.chapterId === "wuqi") {
+      flags["fate.feimao.dead"] = true;
+      flags["fate.zaowang.dead"] = true;
+      flags["fate.dongsheng.dead"] = false;
+      flags.strain = 1;
+      return "fate";
+    }
+    var changed = false;
+    if (passedNode(state, "luding", "l022") && flags["fate.feimao.dead"] !== true) {
+      flags["fate.feimao.dead"] = true;
+      flags.strain = 0;
+      changed = true;
+    }
+    if (passedNode(state, "grass", "g019") && flags["fate.zaowang.dead"] !== true) {
+      flags["fate.zaowang.dead"] = true;
+      changed = true;
+    }
+    // 返回非空值会触发一次即时落档与“已补记人物命运”提示；否则旧档要等到下一句才写入。
+    return changed ? "fate" : null;
+  }
+
   function isFiniteNumber(value) {
     return typeof value === "number" && isFinite(value);
   }
@@ -207,6 +276,8 @@
 
   var CARD_IDS = ["ideal", "sacrifice", "truth", "overall", "people"];
   var NAME_STATUS = ["self", "remote", "player", "missed"];
+  // legacy 只给 v1.2 旧结局快照补位，不参与新一局的路线判定。
+  var ROUTE_IDS = ["sidao", "menban", "qiaoban", "kongye", "legacy"];
   var ENDING_STATS = { companyStart: 104, companyEnd: 19, redStart: 86000, redEnd: 7000 };
   // 章末记忆：只置 true，不覆盖已有的 true；金沙江记名与吴起门板另有交互写。
   var CHAPTER_MEMORY = {
@@ -217,14 +288,16 @@
   };
   var WUQI_MEMORY = ["memory.ximei", "memory.dongsheng", "memory.lin"];
 
+  // 吴起是 7 人，空页 coda 是 8 人（多一个由冬生代答的满崽）。
   function validEndingNames(names) {
-    if (!Array.isArray(names) || names.length !== 7) return false;
+    if (!Array.isArray(names) || (names.length !== 7 && names.length !== 8)) return false;
     var seen = {};
     return names.every(function (entry) {
       if (!isPlainObject(entry)) return false;
       if (typeof entry.id !== "string" || !entry.id || seen[entry.id]) return false;
       if (typeof entry.name !== "string" || !entry.name) return false;
       if (NAME_STATUS.indexOf(entry.status) === -1) return false;
+      if (entry.answeredBy !== undefined && (typeof entry.answeredBy !== "string" || !entry.answeredBy)) return false;
       seen[entry.id] = true;
       return true;
     });
@@ -251,25 +324,35 @@
     });
   }
 
+  function validEndingFate(fate) {
+    if (!isPlainObject(fate)) return false;
+    var keys = ["feimao", "zaowang", "dongsheng", "lin"];
+    return keys.every(function (key) {
+      return fate[key] === "dead" || fate[key] === "alive";
+    }) && Object.keys(fate).length === keys.length;
+  }
+
   // 点名结束会先写 names/answered/missed，结尾再补 stats/cards；两种形状都收，但键必须干净。
   function normalizeEnding(value) {
     if (!isPlainObject(value)) return null;
-    var allowed = ["stats", "names", "answered", "missed", "cards"];
+    var allowed = ["stats", "names", "answered", "missed", "cards", "route", "routeTitle", "routeLede", "fate", "strain", "recorded"];
     var keys = Object.keys(value);
     if (keys.some(function (key) { return allowed.indexOf(key) === -1; })) return null;
     var clean = {};
     if (value.names !== undefined) {
       if (!validEndingNames(value.names)) return null;
       clean.names = value.names.map(function (entry) {
-        return { id: entry.id, name: entry.name, status: entry.status };
+        var row = { id: entry.id, name: entry.name, status: entry.status };
+        if (entry.answeredBy !== undefined) row.answeredBy = entry.answeredBy;
+        return row;
       });
     }
     if (value.answered !== undefined) {
-      if (!isFiniteNumber(value.answered) || value.answered < 0 || value.answered > 3) return null;
+      if (!isFiniteNumber(value.answered) || value.answered < 0 || value.answered > 8) return null;
       clean.answered = Math.round(value.answered);
     }
     if (value.missed !== undefined) {
-      if (!isFiniteNumber(value.missed) || value.missed < 0 || value.missed > 3) return null;
+      if (!isFiniteNumber(value.missed) || value.missed < 0 || value.missed > 8) return null;
       clean.missed = Math.round(value.missed);
     }
     if (value.cards !== undefined) {
@@ -287,6 +370,30 @@
         redEnd: value.stats.redEnd
       };
     }
+    if (value.route !== undefined) {
+      if (typeof value.route !== "string" || ROUTE_IDS.indexOf(value.route) === -1) return null;
+      clean.route = value.route;
+    }
+    if (value.routeTitle !== undefined) {
+      if (typeof value.routeTitle !== "string") return null;
+      clean.routeTitle = value.routeTitle;
+    }
+    if (value.routeLede !== undefined) {
+      if (typeof value.routeLede !== "string") return null;
+      clean.routeLede = value.routeLede;
+    }
+    if (value.fate !== undefined) {
+      if (!validEndingFate(value.fate)) return null;
+      clean.fate = { feimao: value.fate.feimao, zaowang: value.fate.zaowang, dongsheng: value.fate.dongsheng, lin: value.fate.lin };
+    }
+    if (value.strain !== undefined) {
+      if (!isFiniteNumber(value.strain) || value.strain < 0 || value.strain > 3) return null;
+      clean.strain = Math.round(value.strain);
+    }
+    if (value.recorded !== undefined) {
+      if (typeof value.recorded !== "boolean") return null;
+      clean.recorded = value.recorded;
+    }
     return clean;
   }
 
@@ -295,30 +402,60 @@
       isFiniteNumber(ending.answered) && isFiniteNumber(ending.missed));
   }
 
-  function rollcallEntries() {
-    var chapter = chapterById("wuqi");
-    var node = null;
-    ((chapter && chapter.nodes) || []).some(function (item) {
-      if (item.type === "interact" && item.mode === "rollcall") {
-        node = item;
-        return true;
+  // 点名名单按生死动态生成：老周必没到，林先生看 strain，三次危机看各自 fate。
+  var ROLLCALL_PEOPLE = [
+    { id: "he", name: "何指导员", kind: "remote" },
+    { id: "ximei", name: "细妹", kind: "self" },
+    { id: "lin", name: "林先生", kind: "fate" },
+    { id: "zhou", name: "老周", kind: "absent" },
+    { id: "zaowang", name: "灶王", kind: "fate" },
+    { id: "feimao", name: "飞毛腿", kind: "fate" },
+    { id: "dongsheng", name: "冬生", kind: "fate" }
+  ];
+
+  function resolveRollCall(state, coda) {
+    var flags = (state && state.flags) || {};
+    var rows = ROLLCALL_PEOPLE.map(function (person) {
+      var status = person.kind;
+      if (person.kind === "fate") {
+        status = flags["fate." + person.id + ".dead"] === true ? "absent" : "self";
       }
-      return false;
+      return { id: person.id, name: person.name, status: status };
     });
-    return (node && node.names) || [];
+    if (coda) rows.push({ id: "manzi", name: "满崽", status: "absent", answeredBy: "dongsheng" });
+    return rows;
   }
 
-  // 没走到点名就进结局（调试/异常档）时的默认：不在场的人按“没应”算，不伪造替答。
-  function defaultEndingNames() {
+  function rollcallEntries(state) {
+    var dying = !!(state && state.flags && state.flags["strain.dying"] === true);
+    return resolveRollCall(state || defaults(), dying);
+  }
+
+  // 没走到点名就进结局（调试/异常档）时的默认：不在场的人按“没应”算；有代答人的按代答算。
+  function defaultEndingNames(state) {
     var answered = 0;
     var missed = 0;
-    var names = rollcallEntries().map(function (entry) {
-      var status = entry.status === "absent" ? "missed" : entry.status;
+    var names = rollcallEntries(state).map(function (entry) {
+      var status = entry.answeredBy ? "player" : entry.status === "absent" ? "missed" : entry.status;
       if (status === "missed") missed += 1;
       if (status === "player") answered += 1;
-      return { id: entry.id, name: entry.name, status: status };
+      var row = { id: entry.id, name: entry.name, status: status };
+      if (entry.answeredBy) row.answeredBy = entry.answeredBy;
+      return row;
     });
     return { names: names, answered: answered, missed: missed };
+  }
+
+  // 路线只在结局算一次；strain.dying 优先于救人数，保证“三次全救”必是空页。
+  function routeOf(flags) {
+    var saves = 3 -
+      (flags["fate.feimao.dead"] === true ? 1 : 0) -
+      (flags["fate.zaowang.dead"] === true ? 1 : 0) -
+      (flags["fate.dongsheng.dead"] === true ? 1 : 0);
+    if (flags["strain.dying"] === true) return "kongye";
+    if (saves === 0) return "sidao";
+    if (flags["item.door"] === true || flags["memory.door"] === true) return "menban";
+    return "qiaoban";
   }
 
   // 五卡只算一次：finishChapter 调 buildEnding 落成快照，重进结局直接读快照。
@@ -326,14 +463,24 @@
     var storyEnding = (XB.story && XB.story.ending) || {};
     var flags = state.flags || {};
     var previous = normalizeEnding(state.ending) || {};
-    var fallback = defaultEndingNames();
+    var fallback = defaultEndingNames(state);
     var names = previous.names || fallback.names;
     var answered = previous.answered !== undefined ? previous.answered : fallback.answered;
     var missed = previous.missed !== undefined ? previous.missed : fallback.missed;
 
+    var route = routeOf(flags);
+    var routeDef = ((storyEnding.routes) || {})[route] || {};
+    var routeTitle = routeDef.title || "";
+    var routeLede = routeDef.lede || "";
+    // 同一 qiaoban 路线，有没有带过门板是两种质感：桥板 / 石墙。
+    if (route === "qiaoban" && flags["had.door"] !== true) {
+      routeTitle = routeDef.altTitle || routeTitle;
+      routeLede = routeDef.altLede || routeLede;
+    }
+
     var conditions = {
       ideal: isFiniteNumber(flags.fire) && flags.fire >= 20,
-      sacrifice: flags["choice.xiangjiang.hold"] === true,
+      sacrifice: route === "kongye" || flags["choice.xiangjiang.hold"] === true,
       truth: Number(flags["choice.zunyi.admit"] || 0) >= 2,
       overall: flags["choice.jinsha.priority"] === "main",
       people: Number(flags.trust || 0) >= 3 && flags["memory.zhang"] === true
@@ -341,20 +488,35 @@
 
     var cards = ((storyEnding.cards) || []).map(function (card) {
       var lit = conditions[card.id] === true;
-      return { id: card.id, lit: lit, line: lit ? card.litLine : card.unlitLine };
+      var line = lit ? card.litLine : card.unlitLine;
+      if (card.id === "sacrifice" && lit && route === "kongye") {
+        line = storyEnding.kongyeSacrificeLine || line;
+      }
+      return { id: card.id, lit: lit, line: line };
     });
 
     return {
       stats: {
         companyStart: ENDING_STATS.companyStart,
-        companyEnd: ENDING_STATS.companyEnd,
+        companyEnd: route === "kongye" ? 18 : ENDING_STATS.companyEnd,
         redStart: ENDING_STATS.redStart,
         redEnd: ENDING_STATS.redEnd
       },
       names: names,
       answered: answered,
       missed: missed,
-      cards: cards
+      cards: cards,
+      route: route,
+      routeTitle: routeTitle,
+      routeLede: routeLede,
+      fate: {
+        feimao: flags["fate.feimao.dead"] === true ? "dead" : "alive",
+        zaowang: flags["fate.zaowang.dead"] === true ? "dead" : "alive",
+        dongsheng: flags["fate.dongsheng.dead"] === true ? "dead" : "alive",
+        lin: flags["fate.lin.dead"] === true ? "dead" : "alive"
+      },
+      strain: isFiniteNumber(flags.strain) ? flags.strain : 0,
+      recorded: previous.recorded === true
     };
   }
 
@@ -419,11 +581,15 @@
     ITEM_FLAGS.forEach(function (key) {
       flags[key] = flags[key] === true;
     });
+    BOOLEAN_FLAGS.forEach(function (key) {
+      flags[key] = flags[key] === true;
+    });
     Object.keys(ABANDON_TAKE_FLAGS).forEach(function (id) {
       flags[ABANDON_TAKE_FLAGS[id]] = flags[ABANDON_TAKE_FLAGS[id]] === true;
     });
     flags["choice.xiangjiang.abandoned"] = normalizeAbandoned(flags["choice.xiangjiang.abandoned"]);
     backfillLegacyFlags(save, flags);
+    syncDerivedFlags({ flags: flags });
     state.flags = flags;
     // inventory.door 只是 flags 的镜像，避免两处状态打架。
     state.inventory.door = flags["item.door"];
@@ -492,6 +658,12 @@
     state.unlockedChapters = unlocked;
 
     state.ending = normalizeEnding(save.ending);
+    if (state.ending && !state.ending.route) {
+      // 旧结局快照只补一个“旧档”标签，不重算路线，也不改已显示的点名与五卡。
+      state.ending.route = "legacy";
+      state.ending.routeTitle = "旧档";
+      state.ending.routeLede = "";
+    }
 
     if (save.nodeId !== null && save.nodeId !== undefined && typeof save.nodeId !== "string") {
       return { issue: "node", state: defaults() };
@@ -508,9 +680,13 @@
       migrated = "luding";
     }
 
+    var fateMigrated = migrateLegacyFate(state, save);
+    if (fateMigrated && !migrated) migrated = fateMigrated;
+    syncDerivedFlags(state);
+
     if (state.scene === "ending") {
-      // 结局是只读快照：缺一块、带了节点、或不在吴起章，都回地图并报告，不半截显示。
-      if (state.chapterId !== "wuqi" || state.nodeId !== null || !isFullEnding(state.ending)) {
+      // 结局是只读快照：缺一块、带了节点、或不在吴起/空页章，都回地图并报告，不半截显示。
+      if ((state.chapterId !== "wuqi" && state.chapterId !== "coda") || state.nodeId !== null || !isFullEnding(state.ending)) {
         var fallback = defaults();
         fallback.scene = "map";
         return { issue: "ending", state: fallback };
@@ -568,6 +744,19 @@
     return true;
   }
 
+  // 救人消耗 strain 是唯一数值，其余命运状态全是派生布尔；evalWhen 只认布尔键。
+  function syncDerivedFlags(state) {
+    var flags = state.flags;
+    var strain = isFiniteNumber(flags.strain) ? Math.round(clamp(flags.strain, 0, 3)) : 0;
+    flags.strain = strain;
+    flags["strain.hurt"] = strain >= 2;
+    flags["strain.dying"] = strain >= 3;
+    flags["fate.lin.dead"] = strain >= 2 && strain < 3;
+    flags["fate.all.dead"] = flags["fate.feimao.dead"] === true &&
+      flags["fate.zaowang.dead"] === true &&
+      flags["fate.dongsheng.dead"] === true;
+  }
+
   function isVisible(state, node) {
     if (!node) return false;
     return evalWhen(state, node.when);
@@ -583,6 +772,38 @@
 
   function firstVisible(state, chapter) {
     return nextVisible(state, chapter, 0);
+  }
+
+  // 选项可见性：requires 与节点 when 同一套语法；超时默认项必须在可见项里。
+  function optionVisible(state, option) {
+    if (!option) return false;
+    return evalWhen(state, option.requires);
+  }
+
+  function visibleOptions(state, node) {
+    return ((node && node.options) || []).filter(function (option) {
+      return optionVisible(state, option);
+    });
+  }
+
+  function defaultOptionKey(state, node) {
+    var options = visibleOptions(state, node);
+    if (!options.length) return null;
+    for (var i = 0; i < options.length; i += 1) {
+      if (options[i].key === node.defaultOption) return options[i].key;
+    }
+    // 数据写错时的兜底：宁可让玩家先看到第一项，也不让倒计时结算一个看不见的选项。
+    return options[0].key;
+  }
+
+  // 行囊多选：门板占两格，带板时只装得下一件（maxWhen 由剧本声明）。
+  function effectiveMultiMax(state, node) {
+    var max = isFiniteNumber(node.max) ? node.max : ((node.options || []).length);
+    ((node && node.maxWhen) || []).forEach(function (rule) {
+      if (!rule || !isFiniteNumber(rule.max)) return;
+      if (evalWhen(state, rule.when)) max = Math.min(max, rule.max);
+    });
+    return Math.max(0, max);
   }
 
   function startChapter(state, chapterId, nodeId) {
@@ -684,6 +905,7 @@
         console.error("[XB] " + sourceId + " 写入旗标失败：" + key);
       }
     });
+    syncDerivedFlags(state);
   }
 
   // 记一条选择：旗标写 record（= 选项 value），历史写 choices（供后面的错误卡/点名引用）。
@@ -695,6 +917,10 @@
     }
     if (!option) {
       console.error("[XB] " + (node && node.id) + " 没有选项 " + optionKey);
+      return null;
+    }
+    if (!optionVisible(state, option)) {
+      console.error("[XB] " + (node && node.id) + " 选项不可见：" + optionKey);
       return null;
     }
     applySet(state, option.set, node.id);
@@ -730,7 +956,7 @@
       return null;
     }
     var min = isFiniteNumber(node.min) ? node.min : 0;
-    var max = isFiniteNumber(node.max) ? node.max : options.length;
+    var max = effectiveMultiMax(state, node);
     if (chosen.length < min || chosen.length > max) {
       console.error("[XB] " + node.id + " 选择数量越界：" + chosen.length);
       return null;
@@ -820,6 +1046,13 @@
     isVisible: isVisible,
     firstVisible: firstVisible,
     nextVisible: nextVisible,
+    optionVisible: optionVisible,
+    visibleOptions: visibleOptions,
+    defaultOptionKey: defaultOptionKey,
+    effectiveMultiMax: effectiveMultiMax,
+    syncDerivedFlags: syncDerivedFlags,
+    resolveRollCall: resolveRollCall,
+    routeOf: routeOf,
     startChapter: startChapter,
     advance: advance,
     setFlag: setFlag,
@@ -1949,6 +2182,7 @@
     "ending-title",
     "ending-date",
     "ending-lede",
+    "ending-route",
     "ending-names",
     "ending-stats",
     "ending-cards",
@@ -2021,7 +2255,11 @@
     "gallery-close",
     "gallery-title",
     "gallery-count",
-    "gallery-grid"
+    "gallery-grid",
+    "roster-gallery",
+    "roster-gallery-close",
+    "roster-gallery-count",
+    "roster-gallery-pages"
   ];
 
   var state = null;
@@ -2076,6 +2314,7 @@
   var titleCardState = { open: false, timer: 0, onClose: null };
   var codexState = { open: false, id: null, unlock: false, onClose: null, previousFocus: null };
   var galleryState = { open: false, previousFocus: null };
+  var rosterGalleryState = { open: false, previousFocus: null };
 
   // 点名/记名交互：只活在本次页面；点名结果在结束时落进 ending 快照。
   var interactRun = {
@@ -2160,7 +2399,12 @@
     applyStartScene();
     render();
     if (legacyMigrated) {
-      toast(legacyMigrated === "jinsha" ? "旧存档已接回金沙江" : "旧存档已接回泸定");
+      var migrateText = {
+        jinsha: "旧存档已接回金沙江",
+        luding: "旧存档已接回泸定",
+        fate: "旧存档已按原路线补记人物命运"
+      };
+      toast(migrateText[legacyMigrated] || "旧存档已按原路线继续");
       saveNow();
     }
     updateDebug();
@@ -2255,6 +2499,93 @@
     }
     debugExtra = "save=" + bytes + " B";
     updateDebug();
+  }
+
+  /* 名册回廊：xiangbei.roster.v1 与主存档分开，清档不清名册，名册也不影响路线。 */
+  var ROSTER_KEY = "xiangbei.roster.v1";
+  var ROSTER_MAX_PAGES = 8;
+
+  function normalizeRosterPage(page) {
+    if (!isPlainObject(page)) return null;
+    if (ROUTE_IDS.indexOf(page.route) === -1 || page.route === "legacy") return null;
+    if (typeof page.title !== "string" || typeof page.at !== "string" || typeof page.note !== "string") return null;
+    if (!isFiniteNumber(page.companyEnd)) return null;
+    if (!Array.isArray(page.names) || (page.names.length !== 7 && page.names.length !== 8)) return null;
+    var names = [];
+    for (var i = 0; i < page.names.length; i += 1) {
+      var entry = page.names[i];
+      if (!isPlainObject(entry) || typeof entry.id !== "string" || typeof entry.name !== "string") return null;
+      if (NAME_STATUS.indexOf(entry.status) === -1) return null;
+      var row = { id: entry.id, name: entry.name, status: entry.status };
+      if (typeof entry.answeredBy === "string" && entry.answeredBy) row.answeredBy = entry.answeredBy;
+      names.push(row);
+    }
+    return { route: page.route, title: page.title, at: page.at, companyEnd: page.companyEnd, note: page.note, names: names };
+  }
+
+  function readRosterPages() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(ROSTER_KEY);
+    } catch (err) {
+      console.error("[XB] 读取名册失败：" + err.message);
+      return { ok: false, pages: [] };
+    }
+    if (!raw) return { ok: true, pages: [] };
+    var parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.error("[XB] 名册不是合法 JSON：" + err.message);
+      return { ok: true, pages: [] };
+    }
+    if (!isPlainObject(parsed) || parsed.version !== 1 || !Array.isArray(parsed.pages)) {
+      return { ok: true, pages: [] };
+    }
+    var pages = [];
+    parsed.pages.forEach(function (page) {
+      var clean = normalizeRosterPage(page);
+      if (clean) pages.push(clean);
+    });
+    return { ok: true, pages: pages.slice(-ROSTER_MAX_PAGES) };
+  }
+
+  // 一局只记一页：ending.recorded 落进快照，刷新结局不会重复追加。
+  function recordEndingPage() {
+    var ending = state.ending;
+    if (!ending || ending.recorded === true) return;
+    if (ending.route === "legacy") {
+      ending.recorded = true;
+      return;
+    }
+    var stored = readRosterPages();
+    if (!stored.ok) {
+      ending.recorded = true;
+      toast("本机无法保存名册，本局仍可继续");
+      return;
+    }
+    var page = {
+      route: ending.route,
+      title: ending.routeTitle || ending.route,
+      at: new Date().toISOString().slice(0, 10),
+      companyEnd: ending.stats.companyEnd,
+      note: ending.routeLede || "",
+      names: ending.names.map(function (entry) {
+        var row = { id: entry.id, name: entry.name, status: entry.status };
+        if (entry.answeredBy) row.answeredBy = entry.answeredBy;
+        return row;
+      })
+    };
+    var pages = stored.pages.concat([page]).slice(-ROSTER_MAX_PAGES);
+    try {
+      window.localStorage.setItem(ROSTER_KEY, JSON.stringify({ version: 1, pages: pages }));
+    } catch (err) {
+      console.error("[XB] 写入名册失败：" + err.message);
+      ending.recorded = true;
+      toast("本机无法保存名册，本局仍可继续");
+      return;
+    }
+    ending.recorded = true;
   }
 
   // 刷新后的落点：vn 就回到原句，title/map 保持原样；定位不到的档已在 normalize 里回默认。
@@ -2690,7 +3021,7 @@
     els.vnChoices.textContent = "";
     els.vnChoices.style.setProperty("--choice-progress", "1");
 
-    (node.options || []).forEach(function (option) {
+    XB.core.visibleOptions(state, node).forEach(function (option) {
       var button = document.createElement("button");
       button.type = "button";
       button.className = "xb-choice";
@@ -2744,7 +3075,7 @@
     choiceRun.lastTs = timestamp;
     els.vnChoices.style.setProperty("--choice-progress", String(choiceRun.total ? choiceRun.remaining / choiceRun.total : 0));
     if (choiceRun.remaining <= 0) {
-      resolveChoice(choiceRun.node.defaultOption, true);
+      resolveChoice(XB.core.defaultOptionKey(state, choiceRun.node), true);
       return;
     }
     choiceRun.rafId = requestAnimationFrame(stepChoiceTimer);
@@ -2813,7 +3144,7 @@
   }
 
   function multiMax(node) {
-    return isFiniteNumber(node.max) ? node.max : ((node.options || []).length);
+    return XB.core.effectiveMultiMax(state, node);
   }
 
   function renderMultiChoice(node) {
@@ -3145,10 +3476,16 @@
       state.ending = buildEnding(state);
       saveNow();
     }
+    recordEndingPage();
+    saveNow();
     paintStage("wuqi_wall");
     els.endingTitle.textContent = storyEnding.title || "向北";
     els.endingDate.textContent = (storyEnding.date || "") + " · 吴起镇";
     els.endingLede.textContent = storyEnding.lede || "";
+    els.endingRoute.textContent = state.ending.routeTitle
+      ? state.ending.routeTitle + (state.ending.routeLede ? " · " + state.ending.routeLede : "")
+      : "";
+    els.endingRoute.hidden = !state.ending.routeTitle;
 
     els.endingNames.textContent = "";
     state.ending.names.forEach(function (entry) {
@@ -3159,7 +3496,8 @@
       name.textContent = entry.name;
       var status = document.createElement("span");
       status.className = "xb-ending__name-status";
-      status.textContent = ENDING_STATUS_TEXT[entry.status] || entry.status;
+      var byName = entry.answeredBy === "dongsheng" ? "冬生" : entry.answeredBy === "you" ? "你" : entry.answeredBy || "";
+      status.textContent = byName ? byName + " 代答" : (ENDING_STATUS_TEXT[entry.status] || entry.status);
       row.append(name, status);
       els.endingNames.append(row);
     });
@@ -3219,8 +3557,15 @@
 
     if (node.mode === "rollcall") {
       els.interactKicker.textContent = "点名";
-      interactRun.entries = (node.names || []).map(function (entry) {
-        return { id: entry.id, name: entry.name, base: entry.status || "self", status: entry.status || "self", done: false };
+      interactRun.entries = XB.core.resolveRollCall(state, node.coda === true).map(function (entry) {
+        return {
+          id: entry.id,
+          name: entry.name,
+          base: entry.status || "self",
+          status: entry.status || "self",
+          answeredBy: entry.answeredBy || "",
+          done: false
+        };
       });
       els.interactAnswer.textContent = "替他答到";
       els.interactAnswer.hidden = true;
@@ -3277,7 +3622,13 @@
     }
     var entry = interactRun.entries[interactRun.cursor];
     els.interactName.textContent = entry.name;
-    if (entry.base === "remote" || entry.base === "self") {
+    if (entry.answeredBy) {
+      interactRun.phase = "auto";
+      interactRun.phaseRemaining = 700;
+      els.interactStatus.textContent = "冬生替他答";
+      els.interactAnswer.hidden = true;
+      announceInteract("念到 " + entry.name + "，冬生替他答");
+    } else if (entry.base === "remote" || entry.base === "self") {
       interactRun.phase = "auto";
       interactRun.phaseRemaining = 700;
       els.interactStatus.textContent = entry.base === "remote" ? "在别的连，那边有人应了一声" : "答到";
@@ -3313,8 +3664,12 @@
       entry.status = entry.base === "remote" || entry.base === "self" ? entry.base : "missed";
       entry.done = true;
     });
+    var coda = state.chapterId === "coda";
     var names = interactRun.entries.map(function (entry) {
-      return { id: entry.id, name: entry.name, status: entry.status };
+      var row = { id: entry.id, name: entry.name, status: entry.status };
+      if (entry.answeredBy) row.answeredBy = entry.answeredBy;
+      else if (coda && entry.status === "player") row.answeredBy = "dongsheng";
+      return row;
     });
     var answered = names.filter(function (entry) { return entry.status === "player"; }).length;
     var missed = names.filter(function (entry) { return entry.status === "missed"; }).length;
@@ -3398,7 +3753,7 @@
         var entry = interactRun.entries[interactRun.cursor];
         if (entry && !entry.done) {
           if (interactRun.phase === "auto") {
-            entry.status = entry.base;
+            entry.status = entry.answeredBy ? "player" : entry.base;
           } else {
             entry.status = "missed";
             announceInteract("念到 " + entry.name + "，没有应");
@@ -3433,6 +3788,8 @@
     var nextId = node.next || null;
 
     if (nextId === "ending") {
+      // 结局只读快照已含全部决定；选择日志不再参与任何界面，清空以免整档超过 4096B。
+      state.choices = [];
       state.ending = buildEnding(state);
       state.scene = "ending";
       state.nodeId = null;
@@ -3454,7 +3811,8 @@
       go("map");
       return;
     }
-    if (state.unlockedChapters.indexOf(nextId) === -1) {
+    // 隐藏章（空页 coda）不进地图、不弹解锁；玩家从草地直接走进去。
+    if (chapter.hidden !== true && state.unlockedChapters.indexOf(nextId) === -1) {
       state.unlockedChapters.push(nextId);
       toast("「" + chapter.title + "」已解锁");
     }
@@ -3679,10 +4037,74 @@
     if (previous && previous.focus && previous !== document.body) previous.focus();
   }
 
+  /* ---------------- 名册回廊（标题页入口，只读） ---------------- */
+
+  function renderRosterGallery() {
+    var stored = readRosterPages();
+    var pages = stored.pages;
+    els.rosterGalleryCount.textContent = pages.length
+      ? pages.length + " 页名册 · 每页记一局"
+      : "还没有名册。走完一局，这里会记下应到的人。";
+    els.rosterGalleryPages.textContent = "";
+    pages.slice().reverse().forEach(function (page) {
+      var section = document.createElement("section");
+      section.className = "xb-roster-page";
+      var title = document.createElement("h3");
+      title.className = "xb-roster-page__title";
+      title.textContent = page.title || page.route;
+      var meta = document.createElement("p");
+      meta.className = "xb-roster-page__meta";
+      meta.textContent = page.at + " · 到吴起 " + page.companyEnd + " 人";
+      var list = document.createElement("ol");
+      list.className = "xb-roster-page__names";
+      page.names.forEach(function (entry) {
+        var li = document.createElement("li");
+        li.className = "xb-roster-page__name is-" + entry.status;
+        var name = document.createElement("span");
+        name.className = "xb-roster-page__name-text";
+        name.textContent = entry.name;
+        var mark = document.createElement("span");
+        mark.className = "xb-roster-page__mark";
+        mark.textContent = entry.answeredBy
+          ? (entry.answeredBy === "dongsheng" ? "冬生代答" : "你代答")
+          : entry.status === "missed" ? "未应" : entry.status === "remote" ? "别连" : "到";
+        li.append(name, mark);
+        list.append(li);
+      });
+      section.append(title, meta, list);
+      if (page.note) {
+        var note = document.createElement("p");
+        note.className = "xb-roster-page__note";
+        note.textContent = page.note;
+        section.append(note);
+      }
+      els.rosterGalleryPages.append(section);
+    });
+  }
+
+  function openRosterGallery() {
+    if (rosterGalleryState.open) return;
+    rosterGalleryState.open = true;
+    rosterGalleryState.previousFocus = document.activeElement;
+    renderRosterGallery();
+    els.rosterGallery.hidden = false;
+    els.rosterGallery.scrollTop = 0;
+    els.rosterGalleryClose.focus();
+  }
+
+  function closeRosterGallery() {
+    if (!rosterGalleryState.open) return;
+    rosterGalleryState.open = false;
+    els.rosterGallery.hidden = true;
+    var previous = rosterGalleryState.previousFocus;
+    rosterGalleryState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
   // 暂停、图鉴、史实注可能叠在一起，取最安静的一档，不叠乘。
   function refreshAudioDuck() {
     var duck = 1;
-    if (codexState.open || galleryState.open) duck = Math.min(duck, 0.45);
+    if (codexState.open || galleryState.open || rosterGalleryState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
     XB.audio.setDuck(duck);
   }
@@ -3834,7 +4256,7 @@
     var ended = !!(state.ending && Array.isArray(state.ending.names) && state.ending.names.length);
     var rows = ended
       ? state.ending.names
-      : rollcallEntries().map(function (entry) {
+      : rollcallEntries(state).map(function (entry) {
           return { id: entry.id, name: entry.name, status: "unknown" };
         });
     var labels = {
@@ -3862,7 +4284,11 @@
       name.textContent = entry.name;
       var status = document.createElement("span");
       status.className = "xb-roster__status";
-      status.textContent = labels[entry.status] || labels.unknown;
+      status.textContent = entry.answeredBy === "dongsheng"
+        ? "冬生代答"
+        : entry.answeredBy === "you"
+          ? "你替他答了"
+          : labels[entry.status] || labels.unknown;
       li.append(name, status);
       els.rosterList.append(li);
     });
@@ -4049,6 +4475,9 @@
     els.codexGallery.addEventListener("click", function (event) {
       if (event.target === els.codexGallery) closeGallery();
     });
+    els.rosterGallery.addEventListener("click", function (event) {
+      if (event.target === els.rosterGallery) closeRosterGallery();
+    });
     // 标题卡不单独绑 pointerdown：document 上的 onPointerDown 已经负责关它并 return，
     // 两处都绑会让同一次点击关完卡片后继续把 p001 的第一页“补全”，第一句等于没打。
   }
@@ -4063,7 +4492,7 @@
       closeTitleCard();
       return;
     }
-    if (codexState.open || galleryState.open) return;
+    if (codexState.open || galleryState.open || rosterGalleryState.open) return;
     if (interactRun.active) return;
     if (!els.vnMultichoice.hidden) return;
     if (!state || state.scene !== "vn" || state.paused) return;
@@ -4090,6 +4519,11 @@
       }
       if (galleryState.open) {
         closeGallery();
+        event.preventDefault();
+        return;
+      }
+      if (rosterGalleryState.open) {
+        closeRosterGallery();
         event.preventDefault();
         return;
       }
@@ -4123,7 +4557,12 @@
       trapFocus(event, els.codexGallery);
       return;
     }
+    if (event.key === "Tab" && rosterGalleryState.open) {
+      trapFocus(event, els.rosterGallery);
+      return;
+    }
     if (galleryState.open) return;
+    if (rosterGalleryState.open) return;
 
     // 多选：数字键切换，Enter 确认；焦点在选项/确认按钮上时交给按钮自己的原生行为。
     if (!els.vnMultichoice.hidden && multiRun.node && state && !state.paused) {
@@ -4203,6 +4642,12 @@
         break;
       case "gallery-card":
         openGalleryCard(target.dataset.codex);
+        break;
+      case "roster-gallery":
+        openRosterGallery();
+        break;
+      case "roster-gallery-close":
+        closeRosterGallery();
         break;
       case "interact-answer":
         if (interactRun.mode === "rollcall") answerRollcall();

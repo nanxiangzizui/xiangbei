@@ -425,8 +425,8 @@ function checkPrologueGraph() {
   nodes.forEach(function (node) {
     counts[node.type] = (counts[node.type] || 0) + 1;
   });
-  var expected = { line: 45, choice: 2, multichoice: 1, result: 1, title: 1, codex: 1, end: 1 };
-  if (nodes.length !== 52) fail("C13", "序章节点应为 52，实际 " + nodes.length);
+  var expected = { line: 43, choice: 2, multichoice: 1, result: 1, title: 1, codex: 1, end: 1 };
+  if (nodes.length !== 50) fail("C13", "序章节点应为 50，实际 " + nodes.length);
   Object.keys(expected).forEach(function (type) {
     if ((counts[type] || 0) !== expected[type]) {
       fail("C13", type + " 节点应为 " + expected[type] + "，实际 " + (counts[type] || 0));
@@ -435,19 +435,34 @@ function checkPrologueGraph() {
   var ids = nodes.map(function (node) {
     return node.id;
   });
-  for (var i = 0; i < 20; i += 1) {
+  for (var i = 0; i < 11; i += 1) {
     var expectedId = "p" + String(i + 1).padStart(3, "0");
     if (ids[i] !== expectedId) fail("C13", "第 " + (i + 1) + " 个节点应为 " + expectedId + "，实际 " + ids[i]);
   }
   if (new Set(ids).size !== ids.length) fail("C13", "节点 id 有重复");
-  if (!ids.includes("p039a") || !ids.includes("p039b")) fail("C13", "缺 p039a/p039b 门板分支");
+  ["p013", "p018", "p021", "p024", "p039a", "p039b"].forEach(function (id) {
+    if (ids.indexOf(id) === -1) fail("C13", "缺节点 " + id);
+  });
   var last = nodes[nodes.length - 1];
   if (last.id !== "p900") fail("C13", "末节点应为 p900，实际 " + last.id);
   if (last.next !== "xiangjiang") fail("C13", "p900.next 应为 xiangjiang，实际 " + last.next);
-  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 45 / choice 2 / multichoice 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
+  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 43 / choice 2 / multichoice 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
 }
 
-var SET_KEY_EXACT = ["item.door", "item.pot", "load", "trust", "fire", "lights_lost"];
+var SET_KEY_EXACT = [
+  "item.door", "item.pot", "item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes",
+  "load", "trust", "fire", "lights_lost",
+  "had.door", "strain",
+  "fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead", "fate.lin.dead", "fate.all.dead"
+];
+
+function isAllowedCondition(text) {
+  if (typeof text !== "string" || !text.trim()) return false;
+  return text.split("&&").every(function (part) {
+    var key = part.trim().replace(/^!/, "");
+    return /^(item\.[a-z_]+|strain(\.[a-z]+)?|fate\.[a-z.]+|had\.door|memory\.[a-z0-9_]+|choice\.[a-z0-9._]+)$/.test(key);
+  });
+}
 
 function isAllowedSetKey(key) {
   return (
@@ -476,12 +491,12 @@ function checkChoiceRules() {
         if (duplicate && (!node.when || !duplicate.when)) fail("C14", node.id + " record 重复：" + node.record);
         records.push({ record: node.record, when: !!node.when });
       }
-      if (!Array.isArray(node.options) || node.options.length < 2 || node.options.length > 3) {
-        fail("C14", node.id + " 应有 2–3 个选项");
+      if (!Array.isArray(node.options) || node.options.length < 2 || node.options.length > 4) {
+        fail("C14", node.id + " 应有 2–4 个选项");
         return;
       }
       var keys = node.options.map(function (option) { return option.key; });
-      var expectedKeys = node.options.length === 2 ? ["A", "B"] : ["A", "B", "C"];
+      var expectedKeys = ["A", "B", "C", "D"].slice(0, node.options.length);
       if (keys.join(",") !== expectedKeys.join(",")) fail("C14", node.id + " 选项 key 应为 " + expectedKeys.join(",") + "，实际 " + keys.join(","));
       if (node.defaultOption && keys.indexOf(node.defaultOption) === -1) fail("C14", node.id + " defaultOption 不在选项里");
       node.options.forEach(function (option) {
@@ -491,14 +506,28 @@ function checkChoiceRules() {
         else if (Array.from(option.cost).length > 22) fail("C14", node.id + option.key + " 代价超过 22 字");
         if (option.value === undefined) fail("C14", node.id + option.key + " 缺 value");
         if (option.when !== undefined) fail("C14", node.id + option.key + " 不允许 option.when（只用节点级 when）");
+        if (option.requires !== undefined && !isAllowedCondition(option.requires)) {
+          fail("C14", node.id + option.key + " requires 写法非法：" + option.requires);
+        }
         Object.keys(option.set || {}).forEach(function (key) {
           if (!isAllowedSetKey(key)) fail("C14", node.id + option.key + " 写了未登记旗标 " + key);
         });
       });
     });
   });
-  if (total !== 13) fail("C14", "全章 choice 应为 13 个，实际 " + total);
-  notes.push("C14 OK 全章 " + total + " 个选择：2–3 项、key 连续、文案/代价受控、timeout 与 defaultOption 配对、set 白名单");
+  if (total !== 16) fail("C14", "全章 choice 应为 16 个，实际 " + total);
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.type === "multichoice" && node.maxWhen !== undefined) {
+        if (!Array.isArray(node.maxWhen)) fail("C14", node.id + " maxWhen 应为数组");
+        else node.maxWhen.forEach(function (rule) {
+          if (!isAllowedCondition(rule.when) || !(rule.max >= 0)) fail("C14", node.id + " maxWhen 写法非法");
+        });
+      }
+      if (node.requires !== undefined && !isAllowedCondition(node.requires)) fail("C14", node.id + " 节点 requires 写法非法");
+    });
+  });
+  notes.push("C14 OK 全章 " + total + " 个选择：2–4 项、key 连续、requires/maxWhen、文案/代价受控、timeout 与 defaultOption 配对、set 白名单");
 }
 
 // C15：阅读层容器、标题版本行、量具不能 display:none
@@ -523,7 +552,12 @@ function checkConditionWhitelist() {
   var allowedWhen = Object.keys(XB.core.FLAG_DEFAULTS)
     .concat(XB.core.WUQI_MEMORY)
     .concat(Object.keys(XB.core.CHAPTER_MEMORY).map(function (chapterId) { return XB.core.CHAPTER_MEMORY[chapterId]; }))
-    .concat(["memory.zhang", "memory.door", "memory.luding_unknown", "memory.rollcall_missed_any"]);
+    .concat([
+      "memory.zhang", "memory.door", "memory.luding_unknown", "memory.rollcall_missed_any",
+      "memory.fly_bridge", "memory.fly_medicine", "memory.fly_leave",
+      "memory.zaowang_barley", "memory.zaowang_pot", "memory.zaowang_body",
+      "memory.dongsheng_shoes", "memory.dongsheng_cloth", "memory.dongsheng_body"
+    ]);
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
       if (node.type === "choice" && node.record) allowedWhen.push(node.record);
@@ -761,22 +795,23 @@ function checkLegacySaveMigration() {
 }
 
 
-// C24：七章表、节点数、id 前缀/唯一、end、title/codex 位置与文档表一致
+// C24：八章表、节点数、id 前缀/唯一、end、title/codex 位置与文档表一致
 function checkChapterTable() {
   var XB = loadGame();
   var expected = [
-    { id: "prologue", prefix: "p", count: 52, next: "xiangjiang" },
-    { id: "xiangjiang", prefix: "x", count: 51, next: "zunyi" },
-    { id: "zunyi", prefix: "z", count: 33, next: "jinsha" },
-    { id: "jinsha", prefix: "j", count: 42, next: "luding" },
-    { id: "luding", prefix: "l", count: 41, next: "grass" },
-    { id: "grass", prefix: "g", count: 35, next: "wuqi" },
-    { id: "wuqi", prefix: "w", count: 49, next: "ending" }
+    { id: "prologue", prefix: "p", count: 50, next: "xiangjiang", title: true },
+    { id: "xiangjiang", prefix: "x", count: 51, next: "zunyi", title: true },
+    { id: "zunyi", prefix: "z", count: 30, next: "jinsha", title: true },
+    { id: "jinsha", prefix: "j", count: 42, next: "luding", title: true },
+    { id: "luding", prefix: "l", count: 46, next: "grass", title: true },
+    { id: "grass", prefix: "g", count: 47, next: "wuqi", title: true, extraEnd: "coda" },
+    { id: "wuqi", prefix: "w", count: 56, next: "ending", title: false },
+    { id: "coda", prefix: "c", count: 12, next: "ending", title: true, hidden: true, last: "c012" }
   ];
   var doc = readRoot("docs/chapter-integration.md");
   var docCounts = {};
   (doc.split(/\r?\n/)).forEach(function (line) {
-    var row = /^\|\s*(\d+)\s*\|\s*`?([a-z]+)`?\s*\|\s*([a-z])\s*\|\s*(\d+)\s*\|/.exec(line);
+    var row = /^\|\s*(\d+)\s*\|\s*`?([a-z]+)[^|]*\|\s*([a-z])\s*\|\s*(\d+)\s*\|/.exec(line);
     if (row) docCounts[row[2]] = Number(row[4]);
   });
   var allIds = {};
@@ -788,26 +823,29 @@ function checkChapterTable() {
     }
     if (chapter.order !== index + 1) fail("C24", item.id + " order 应为 " + (index + 1));
     if (chapter.playable !== true) fail("C24", item.id + " 未设 playable");
+    if ((chapter.hidden === true) !== (item.hidden === true)) fail("C24", item.id + " hidden 标记不符");
     if (chapter.nodes.length !== item.count) fail("C24", item.id + " 节点应为 " + item.count + "，实际 " + chapter.nodes.length);
     if (docCounts[item.id] !== item.count) fail("C24", "chapter-integration 表 " + item.id + " 应为 " + item.count + "，实际 " + docCounts[item.id]);
     var nodes = chapter.nodes;
     if (nodes[0].id !== item.prefix + "001") fail("C24", item.id + " 首节点应为 " + item.prefix + "001");
-    if (nodes[nodes.length - 1].id !== item.prefix + "900") fail("C24", item.id + " 末节点应为 " + item.prefix + "900");
-    if (nodes[nodes.length - 2].type !== "codex") fail("C24", item.id + " 倒数第二节点应为 codex");
-    if (item.id === "wuqi") {
-      if (nodes[nodes.length - 3].type === "title") fail("C24", "吴起不应有标题卡");
-    } else if (nodes[nodes.length - 3].type !== "title") {
-      fail("C24", item.id + " 倒数第三节点应为 title");
-    }
+    var lastId = item.last || item.prefix + "900";
+    if (nodes[nodes.length - 1].id !== lastId) fail("C24", item.id + " 末节点应为 " + lastId + "，实际 " + nodes[nodes.length - 1].id);
+    var codexCount = nodes.filter(function (node) { return node.type === "codex"; }).length;
+    if (codexCount !== 1) fail("C24", item.id + " 应有 1 个 codex 节点，实际 " + codexCount);
+    var titleCount = nodes.filter(function (node) { return node.type === "title"; }).length;
+    if (titleCount !== (item.title ? 1 : 0)) fail("C24", item.id + " title 节点数不符");
     var end = nodes[nodes.length - 1];
     if (end.type !== "end" || end.next !== item.next) fail("C24", item.id + " end.next 应为 " + item.next);
+    if (item.extraEnd && !nodes.some(function (node) { return node.type === "end" && node.next === item.extraEnd; })) {
+      fail("C24", item.id + " 缺少 next=" + item.extraEnd + " 的 end");
+    }
     nodes.forEach(function (node) {
-      if (!(new RegExp("^" + item.prefix + "\\d{3}[abc]?$")).test(node.id)) fail("C24", item.id + " 节点 id 不合规则：" + node.id);
+      if (!(new RegExp("^" + item.prefix + "\\d{3}[a-z]?$")).test(node.id)) fail("C24", item.id + " 节点 id 不合规则：" + node.id);
       if (allIds[node.id]) fail("C24", "节点 id 重复：" + node.id);
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 七章 52/51/33/42/41/35/49 共 303 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 八章 50/51/30/42/46/47/56/12 共 334 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -819,21 +857,22 @@ function checkCodexNodes() {
       if (node.type === "codex") codexNodes.push({ chapter: chapter.id, node: node });
     });
   });
-  if (codexNodes.length !== 7) fail("C25", "codex 节点应为 7 个，实际 " + codexNodes.length);
+  if (codexNodes.length !== 8) fail("C25", "codex 节点应为 8 个（吴起两份：w041 + coda c010），实际 " + codexNodes.length);
   var storyIds = XB.story.codex.map(function (card) { return card.id; });
   if (storyIds.join(",") !== "yudu,xiangjiang,zunyi,jinsha,luding,grass,wuqi") fail("C25", "story.codex 顺序/数量不对：" + storyIds.join(","));
   var seen = {};
   codexNodes.forEach(function (entry) {
     if (!entry.node.codexId) fail("C25", entry.node.id + " 缺 codexId");
     else if (storyIds.indexOf(entry.node.codexId) === -1) fail("C25", entry.node.id + " 的 codexId 不在 story.codex");
-    else if (seen[entry.node.codexId]) fail("C25", "codex 节点重复：" + entry.node.codexId);
-    else seen[entry.node.codexId] = true;
+    else if (seen[entry.node.codexId]) {
+      if (!(entry.node.codexId === "wuqi" && entry.chapter === "coda")) fail("C25", "codex 节点重复：" + entry.node.codexId);
+    } else seen[entry.node.codexId] = true;
   });
   var engine = stripComments(readProject("engine.js"));
   ["XB.story.codex", "renderGallery", "gallery-card"].forEach(function (needle) {
     if (engine.indexOf(needle) === -1) fail("C25", "图鉴未从 story.codex 单一数据源生成，缺 " + needle);
   });
-  notes.push("C25 OK 7 个 codex 节点一一对应 story.codex；图鉴单源");
+  notes.push("C25 OK 8 个 codex 节点一一对应 story.codex（吴起 + 空页各张一次）；图鉴单源");
 }
 
 // C26：ending 数据、w900→ending、SCENES 含 ending、五卡/七名/数字
@@ -858,13 +897,25 @@ function checkEndingData() {
   var w900 = XB.core.locate("wuqi", "w900").node;
   if (!w900 || w900.type !== "end" || w900.next !== "ending") fail("C26", "w900.next 应为 ending");
   if (XB.core.SCENES.indexOf("ending") === -1) fail("C26", "core SCENES 缺 ending");
-  var built = XB.core.buildEnding(XB.core.defaults());
+  var sidao = XB.core.defaults();
+  ["fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead"].forEach(function (key) { sidao.flags[key] = true; });
+  sidao.flags["had.door"] = true;
+  XB.core.syncDerivedFlags(sidao);
+  var built = XB.core.buildEnding(sidao);
   var stats = built.stats;
   if (!stats || stats.companyStart !== 104 || stats.companyEnd !== 19 || stats.redStart !== 86000 || stats.redEnd !== 7000) {
     fail("C26", "ending stats 不是 104/19/86000/7000");
   }
   if (!built.cards || built.cards.length !== 5) fail("C26", "buildEnding 没产出五卡");
-  if (!built.names || built.names.length !== 7) fail("C26", "buildEnding 没产出七名");
+  if (!built.names || built.names.length !== 7) fail("C26", "默认路线 buildEnding 应产出七名");
+  if (built.stats.companyEnd !== 19 || built.route !== "sidao") fail("C26", "三人全没时路线应为四道划痕、companyEnd 19");
+  var dying = XB.core.defaults();
+  dying.flags.strain = 3;
+  XB.core.syncDerivedFlags(dying);
+  var kongye = XB.core.buildEnding(dying);
+  if (kongye.route !== "kongye") fail("C26", "strain 3 应判空页，实际 " + kongye.route);
+  if (kongye.names.length !== 8) fail("C26", "空页应产出八名（含满崽）");
+  if (kongye.stats.companyEnd !== 18) fail("C26", "空页 companyEnd 应为 18，实际 " + kongye.stats.companyEnd);
   if (!built.stats || built.stats.redStart !== 86000) fail("C26", "buildEnding 没带数字");
   var cold = XB.core.defaults();
   cold.flags.fire = 10;
@@ -884,9 +935,19 @@ function checkRollcallData() {
   if (!node) return;
   if (node.mode !== "rollcall") fail("C27", "点名 mode 应为 rollcall");
   if (node.duration !== 45) fail("C27", "点名 duration 应为 45，实际 " + node.duration);
-  if (!Array.isArray(node.names) || node.names.length !== 7) fail("C27", "点名 names 应为 7 项");
+  if (node.names !== undefined) fail("C27", "点名 names 应动态解析，不写静态数组");
+  var coda = XB.core.chapterById("coda");
+  var codaInteracts = (coda.nodes || []).filter(function (item) { return item.type === "interact"; });
+  if (codaInteracts.length !== 1 || codaInteracts[0].coda !== true) fail("C27", "空页章应有 1 个 coda 点名 interact");
+  if (codaInteracts[0] && codaInteracts[0].duration !== 45) fail("C27", "空页点名 duration 应为 45");
+  var six = XB.core.resolveRollCall(XB.core.defaults(), false);
+  if (six.length !== 7) fail("C27", "常规点名应解析 7 名，实际 " + six.length);
+  var seven = XB.core.resolveRollCall(XB.core.defaults(), true);
+  if (seven.length !== 8) fail("C27", "空页点名应解析 8 名，实际 " + seven.length);
+  var last = seven[seven.length - 1] || {};
+  if (last.id !== "manzi" || last.status !== "absent" || last.answeredBy !== "dongsheng") fail("C27", "满崽应由冬生代答且缺席");
   var ids = {};
-  (node.names || []).forEach(function (entry) {
+  six.forEach(function (entry) {
     if (ids[entry.id]) fail("C27", "点名 id 重复：" + entry.id);
     ids[entry.id] = true;
     if (XB.core.NAME_STATUS.indexOf(entry.status) === -1 && entry.status !== "absent") fail("C27", entry.id + " 状态非法：" + entry.status);
@@ -899,7 +960,7 @@ function checkRollcallData() {
   });
   var css = readProject("style.css");
   if (css.indexOf(".vn-interact") === -1) fail("C27", "style.css 缺 .vn-interact");
-  notes.push("C27 OK 吴起点名 1 个 interact / 45s / 7 名 / 无评分；DOM 与样式就位");
+  notes.push("C27 OK 吴起+空页点名 2 个 interact（45s）/ 动态 7→8 名 / 冬生代答 / 无评分；DOM 与样式就位");
 }
 
 // C28：图鉴 DOM、两处入口、7 卡样式
@@ -1166,6 +1227,115 @@ function checkCredits() {
   notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、字体/图像/音频授权、./CREDITS.txt 链接");
 }
 
+// C39：人物命运四路线账本与结局快照
+function checkEndingRoutes() {
+  var XB = loadGame();
+  function makeState(flags) {
+    var state = XB.core.defaults();
+    Object.keys(flags).forEach(function (key) { state.flags[key] = flags[key]; });
+    XB.core.syncDerivedFlags(state);
+    return state;
+  }
+  function expectRoute(label, flags, route, title, companyEnd) {
+    var ending = XB.core.buildEnding(makeState(flags));
+    if (ending.route !== route) fail("C39", label + " 路线应为 " + route + "，实际 " + ending.route);
+    if (ending.routeTitle !== title) fail("C39", label + " 标题应为 " + title + "，实际 " + ending.routeTitle);
+    if (!ending.routeLede) fail("C39", label + " 缺路线引语");
+    if (companyEnd !== undefined && ending.stats.companyEnd !== companyEnd) fail("C39", label + " companyEnd 应为 " + companyEnd);
+    return ending;
+  }
+  expectRoute("四道划痕", { "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true, "had.door": true }, "sidao", "四道划痕", 19);
+  expectRoute("门板", { "fate.feimao.dead": true, "fate.zaowang.dead": true, "item.door": true }, "menban", "门板", 19);
+  expectRoute("桥板", { "fate.feimao.dead": true, "had.door": true }, "qiaoban", "桥板", 19);
+  expectRoute("石墙", { "fate.feimao.dead": true }, "qiaoban", "石墙", 19);
+  var kongye = expectRoute("空页", { strain: 3 }, "kongye", "空页", 18);
+  if (kongye.names.length !== 8) fail("C39", "空页应八名");
+  if (kongye.fate.dongsheng !== "alive" || kongye.strain !== 3) fail("C39", "空页 fate/strain 快照不对");
+  var sacrifice = kongye.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
+  if (!sacrifice || sacrifice.lit !== true) fail("C39", "空页牺牲卡应亮");
+  if (sacrifice.line !== XB.story.ending.kongyeSacrificeLine) fail("C39", "空页牺牲卡没用 kongyeSacrificeLine");
+
+  var state = makeState({ strain: 3 });
+  state.scene = "ending";
+  state.chapterId = "coda";
+  state.nodeId = null;
+  state.ending = XB.core.buildEnding(state);
+  var result = XB.core.normalize(JSON.parse(JSON.stringify(XB.core.serialize(state))));
+  if (result.issue !== null || !result.state.ending) {
+    fail("C39", "空页 ending 存档 normalize 失败：" + result.issue);
+    return;
+  }
+  var snap = result.state.ending;
+  if (snap.route !== "kongye" || snap.strain !== 3) fail("C39", "ending 快照丢了 route/strain");
+  if (!snap.fate || snap.fate.feimao !== "alive" || snap.fate.lin !== "alive") fail("C39", "ending 快照 fate 不符（空页三个危机都活着）");
+  notes.push("C39 OK 四路线账本 sidao/menban/qiaoban(桥板/石墙)/kongye；空页 18 人八名；快照保留 route/fate/strain");
+}
+
+// C40：requires/maxWhen、旧档 fate 迁移、名册回廊
+function checkFateMechanics() {
+  var XB = loadGame();
+  var state = XB.core.defaults();
+  if (!XB.core.startChapter(state, "luding", "l019x")) {
+    fail("C40", "定位不到 l019x");
+    return;
+  }
+  var node = XB.core.currentNode(state);
+  if (XB.core.visibleOptions(state, node).length !== 1) fail("C40", "无药时应只显示“继续走”1 项");
+  if (XB.core.applyChoice(state, node, "A", false) !== null) fail("C40", "缺药也能选喂药");
+  if (XB.core.currentNode(state).id !== "l019x") fail("C40", "被拒选项不应推进节点");
+  XB.core.setFlag(state, "item.medicine", true);
+  if (XB.core.visibleOptions(state, node).length !== 2) fail("C40", "有药时 l019x 应显示 2 项");
+  if (!XB.core.applyChoice(state, XB.core.currentNode(state), "A", false)) fail("C40", "有药却不能选喂药");
+
+  var fallback = XB.core.defaultOptionKey(state, {
+    defaultOption: "A",
+    options: [{ key: "A", requires: "item.door" }, { key: "B" }]
+  });
+  if (fallback !== "B") fail("C40", "默认项不可见时应回退到首个可见项，实际 " + fallback);
+
+  var p024 = XB.core.locate("prologue", "p024").node;
+  if (XB.core.effectiveMultiMax(XB.core.defaults(), p024) !== 3) fail("C40", "无板行囊上限应为 3");
+  var withDoor = XB.core.defaults();
+  withDoor.flags["item.door"] = true;
+  if (XB.core.effectiveMultiMax(withDoor, p024) !== 1) fail("C40", "带板行囊上限应为 1");
+
+  function oldSave(chapterId, nodeId, flags) {
+    var save = XB.core.serialize(XB.core.defaults());
+    save.scene = "vn";
+    save.chapterId = chapterId;
+    save.nodeId = nodeId;
+    save.flags = flags || {};
+    return XB.core.normalize(save);
+  }
+  var wuqi = oldSave("wuqi", "w022", { "choice.prologue.door": true });
+  if (wuqi.issue) fail("C40", "吴起旧档被判坏档");
+  else {
+    if (wuqi.state.flags["fate.feimao.dead"] !== true || wuqi.state.flags["fate.zaowang.dead"] !== true) fail("C40", "吴起旧档没补飞毛腿/灶王");
+    if (wuqi.state.flags["fate.dongsheng.dead"] !== false) fail("C40", "吴起旧档冬生应活");
+    if (wuqi.state.flags.strain !== 1) fail("C40", "吴起旧档 strain 应为 1");
+    if (wuqi.state.flags["had.door"] !== true) fail("C40", "旧档没补 had.door");
+    if (wuqi.migrated !== "fate") fail("C40", "吴起旧档迁移标记应为 fate");
+  }
+  var luding = oldSave("luding", "l022", {});
+  if (luding.issue) fail("C40", "泸定旧档被判坏档");
+  else if (luding.state.flags["fate.feimao.dead"] !== true || luding.state.flags.strain !== 0) fail("C40", "泸定 l022 旧档没补飞毛腿");
+  var grass = oldSave("grass", "g019", {});
+  if (grass.issue) fail("C40", "草地旧档被判坏档");
+  else if (grass.state.flags["fate.zaowang.dead"] !== true) fail("C40", "草地 g019 旧档没补灶王");
+
+  var engine = stripComments(readProject("engine.js"));
+  ["xiangbei.roster.v1", "ROSTER_MAX_PAGES", "pages.slice(-ROSTER_MAX_PAGES)", "ending.recorded", "本机无法保存名册，本局仍可继续"].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C40", "名册回廊缺 " + needle);
+  });
+  var html = readProject("index.html");
+  ["roster-gallery", "roster-gallery-pages"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C40", "index.html 缺 #" + id);
+  });
+  if (html.indexOf('data-action="roster-gallery"') === -1) fail("C40", "标题页缺名册入口");
+  if (readProject("style.css").indexOf(".xb-roster-pages") === -1) fail("C40", "style.css 缺名册回廊样式");
+  notes.push("C40 OK requires 可见性/默认回退/maxWhen；旧档三处 fate 迁移；名册回廊 .v1 入口与样式");
+}
+
 // C38：发布运行时无外部请求/模块（步骤八冻结）
 function checkReleaseRuntime() {
   var files = ["index.html", "style.css"].concat(JS_FILES);
@@ -1207,6 +1377,8 @@ checkRollcallData();
 checkGalleryDom();
 checkChapterMemory();
 checkEndingSnapshot();
+checkEndingRoutes();
+checkFateMechanics();
 checkAudioAssets();
 checkAudioLifecycle();
 checkAudioBeds();

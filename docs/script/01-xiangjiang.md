@@ -1,9 +1,9 @@
 # 第一章 · 湘江
-- id: xiangjiang ｜ 史实注: xiangjiang ｜ 小游戏: abandon(80s)
-- 定稿: 776 字 ｜ 36 beat ｜ 时长 3:21
+- id: xiangjiang ｜ 史实注: xiangjiang ｜ 选择: x015（弃物多选）、x025a/x025b（先渡谁）
+- 定稿: 945 字 ｜ 44 beat ｜ 时长(B) 4:04
 - bg: xiangjiang_ford, xiangjiang_dawn ｜ sfx: river, gunfire_far, wind, boat
 - 演出: 浮桥人潮横移长镜 / 江面漂物 / 名册特写（划名）
-- 注意: 结算后 `item.door` 以 abandon 结算结果为准，后续 [[if]] 读的是最终值；“三百斤的箱子”只写重量，不点名
+- 注意: 弃物只改变带过江的物资与后文可用的东西，不评分；门板去留读最终 item.door
 
 [[bg:xiangjiang_ford]]
 【旁白】湘江。十一月末，水是灰的。
@@ -22,7 +22,13 @@
 【何指导员】先弄清情况：什么必须过江，什么可以留下。定了就不许回头拿。
 【旁白】他蹲下来，把六样东西摆成一排，像摆一副牌。摆完抬头问我：你自己挑三样。
 
-【小游戏】abandon｜duration=80, batches=2, quota=3, items=6, enemy=45s, heavy=8s
+>> 多选｜六样东西摆成一排。船只能再装三样。｜必须选 3 件｜确认“上船”｜记录留在岸上的到 choice.xiangjiang.abandoned
+X 光机｜三百斤，四个人抬。｜1 格
+印刷机｜铁架子的，拆不开。｜1 格
+文件｜两捆，绳子勒得紧。｜1 格
+药箱｜白铁皮，锁着。｜1 格
+电台｜天线用油布裹着。｜1 格
+银元｜一箱，沉，但能花。｜1 格
 
 【结算】弃物｜过江清单 / 留在江那边；不评分
 [[if:item.door]]
@@ -31,18 +37,46 @@
 【旁白】门板留在江那边。我回头找过，只看见水。
 [[end]]
 【旁白】留下的东西堆在岸边，像一个小一点的村子。
+[[if:!choice.xiangjiang.take.xray]]
+【旁白】那只大木箱留在岸边，箱角朝着江。
+[[else]]
+【旁白】四个人抬那只大木箱上船。船身沉下去一截。
+[[end]]
 
 【旁白】天亮了。江面上漂着我们的东西：斗笠、文件箱、一面没有字的旗。
+[[if:item.raincloth]]
+【旁白】雨布裹在名册外头。我解开看，边角还是湿了。
+[[else]]
+【旁白】名册的边角湿了，字洇开。我把湿的那页撕下来。
+[[end]]
+[[if:choice.xiangjiang.take.radio]]
+【旁白】电台的天线断了一截，泡在水里，没人去捞。
+[[end]]
 【旁白】江很宽，漂得很慢。桥头有个卫生员在给人裹伤，绷带不够，就撕自己的衬衣。
+[[if:item.medicine]]
+【旁白】卫生员看见我包袱里的药，停了一下，又塞回来：留着，路上长。
+[[else]]
+[[if:choice.xiangjiang.take.medkit]]
+【旁白】他打开药箱，里面只剩半卷纱布。他把纱布剪成三段。
+[[else]]
+【旁白】我没有药。掏了半天，只掏出一支铅笔。
+[[end]]
+[[end]]
 【旁白】我把名册摊在膝盖上，开始划。
 【旁白】划第一个名字的时候，手还稳。划到第五个，铅笔在纸上顿了一下。
 【旁白】有个名字我划错了行，刮不掉，只好在旁边画个小叉。
 【旁白】后来那种小叉越画越多，都是划错的行。一页纸像下了一场雨。
 
+[[if:item.door]]
 >> 选项｜限时 20s｜默认 C｜记录到 choice.xiangjiang.hold
 A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜cost: 你晚过江一个时辰，丢了半袋粮
 B｜按命令先过江｜set: choice.xiangjiang.hold=false｜cost: 桥头最后一面，你看见的是他的背影
 C｜把门板横在桥头挡一下｜set: choice.xiangjiang.hold=true, item.door=false｜cost: 门板留在了浮桥，三号担架少一块垫板
+[[else]]
+>> 选项｜限时 20s｜默认 A｜记录到 choice.xiangjiang.hold
+A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜cost: 你晚过江一个时辰，丢了半袋粮
+B｜按命令先过江｜set: choice.xiangjiang.hold=false｜cost: 桥头最后一面，你看见的是他的背影
+[[end]]
 
 [[if:choice.xiangjiang.hold]]
 【旁白】我跑回桥头。老周没骂我，只把我的领子往前一推。

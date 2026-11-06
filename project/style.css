@@ -1344,6 +1344,16 @@ a:focus-visible,
   letter-spacing: 1px;
 }
 
+/* 人物命运路线：一行朱砂，压在场次之上，不做分数/百分比 */
+.xb-ending__route {
+  margin: 0;
+  padding-left: 10px;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--cinnabar);
+  border-left: 3px solid var(--cinnabar);
+}
+
 .xb-ending__cols {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -2530,6 +2540,79 @@ a:focus-visible,
   color: var(--cinnabar);
 }
 
+.xb-roster-pages {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-content: start;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.xb-roster-page {
+  padding: var(--space-3);
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a30);
+  border-radius: var(--radius);
+}
+
+.xb-roster-page__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
+
+.xb-roster-page__meta {
+  margin: 2px 0 var(--space-2);
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.xb-roster-page__names {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xb-roster-page__name {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  border-bottom: 1px dashed var(--ink-a20);
+}
+
+.xb-roster-page__name.is-missed .xb-roster-page__name-text {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+
+.xb-roster-page__mark {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.xb-roster-page__name.is-player .xb-roster-page__mark {
+  color: var(--cinnabar);
+}
+
+.xb-roster-page__note {
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
 .xb-gallery__hint {
   margin: var(--space-2) 0 0;
   font-size: 12px;
@@ -2593,6 +2676,7 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-ending__title { font-size: 42px; }
   .xb-ending__date { font-size: 24px; letter-spacing: 1px; }
   .xb-ending__lede { font-size: 28px; letter-spacing: 0; }
+  .xb-ending__route { font-size: 22px; }
   .xb-ending__cols { grid-template-columns: 1fr; gap: var(--space-3); }
   .xb-ending__label { font-size: 22px; letter-spacing: 2px; }
   .xb-ending__names { max-height: none; font-size: 26px; line-height: 1.5; }
@@ -2610,6 +2694,15 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-pause .pause-button { min-height: 72px; font-size: 26px; }
 
   /* 844×390 舞台缩放约 0.54；96/82 逻辑像素落在 44 CSS 像素以上 */
+  .xb-choice { min-height: 82px; }
   .xb-multi-option { min-height: 82px; }
   .vn-multi-confirm { min-width: 160px; min-height: 96px; font-size: 22px; }
+
+  .xb-roster-pages { grid-template-columns: 1fr; gap: var(--space-3); }
+  .xb-roster-page__title { font-size: 28px; }
+  .xb-roster-page__meta { font-size: 20px; }
+  .xb-roster-page__names { grid-template-columns: 1fr; }
+  .xb-roster-page__name { font-size: 24px; }
+  .xb-roster-page__mark { font-size: 18px; }
+  .xb-roster-page__note { font-size: 20px; }
 }

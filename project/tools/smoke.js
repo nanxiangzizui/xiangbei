@@ -123,9 +123,9 @@ check("S04", "scene=vn 但节点不存在", function () {
 
 check("S05", "locate 下标与未知节点", function () {
   assertEqual(XB.core.locate("prologue", "p001").index, 0, "p001");
-  assertEqual(XB.core.locate("prologue", "p020").index, 19, "p020");
-  assertEqual(XB.core.locate("prologue", "p021").index, 20, "p021");
-  assertEqual(XB.core.locate("prologue", "p900").index, 51, "p900");
+  assertEqual(XB.core.locate("prologue", "p020").index, 17, "p020");
+  assertEqual(XB.core.locate("prologue", "p021").index, 18, "p021");
+  assertEqual(XB.core.locate("prologue", "p900").index, 49, "p900");
   assertEqual(XB.core.locate("prologue", "nope"), null, "未知节点");
 });
 
@@ -135,15 +135,19 @@ check("S06", "startChapter 按 id 定位（无栈）", function () {
   assertEqual(state.scene, "vn", "scene");
   assertEqual(state.nodeId, "p001", "nodeId");
   assertEqual(state.stack, undefined, "不再写栈");
-  assertEqual(XB.core.startChapter(state, "prologue", "p012"), true, "指定节点");
-  assertEqual(state.nodeId, "p012", "按 id 落点");
+  assertEqual(XB.core.startChapter(state, "prologue", "p013"), true, "指定节点");
+  assertEqual(state.nodeId, "p013", "按 id 落点");
 });
 
 check("S07", "20 句推进到第一个选择节点", function () {
   var state = XB.core.defaults();
   XB.core.startChapter(state, "prologue");
-  for (var i = 0; i < 20; i += 1) XB.core.advance(state);
-  assertEqual(XB.core.currentNode(state).id, "p021", "第 20 次推进后");
+  var guard = 0;
+  while (XB.core.currentNode(state).type !== "choice" && guard < 40) {
+    XB.core.advance(state);
+    guard += 1;
+  }
+  assertEqual(XB.core.currentNode(state).id, "p021", "第一个选择节点");
   assertEqual(XB.core.currentNode(state).type, "choice", "p021 是选择");
 });
 
@@ -169,21 +173,22 @@ check("S08", "serialize → JSON → normalize 往返", function () {
 
 check("S09", "七章元数据", function () {
   var chapters = XB.story.chapters;
-  assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"], "章节 id");
-  assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7], "顺序");
-  assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true], "七章全部可玩");
-  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [52, 51, 33, 42, 41, 35, 49], "七章节点数");
+  assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "coda"], "章节 id");
+  assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7, 8], "顺序");
+  assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true, true], "八章全部可玩");
+  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [50, 51, 30, 42, 46, 47, 56, 12], "八章节点数");
+  assertEqual(chapters.map(function (c) { return c.hidden === true; }), [false, false, false, false, false, false, false, true], "只有 coda 隐藏");
 });
 
 check("S10", "序章节点 id 唯一、七种类型齐全", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 52, "节点数");
+  assertEqual(nodes.length, 50, "节点数");
   var ids = nodes.map(function (node) { return node.id; });
   assertEqual(ids.length, new Set(ids).size, "id 唯一");
   var types = nodes.map(function (node) { return node.type; });
   var unique = types.filter(function (type, index) { return types.indexOf(type) === index; }).sort();
   assertEqual(unique, ["choice", "codex", "end", "line", "multichoice", "result", "title"], "类型集合");
-  assertEqual(nodes[51].type, "end", "末节点是 end");
+  assertEqual(nodes[49].type, "end", "末节点是 end");
 });
 
 check("S11", "背景指令落在四处换景", function () {
@@ -199,19 +204,17 @@ check("S11", "背景指令落在四处换景", function () {
   assertEqual(others.length, 0, "不该有第六处 bg");
 });
 
-check("S12", "前 20 句与剧本源逐字一致", function () {
+check("S12", "序章全部台词与剧本源逐字一致", function () {
   var raw = fs.readFileSync(path.join(ROOT_DIR, "docs", "script", "00-prologue.md"), "utf8");
-  var lines = raw.split(/\r?\n/);
   var expected = [];
-  for (var i = 8; i <= 30; i += 1) {
-    var line = lines[i];
-    if (!line) continue;
+  raw.split(/\r?\n/).forEach(function (line) {
     var match = /^【([^】]+)】(.*)$/.exec(line);
-    if (!match) continue;
+    if (!match) return;
+    if (["小游戏", "结算", "演出", "标题卡", "史实注", "结束"].indexOf(match[1]) !== -1) return;
+    if (match[1].indexOf("if:") === 0) return;
     expected.push({ speaker: match[1], text: match[2] });
-  }
-  assertEqual(expected.length, 20, "源文件句数");
-  var actual = nodesOfType("line").slice(0, 20).map(function (node) {
+  });
+  var actual = nodesOfType("line").map(function (node) {
     return { speaker: node.speaker, text: node.text };
   });
   assertEqual(actual, expected, "逐句比对");
@@ -277,16 +280,17 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "25 条旗标与八项设置默认值", function () {
+check("S18", "34 条旗标与八项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
   assertEqual(Object.keys(flags).sort(), [
     "choice.jinsha.kettle", "choice.jinsha.main", "choice.jinsha.trips", "choice.jinsha.wounded",
     "choice.luding.door", "choice.xiangjiang.abandoned",
     "choice.xiangjiang.take.files", "choice.xiangjiang.take.medkit", "choice.xiangjiang.take.press",
     "choice.xiangjiang.take.radio", "choice.xiangjiang.take.silver", "choice.xiangjiang.take.xray",
-    "choice.zunyi.admit", "choice.zunyi.missed", "fire",
+    "choice.zunyi.admit", "choice.zunyi.missed", "fate.all.dead", "fate.dongsheng.dead",
+    "fate.feimao.dead", "fate.lin.dead", "fate.zaowang.dead", "fire", "had.door",
     "item.barley", "item.door", "item.homepot", "item.medicine", "item.pot", "item.raincloth", "item.shoes",
-    "lights_lost", "load", "trust"
+    "lights_lost", "load", "strain", "strain.dying", "strain.hurt", "trust"
   ], "旗标键");
   ["item.door", "item.pot", "item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes"].forEach(function (key) {
     assertEqual(flags[key], false, key);
@@ -294,8 +298,12 @@ check("S18", "25 条旗标与八项设置默认值", function () {
   ["choice.jinsha.main", "choice.jinsha.wounded", "choice.jinsha.kettle", "choice.luding.door"].forEach(function (key) {
     assertEqual(flags[key], false, key);
   });
+  ["fate.all.dead", "fate.dongsheng.dead", "fate.feimao.dead", "fate.lin.dead", "fate.zaowang.dead", "had.door", "strain.dying", "strain.hurt"].forEach(function (key) {
+    assertEqual(flags[key], false, key);
+  });
   assertEqual(flags.load, 0, "load");
   assertEqual(flags.trust, 0, "trust");
+  assertEqual(flags.strain, 0, "strain");
   assertEqual(flags.fire, 50, "fire");
   assertEqual(flags.lights_lost, 0, "lights_lost");
   assertEqual(flags["choice.xiangjiang.abandoned"], [], "abandoned");
@@ -334,12 +342,13 @@ check("S20", "when 可见性与跳过不可见节点", function () {
   var state = XB.core.defaults();
   assertEqual(XB.core.isVisible(state, nodeById("p022b")), true, "默认走 b 支");
   assertEqual(XB.core.isVisible(state, nodeById("p022a")), false, "默认不走 a 支");
-  // nextVisible 的 fromIndex 是“从这一下标开始找”，所以 p021 的后继从 21 起算
-  assertEqual(XB.core.nextVisible(state, chapter(), 21).id, "p022b", "p021 之后是 p022b");
+  // nextVisible 的 fromIndex 是“从这一下标开始找”，所以 p021 的后继从它的下标 +1 起算
+  var afterP021 = XB.core.locate("prologue", "p021").index + 1;
+  assertEqual(XB.core.nextVisible(state, chapter(), afterP021).id, "p022b", "p021 之后是 p022b");
   XB.core.setFlag(state, "item.door", true);
   assertEqual(XB.core.isVisible(state, nodeById("p022a")), true, "有门板走 a 支");
   assertEqual(XB.core.isVisible(state, nodeById("p022b")), false, "有门板不走 b 支");
-  assertEqual(XB.core.nextVisible(state, chapter(), 21).id, "p022a", "p021 之后是 p022a");
+  assertEqual(XB.core.nextVisible(state, chapter(), afterP021).id, "p022a", "p021 之后是 p022a");
   var state2 = XB.core.defaults();
   XB.core.setFlag(state2, "choice.prologue.lookback", true);
   assertEqual(XB.core.isVisible(state2, nodeById("p038a")), true, "回头看走 a 支");
@@ -378,8 +387,8 @@ check("S21", "applyChoice 写旗标与选择日志", function () {
 
 check("S22", "序章结构统计与分支同位置", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 52, "节点数");
-  assertEqual(nodesOfType("line").length, 45, "line");
+  assertEqual(nodes.length, 50, "节点数");
+  assertEqual(nodesOfType("line").length, 43, "line");
   assertEqual(nodesOfType("choice").length, 2, "choice");
   assertEqual(nodesOfType("multichoice").length, 1, "multichoice");
   assertEqual(nodesOfType("result").length, 1, "result");
@@ -654,29 +663,28 @@ check("S39", "图鉴 0/7–7/7 与单一数据源", function () {
   });
 });
 
-check("S40", "点名状态机数据：7 名、替答/漏答、快照保留", function () {
+check("S40", "点名状态机数据：动态 7/8 名、替答/漏答、快照保留", function () {
   var node = XB.core.locate("wuqi", "w026").node;
   assertEqual(node.type, "interact", "w026 类型");
   assertEqual(node.mode, "rollcall", "mode");
   assertEqual(node.duration, 45, "duration");
-  assertEqual(node.names.length, 7, "7 名");
-  var absent = node.names.filter(function (entry) { return entry.status === "absent"; });
-  assertEqual(absent.map(function (entry) { return entry.id; }), ["zhou", "zaowang", "feimao"], "缺应三人");
-  var answeredNames = node.names.map(function (entry) {
-    return { id: entry.id, name: entry.name, status: entry.status === "absent" ? "player" : entry.status };
-  });
+  assertEqual(node.names, undefined, "静态 names 应已删除");
+  var six = XB.core.resolveRollCall(XB.core.defaults(), false);
+  assertEqual(six.length, 7, "常规 7 名");
+  assertEqual(six.filter(function (entry) { return entry.status === "absent"; }).map(function (entry) { return entry.id; }), ["zhou"], "默认只有老周缺席");
+  var eight = XB.core.resolveRollCall(XB.core.defaults(), true);
+  assertEqual(eight.length, 8, "空页 8 名");
+  var manzi = eight[7];
+  assertEqual({ id: manzi.id, status: manzi.status, answeredBy: manzi.answeredBy }, { id: "manzi", status: "absent", answeredBy: "dongsheng" }, "满崽由冬生代答");
   var state = XB.core.defaults();
-  state.ending = { names: answeredNames, answered: 3, missed: 0 };
+  state.ending = { names: six.map(function (entry) { return { id: entry.id, name: entry.name, status: "player" }; }), answered: 7, missed: 0 };
   var full = XB.core.buildEnding(state);
-  assertEqual(full.answered, 3, "全答 answered");
+  assertEqual(full.answered, 7, "全答 answered");
   assertEqual(full.missed, 0, "全答 missed");
   assertEqual(full.names.length, 7, "全答 names");
-  var missedNames = node.names.map(function (entry) {
-    return { id: entry.id, name: entry.name, status: entry.status === "absent" ? "missed" : entry.status };
-  });
-  state.ending = { names: missedNames, answered: 0, missed: 3 };
+  state.ending = { names: six.map(function (entry) { return { id: entry.id, name: entry.name, status: "missed" }; }), answered: 0, missed: 7 };
   var missed = XB.core.buildEnding(state);
-  assertEqual(missed.missed, 3, "漏答 missed");
+  assertEqual(missed.missed, 7, "漏答 missed");
   assertEqual(missed.answered, 0, "漏答 answered");
   assertEqual(XB.core.setFlag(state, "memory.rollcall_missed_any", true), true, "漏答旗标");
   assert(!/\bsuccess\b|\bscore\b/i.test(JSON.stringify(node)), "点名不评分");

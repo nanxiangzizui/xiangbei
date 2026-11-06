@@ -24,6 +24,7 @@
         <button type="button" class="menu-button xb-btn xb-btn--primary" role="menuitem" data-action="start">开始</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="roster-gallery">名册</button>
       </div>
       <p class="title-version">试玩版 · 人物虚构，非史料人物</p>
       <a class="title-credits" href="./CREDITS.txt" target="_blank" rel="noopener">制作名单</a>
@@ -104,6 +105,7 @@
         <h2 id="ending-title" class="xb-ending__title"></h2>
         <p id="ending-date" class="xb-ending__date"></p>
         <p id="ending-lede" class="xb-ending__lede"></p>
+        <p id="ending-route" class="xb-ending__route"></p>
         <div class="xb-ending__cols">
           <div class="xb-ending__names-wrap">
             <h3 class="xb-ending__label">点名</h3>
@@ -225,6 +227,17 @@
         <div id="gallery-grid" class="xb-gallery__grid"></div>
         <p class="xb-gallery__asset-note">照片说明：部分场景图为1967年或当代拍摄，作历史氛围示意，非1935年现场；来源与授权见制作名单。</p>
         <p class="xb-gallery__hint">已解锁的卡片可以打开；其余卡片在对应章节记入。</p>
+      </div>
+    </div>
+
+    <!-- 名册回廊：只读，记四路人物命运的应到/未到/谁替答，不记分数 -->
+    <div id="roster-gallery" class="xb-gallery xb-roster-gallery" role="dialog" aria-modal="true" aria-labelledby="roster-gallery-title" hidden>
+      <div class="xb-gallery__panel">
+        <button type="button" id="roster-gallery-close" class="xb-modal__close" data-action="roster-gallery-close" aria-label="关闭名册">×</button>
+        <h2 id="roster-gallery-title" class="xb-gallery__title">名册</h2>
+        <p id="roster-gallery-count" class="xb-gallery__count"></p>
+        <div id="roster-gallery-pages" class="xb-roster-pages"></div>
+        <p class="xb-gallery__hint">这里只记名字，不记分数。清档不会清掉它。</p>
       </div>
     </div>
 
