@@ -75,40 +75,110 @@
           },
           {
             id: "p024",
-            type: "minigame",
-            game: "door",
-            config: { duration: 75, capacity: 6, doorCost: 2, items: 8 }
+            type: "multichoice",
+            prompt: "娘把五样东西摆在桌上。行囊还能塞三件。",
+            min: 0,
+            max: 3,
+            confirmLabel: "系好行囊",
+            slotLoad: true,
+            inventoryBase: ["roster", "pencil"],
+            options: [
+              {
+                id: "medicine",
+                text: "药",
+                note: "两包草药，油纸裹着。",
+                slots: 1,
+                inventoryId: "medicine",
+                flag: "item.medicine",
+                setOn: { "item.medicine": true },
+                setOff: { "item.medicine": false }
+              },
+              {
+                id: "barley",
+                text: "青稞",
+                note: "一小袋炒青稞，娘连夜磨的。",
+                slots: 1,
+                inventoryId: "barley",
+                flag: "item.barley",
+                setOn: { "item.barley": true },
+                setOff: { "item.barley": false }
+              },
+              {
+                id: "homepot",
+                text: "铁锅",
+                note: "家里那口铁锅，锅底结着黑。",
+                slots: 1,
+                inventoryId: "pot",
+                flag: "item.homepot",
+                setOn: { "item.homepot": true },
+                setOff: { "item.homepot": false }
+              },
+              {
+                id: "raincloth",
+                text: "雨布",
+                note: "补过三次的油布，叠起来一卷。",
+                slots: 1,
+                inventoryId: "raincloth",
+                flag: "item.raincloth",
+                setOn: { "item.raincloth": true },
+                setOff: { "item.raincloth": false }
+              },
+              {
+                id: "shoes",
+                text: "布鞋",
+                note: "新纳的底，针脚密。",
+                slots: 1,
+                inventoryId: "shoes",
+                flag: "item.shoes",
+                setOn: { "item.shoes": true },
+                setOff: { "item.shoes": false }
+              }
+            ]
           },
           {
             id: "p025",
             type: "result",
-            source: "minigame",
-            game: "door",
+            source: "items",
             title: "行囊",
-            note: "带走的摊在地上，只有一小堆。",
-            lists: [
-              { when: "item.door", heading: "带走", items: ["门板", "花名册", "铅笔"] },
-              { when: "item.door", heading: "留下", items: ["水缸", "柴", "一口大锅"] },
-              { when: "!item.door", heading: "带走", items: ["花名册", "铅笔"] },
-              { when: "!item.door", heading: "留下", items: ["水缸", "柴", "一口大锅", "一扇门"] }
-            ]
+            note: "带走的摊在地上，只有一小堆。"
           },
           { id: "p026", type: "line", speaker: "旁白", text: "天快亮时，行囊定了。带走的摊在地上，只有一小堆。" },
           { id: "p027", type: "line", speaker: "旁白", text: "灶王把锅擦了一遍，又擦一遍，像要把它擦亮。" },
           { id: "p028", type: "line", speaker: "灶王", text: "大锅留下，小锅我背。人先走。" },
           {
+            id: "p028a",
+            type: "line",
+            speaker: "旁白",
+            text: "家里的铁锅绑在行囊外头。走一步，锅底磕一下背。",
+            when: "item.homepot"
+          },
+          {
+            id: "p028b",
+            type: "line",
+            speaker: "旁白",
+            text: "家里的铁锅留在灶台上，锅盖扣着。",
+            when: "!item.homepot"
+          },
+          {
             id: "p029a",
             type: "line",
             speaker: "旁白",
-            text: "我在纸上写：水缸、柴、一口大锅。门板那一行，空着。",
+            text: "我在纸上写：水缸、柴、桌子。门板那一行，空着。",
             when: "item.door"
           },
           {
             id: "p029b",
             type: "line",
             speaker: "旁白",
-            text: "我在纸上写：水缸、柴、一口大锅、一扇门。",
+            text: "我在纸上写：水缸、柴、桌子、一扇门。",
             when: "!item.door"
+          },
+          {
+            id: "p029c",
+            type: "line",
+            speaker: "旁白",
+            text: "纸角补一行：铁锅一口，带走。",
+            when: "item.homepot"
           },
           { id: "p030", type: "line", speaker: "旁白", text: "写完，我把纸压在灶台边。压得很平。" },
           {
@@ -208,15 +278,68 @@
           { id: "x014", type: "line", speaker: "旁白", text: "他蹲下来，把六样东西摆成一排，像摆一副牌。摆完抬头问我：你自己挑三样。" },
           {
             id: "x015",
-            type: "minigame",
-            game: "abandon",
-            config: { duration: 80, batches: 2, quota: 3, items: 6, enemy: 45, heavy: 8 }
+            type: "multichoice",
+            prompt: "六样东西摆成一排。船只能再装三样。",
+            min: 3,
+            max: 3,
+            confirmLabel: "上船",
+            record: "choice.xiangjiang.abandoned",
+            recordMode: "left",
+            options: [
+              {
+                id: "xray",
+                text: "X 光机",
+                note: "三百斤，四个人抬。",
+                flag: "choice.xiangjiang.take.xray",
+                setOn: { "choice.xiangjiang.take.xray": true },
+                setOff: { "choice.xiangjiang.take.xray": false }
+              },
+              {
+                id: "press",
+                text: "印刷机",
+                note: "铁架子的，拆不开。",
+                flag: "choice.xiangjiang.take.press",
+                setOn: { "choice.xiangjiang.take.press": true },
+                setOff: { "choice.xiangjiang.take.press": false }
+              },
+              {
+                id: "files",
+                text: "文件",
+                note: "两捆，绳子勒得紧。",
+                flag: "choice.xiangjiang.take.files",
+                setOn: { "choice.xiangjiang.take.files": true },
+                setOff: { "choice.xiangjiang.take.files": false }
+              },
+              {
+                id: "medkit",
+                text: "药箱",
+                note: "白铁皮，锁着。",
+                flag: "choice.xiangjiang.take.medkit",
+                setOn: { "choice.xiangjiang.take.medkit": true },
+                setOff: { "choice.xiangjiang.take.medkit": false }
+              },
+              {
+                id: "radio",
+                text: "电台",
+                note: "天线用油布裹着。",
+                flag: "choice.xiangjiang.take.radio",
+                setOn: { "choice.xiangjiang.take.radio": true },
+                setOff: { "choice.xiangjiang.take.radio": false }
+              },
+              {
+                id: "silver",
+                text: "银元",
+                note: "一箱，沉，但能花。",
+                flag: "choice.xiangjiang.take.silver",
+                setOn: { "choice.xiangjiang.take.silver": true },
+                setOff: { "choice.xiangjiang.take.silver": false }
+              }
+            ]
           },
           {
             id: "x016",
             type: "result",
-            source: "minigame",
-            game: "abandon",
+            source: "abandon",
             title: "弃物",
             note: "清单之外，江那边还留着一些东西。"
           },
@@ -235,8 +358,64 @@
             when: "!item.door"
           },
           { id: "x018", type: "line", speaker: "旁白", text: "留下的东西堆在岸边，像一个小一点的村子。" },
+          {
+            id: "x018a",
+            type: "line",
+            speaker: "旁白",
+            text: "那只大木箱留在岸边，箱角朝着江。",
+            when: "!choice.xiangjiang.take.xray"
+          },
+          {
+            id: "x018b",
+            type: "line",
+            speaker: "旁白",
+            text: "四个人抬那只大木箱上船。船身沉下去一截。",
+            when: "choice.xiangjiang.take.xray"
+          },
           { id: "x019", type: "line", speaker: "旁白", text: "天亮了。江面上漂着我们的东西：斗笠、文件箱、一面没有字的旗。", bg: "xiangjiang_dawn" },
+          {
+            id: "x019a",
+            type: "line",
+            speaker: "旁白",
+            text: "雨布裹在名册外头。我解开看，边角还是湿了。",
+            when: "item.raincloth"
+          },
+          {
+            id: "x019b",
+            type: "line",
+            speaker: "旁白",
+            text: "名册的边角湿了，字洇开。我把湿的那页撕下来。",
+            when: "!item.raincloth"
+          },
+          {
+            id: "x019c",
+            type: "line",
+            speaker: "旁白",
+            text: "电台的天线断了一截，泡在水里，没人去捞。",
+            when: "choice.xiangjiang.take.radio"
+          },
           { id: "x020", type: "line", speaker: "旁白", text: "江很宽，漂得很慢。桥头有个卫生员在给人裹伤，绷带不够，就撕自己的衬衣。" },
+          {
+            id: "x020a",
+            type: "line",
+            speaker: "旁白",
+            text: "卫生员看见我包袱里的药，停了一下，又塞回来：留着，路上长。",
+            when: "item.medicine"
+          },
+          {
+            id: "x020b",
+            type: "line",
+            speaker: "旁白",
+            text: "他打开药箱，里面只剩半卷纱布。他把纱布剪成三段。",
+            when: "choice.xiangjiang.take.medkit"
+          },
+          {
+            id: "x020c",
+            type: "line",
+            speaker: "旁白",
+            text: "我没有药。掏了半天，只掏出一支铅笔。",
+            when: "!item.medicine && !choice.xiangjiang.take.medkit"
+          },
           { id: "x021", type: "line", speaker: "旁白", text: "我把名册摊在膝盖上，开始划。" },
           { id: "x022", type: "line", speaker: "旁白", text: "划第一个名字的时候，手还稳。划到第五个，铅笔在纸上顿了一下。" },
           { id: "x023", type: "line", speaker: "旁白", text: "有个名字我划错了行，刮不掉，只好在旁边画个小叉。" },
@@ -460,20 +639,6 @@
           { id: "j007", type: "line", speaker: "满崽", text: "一条船能多坐一个吗？" },
           { id: "j008", type: "line", speaker: "张老幺", text: "多一个，沉一个。你说呢？" },
           { id: "j009", type: "line", speaker: "旁白", text: "他把人一个一个数上船。数完，又数一遍。" },
-          {
-            id: "j010",
-            type: "minigame",
-            game: "boat",
-            config: { duration: 90, boats: 6, capacity: 8, crewPerBoat: 3, plannedTrips: 18, outbound: 12, inbound: 12, fatigue: 12, rest: 12, enemy: 120 }
-          },
-          {
-            id: "j011",
-            type: "result",
-            source: "minigame",
-            game: "boat",
-            title: "渡江",
-            note: "过了多少人，江东岸还留着多少人，都在这张单子上。"
-          },
           { id: "j012", type: "line", speaker: "旁白", text: "七天七夜。船工的号子从早喊到晚，最后哑成气音。" },
           { id: "j013", type: "line", speaker: "旁白", text: "有人在船上睡着了，头一点一点，像在跟谁认错。" },
           { id: "j014", type: "line", speaker: "旁白", text: "我蹲在岸边记名字。" },
@@ -533,30 +698,111 @@
                 key: "A",
                 text: "先渡主力",
                 value: "main",
-                set: { "choice.jinsha.priority": "main", trust: "+1" },
+                set: {
+                  "choice.jinsha.priority": "main",
+                  "choice.jinsha.main": true,
+                  "choice.jinsha.wounded": false,
+                  "choice.jinsha.kettle": false,
+                  trust: "+1"
+                },
                 cost: "后勤的人和骡子多等一天"
               },
               {
                 key: "B",
                 text: "先渡伤员",
                 value: "wounded",
-                set: { "choice.jinsha.priority": "wounded", trust: "-1" },
+                set: {
+                  "choice.jinsha.priority": "wounded",
+                  "choice.jinsha.main": false,
+                  "choice.jinsha.wounded": true,
+                  "choice.jinsha.kettle": false,
+                  trust: "-1"
+                },
                 cost: "主力在渡口多暴露一天"
               },
               {
                 key: "C",
                 text: "先渡炊事班",
                 value: "kettle",
-                set: { "choice.jinsha.priority": "kettle", fire: "+5" },
+                set: {
+                  "choice.jinsha.priority": "kettle",
+                  "choice.jinsha.main": false,
+                  "choice.jinsha.wounded": false,
+                  "choice.jinsha.kettle": true,
+                  fire: "+5"
+                },
                 cost: "伤员在岸上多躺一天"
               }
             ]
           },
+          {
+            id: "j024a",
+            type: "line",
+            speaker: "旁白",
+            text: "主力先上。骡子被牵着，蹄子在石头上打滑。",
+            when: "choice.jinsha.main"
+          },
+          {
+            id: "j024b",
+            type: "line",
+            speaker: "旁白",
+            text: "伤员先上。担架放上船，船工把桨递过去，让躺着的人抓住。",
+            when: "choice.jinsha.wounded"
+          },
+          {
+            id: "j024c",
+            type: "line",
+            speaker: "旁白",
+            text: "炊事班先上。锅和米袋挤在船头，船工喊了一声：沉。",
+            when: "choice.jinsha.kettle"
+          },
           { id: "j025", type: "line", speaker: "旁白", text: "最后一批上船的时候，天快亮了。", bg: "jinsha_night" },
           { id: "j026", type: "line", speaker: "旁白", text: "船工的号子只剩调子，没有词。" },
+          {
+            id: "j026a",
+            type: "line",
+            speaker: "旁白",
+            text: "船工把最后一批人送过去，又回来接后勤。天亮前，骡子也上了船。",
+            when: "choice.jinsha.main"
+          },
+          {
+            id: "j026b",
+            type: "line",
+            speaker: "旁白",
+            text: "最后一批是伤员。有人躺在船底，看着天，一声不吭。",
+            when: "choice.jinsha.wounded"
+          },
+          {
+            id: "j026c",
+            type: "line",
+            speaker: "旁白",
+            text: "炊事班的锅最后过江。锅底朝天，像一口倒扣的井。",
+            when: "choice.jinsha.kettle"
+          },
           { id: "j027", type: "line", speaker: "张老幺", text: "走吧。往北，别停。" },
           { id: "j028", type: "line", speaker: "旁白", text: "船离岸，他没有招手。他蹲下去，把船绳又系紧了一道。" },
           { id: "j029", type: "line", speaker: "旁白", text: "我们上了北岸，回头看不见船。" },
+          {
+            id: "j029a",
+            type: "line",
+            speaker: "旁白",
+            text: "后勤的人在岸边等船。有人靠着骡子睡着了。",
+            when: "choice.jinsha.main"
+          },
+          {
+            id: "j029b",
+            type: "line",
+            speaker: "旁白",
+            text: "伤员的担架排在岸上。卫生员一个一个看过去。",
+            when: "choice.jinsha.wounded"
+          },
+          {
+            id: "j029c",
+            type: "line",
+            speaker: "旁白",
+            text: "炊事班在岸上埋锅。火点着的时候，天刚好亮。",
+            when: "choice.jinsha.kettle"
+          },
           { id: "j030", type: "line", speaker: "旁白", text: "只听见桨声，一下，一下，没有停。" },
           { id: "j031", type: "title", text: "第四章 · 泸定", sub: "一九三五年 · 五月", place: "川西 · 大渡河", bg: "luding_bridge" },
           { id: "j032", type: "codex", codexId: "jinsha" },
@@ -582,20 +828,6 @@
           { id: "l010", type: "line", speaker: "旁白", text: "我在桥头数光点。一个光点是一个活人。" },
           { id: "l011", type: "line", speaker: "旁白", text: "数到十七，停了很久，才数到十八。" },
           { id: "l012", type: "line", speaker: "旁白", text: "中间那一段，我数了三遍，都是十七。" },
-          {
-            id: "l013",
-            type: "minigame",
-            game: "climb",
-            config: { duration: 75, spans: 3, lights: 22, stepMs: 1800, hitWindow: 0.35, fireAt: "6,12,18", fireWindow: 1.5, fireTaps: 3 }
-          },
-          {
-            id: "l014",
-            type: "result",
-            source: "minigame",
-            game: "climb",
-            title: "攀索",
-            note: "过去了多少，没过去多少，桥上都记着。"
-          },
           { id: "l015", type: "line", speaker: "旁白", text: "桥板一块一块铺上去的时候，铁索在抖。" },
           { id: "l016", type: "line", speaker: "旁白", text: "铺桥的人趴着往前挪，脚后跟勾住铁索，手里递板子。" },
           { id: "l017", type: "line", speaker: "旁白", text: "我跟着队伍过桥。" },
@@ -626,13 +858,48 @@
             ]
           },
           {
+            id: "l019a",
+            type: "line",
+            speaker: "旁白",
+            text: "桥面多了一块板。我踩过去的时候，脚底下响了一声。",
+            when: "choice.luding.door"
+          },
+          {
+            id: "l019b",
+            type: "line",
+            speaker: "旁白",
+            text: "门板压在背上，三十斤。我走一步，后面的人就等一步。",
+            when: "item.door"
+          },
+          {
             id: "l020",
             type: "line",
             speaker: "旁白",
             text: "我背上没有门板。过桥的时候，手只能抓住铁索。",
-            when: "!item.door"
+            when: "!item.door && !choice.luding.door"
           },
           { id: "l021", type: "line", speaker: "旁白", text: "过桥以后，我回头看那十三根铁索。它们空着，还在晃。", bg: "luding_after" },
+          {
+            id: "l021a",
+            type: "line",
+            speaker: "旁白",
+            text: "有一块板，是我家的门。",
+            when: "choice.luding.door"
+          },
+          {
+            id: "l021b",
+            type: "line",
+            speaker: "旁白",
+            text: "门板还在背上。过了桥，它比我先磕在石头上。",
+            when: "item.door"
+          },
+          {
+            id: "l021c",
+            type: "line",
+            speaker: "旁白",
+            text: "背上空着。我一直没背门板，过桥时两只手都给了铁索。",
+            when: "!item.door && !choice.luding.door"
+          },
           { id: "l022", type: "line", speaker: "旁白", text: "飞毛腿没过来。他的号挂在桥头的木桩上，还热着。" },
           { id: "l023", type: "line", speaker: "旁白", text: "我把号取下来，塞进背包。号嘴上有牙印，他咬的。" },
           { id: "l024", type: "line", speaker: "冬生", text: "号给我。" },
@@ -684,6 +951,20 @@
             when: "!memory.luding_unknown"
           },
           { id: "l030", type: "line", speaker: "旁白", text: "那天夜里，我把“北”字重新描了一遍。" },
+          {
+            id: "l030a",
+            type: "line",
+            speaker: "旁白",
+            text: "脱鞋的时候，鞋底磨穿了一个洞。娘纳的底，磨到了线。",
+            when: "item.shoes"
+          },
+          {
+            id: "l030b",
+            type: "line",
+            speaker: "旁白",
+            text: "草鞋后跟散了。我坐在地上，用布条重新绑了一遍。",
+            when: "!item.shoes"
+          },
           { id: "l031", type: "line", speaker: "旁白", text: "铅笔头短得握不住，我用布条把它绑在手指上。" },
           { id: "l032", type: "line", speaker: "旁白", text: "描的时候，手没抖。" },
           { id: "l033", type: "title", text: "第五章 · 草地", sub: "一九三五年 · 八月", place: "川西北 · 松潘草地", bg: "grass_marsh" },
@@ -736,11 +1017,32 @@
           { id: "g013", type: "line", speaker: "旁白", text: "有人问，埋谁。" },
           { id: "g014", type: "line", speaker: "旁白", text: "没人答。" },
           { id: "g015", type: "line", speaker: "旁白", text: "后来大家把各自的干粮袋解下来，放在坑边。" },
+          {
+            id: "g015a",
+            type: "line",
+            speaker: "旁白",
+            text: "我把青稞倒进锅里。锅底响了一声，像有人在里面敲。",
+            when: "item.barley"
+          },
+          {
+            id: "g015b",
+            type: "line",
+            speaker: "旁白",
+            text: "我的干粮袋早就空了，袋底有一层碎末。",
+            when: "!item.barley"
+          },
           { id: "g016", type: "line", speaker: "灶王", text: "最后一锅。喝了再走。" },
           { id: "g017", type: "line", speaker: "旁白", text: "他蹲下去生火。" },
           { id: "g018", type: "line", speaker: "旁白", text: "柴是湿的，他吹了半天。" },
           { id: "g019", type: "line", speaker: "旁白", text: "火没起来。他就在那儿蹲着，没再站起来。" },
           { id: "g020", type: "line", speaker: "旁白", text: "我把他埋在一个能看见太阳的地方。那天没有太阳。" },
+          {
+            id: "g020a",
+            type: "line",
+            speaker: "旁白",
+            text: "我把家里的铁锅擦了一遍，又擦一遍，像他擦他那口。",
+            when: "item.homepot"
+          },
           {
             id: "g021",
             type: "choice",

@@ -1,6 +1,7 @@
 # 《向北》小游戏系统（步骤四定稿）
 
-> 状态：T4.0 定稿（2026-11-02）。本文件是四关的**系统契约**；数值表在 `docs/minigame-tuning.md`，旗标在 `docs/state-schema.md`，坐标在 `docs/ui-layout.md`。
+> 状态：**v1.1.1 历史文档**。T4.0 定稿（2026-11-02）；v1.2.0-dev（2026-11-06）已删除四关与 `project/minigames.js`，本文件只用于回滚/史料对照，不再描述现行契约。现行四段选择见 `step/step-09-移除小游戏与选择回写.md`、`docs/state-schema.md` 与 `docs/ui-layout.md` §3。
+> 原文：本文件是四关的**系统契约**；数值表在 `docs/minigame-tuning.md`，旗标在 `docs/state-schema.md`，坐标在 `docs/ui-layout.md`。
 > 权威顺序：用户指令 > `向北-项目计划书.md` > `.claude/CLAUDE.md` > 本文件 > 其余 docs。冲突时先改本文件，再同步代码与检查脚本。
 > 本步只做核心 4 关；第 5 关探路/分粮不做；音频、章节接入、结局不在本步。
 

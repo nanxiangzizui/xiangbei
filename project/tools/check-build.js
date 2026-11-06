@@ -10,8 +10,8 @@ const { BANNED, REAL } = require("./redlines");
 
 const PROJECT_DIR = path.resolve(__dirname, "..");
 const ROOT_DIR = path.resolve(PROJECT_DIR, "..");
-const JS_FILES = ["art.js", "story.js", "minigames.js", "engine.js"];
-const SCRIPT_ORDER = ["art.js", "story.js", "minigames.js", "engine.js"];
+const JS_FILES = ["art.js", "story.js", "engine.js"];
+const SCRIPT_ORDER = ["art.js", "story.js", "engine.js"];
 // 与 engine.js 的 REQUIRED_IDS 对齐：缺一个引擎就抛错，所以列表必须逐字一致
 const REQUIRED_IDS = [
   "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending", "fx-layer",
@@ -20,8 +20,8 @@ const REQUIRED_IDS = [
   "pause", "pause-menu", "toast", "debug", "orientation",
   "title-menu", "map-stations", "map-route",
   "vn-chapter", "vn-toolbar", "vn-auto", "vn-skip", "vn-dialogue", "vn-name", "vn-text", "vn-next",
-  "vn-choice-prompt", "vn-choices", "vn-minigame", "vn-result",
-  "minigame-canvas", "minigame-hud", "minigame-help", "minigame-live", "minigame-pause", "minigame-fallback",
+  "vn-choice-prompt", "vn-choices", "vn-result",
+  "vn-multichoice", "vn-multi-prompt", "vn-multi-options", "vn-multi-status", "vn-multi-confirm",
   "vn-interact", "interact-kicker", "interact-name", "interact-status", "interact-progress",
   "interact-names", "interact-answer", "interact-live",
   "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-title-place", "vn-measure",
@@ -119,7 +119,7 @@ function checkCompile() {
       fail("C01", file + " 编译失败：" + err.message);
     }
   });
-  notes.push("C01 OK 4 个 JS 可编译");
+  notes.push("C01 OK 3 个 JS 可编译");
 }
 
 function checkForbiddenApis() {
@@ -167,7 +167,7 @@ function checkHtml() {
   if (artIndex === -1 || titleIndex === -1 || artIndex > titleIndex) {
     fail("C03", "#stage-art 必须在 #scene-title 之前");
   }
-  notes.push("C03 OK 必需 id 齐全、画布在场景前、脚本顺序 art → story → minigames → engine");
+  notes.push("C03 OK 必需 id 齐全、画布在场景前、脚本顺序 art → story → engine");
 }
 
 function checkPaths() {
@@ -220,12 +220,9 @@ function checkPlaceholders() {
   ["SCENES: SCENES", "mount: mount", "paint: paint", "resize: resize", "rng: rng"].forEach(function (needle) {
     if (art.indexOf(needle) === -1) fail("C07", "art.js 缺契约 " + needle);
   });
-  var minigames = loadGame().minigames;
-  if (!minigames || typeof minigames.start !== "function") fail("C07", "minigames.js 没有 XB.minigames.start");
   var engine = stripComments(readProject("engine.js"));
   if (!/XB\.art\b/.test(engine)) fail("C07", "engine.js 未接入 XB.art");
-  if (!/XB\.minigames\b/.test(engine)) fail("C07", "engine.js 未接入 XB.minigames");
-  notes.push("C07 OK art.js 五项契约就位、minigames API 可加载、engine 已接入两者");
+  notes.push("C07 OK art.js 五项契约就位、engine 已接入 XB.art");
 }
 
 function checkDocs() {
@@ -428,8 +425,8 @@ function checkPrologueGraph() {
   nodes.forEach(function (node) {
     counts[node.type] = (counts[node.type] || 0) + 1;
   });
-  var expected = { line: 42, choice: 2, minigame: 1, result: 1, title: 1, codex: 1, end: 1 };
-  if (nodes.length !== 49) fail("C13", "序章节点应为 49，实际 " + nodes.length);
+  var expected = { line: 45, choice: 2, multichoice: 1, result: 1, title: 1, codex: 1, end: 1 };
+  if (nodes.length !== 52) fail("C13", "序章节点应为 52，实际 " + nodes.length);
   Object.keys(expected).forEach(function (type) {
     if ((counts[type] || 0) !== expected[type]) {
       fail("C13", type + " 节点应为 " + expected[type] + "，实际 " + (counts[type] || 0));
@@ -447,7 +444,7 @@ function checkPrologueGraph() {
   var last = nodes[nodes.length - 1];
   if (last.id !== "p900") fail("C13", "末节点应为 p900，实际 " + last.id);
   if (last.next !== "xiangjiang") fail("C13", "p900.next 应为 xiangjiang，实际 " + last.next);
-  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 42 / choice 2 / minigame 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
+  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 45 / choice 2 / multichoice 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
 }
 
 var SET_KEY_EXACT = ["item.door", "item.pot", "load", "trust", "fire", "lights_lost"];
@@ -507,7 +504,7 @@ function checkChoiceRules() {
 // C15：阅读层容器、标题版本行、量具不能 display:none
 function checkReadingDom() {
   var html = readProject("index.html");
-  ["vn-toolbar", "vn-choices", "vn-choice-prompt", "vn-title-card", "vn-minigame", "vn-result", "vn-measure", "vn-settings", "codex"].forEach(function (id) {
+  ["vn-toolbar", "vn-choices", "vn-choice-prompt", "vn-title-card", "vn-multichoice", "vn-result", "vn-measure", "vn-settings", "codex"].forEach(function (id) {
     if (html.indexOf('id="' + id + '"') === -1) fail("C15", "index.html 缺阅读层容器 #" + id);
   });
   if (html.indexOf("试玩版 · 人物虚构，非史料人物") === -1) fail("C15", "标题版本行未改成「试玩版 · 人物虚构，非史料人物」");
@@ -613,118 +610,154 @@ function checkSaveAndCodex() {
   notes.push("C17 OK 7 张图鉴齐全、存档 11 键冻结、p001→p900 可走通、end.next 允许章节/ending/map、剧情内联");
 }
 
-// C18：四关 API、冻结的数值/物品表、纯函数契约
-function checkMinigameApi() {
+// C18：多选组件与纯函数契约（行囊/弃物）
+function checkMultichoiceApi() {
   var XB = loadGame();
-  var mg = XB.minigames;
-  if (!mg || typeof mg !== "object") {
-    fail("C18", "找不到 XB.minigames");
+  if (typeof XB.core.applyMultiChoice !== "function") {
+    fail("C18", "XB.core.applyMultiChoice 不是函数");
     return;
   }
-  if (mg.SCENES.join(",") !== "door,abandon,boat,climb") fail("C18", "SCENES 应为 door/abandon/boat/climb，实际 " + mg.SCENES.join(","));
-  if (!Object.isFrozen(mg.SCENES)) fail("C18", "SCENES 未冻结");
-  if (!Object.isFrozen(mg.RULES) || !Object.isFrozen(mg.RULES.door)) fail("C18", "RULES 未深冻结");
-  if (!Object.isFrozen(mg.ITEMS) || !Object.isFrozen(mg.ITEMS.door)) fail("C18", "ITEMS 未深冻结");
-  ["start", "stop", "isActive", "resize", "labelFor", "itemIds", "crewForTrust", "usedSlots", "canPack"].forEach(function (name) {
-    if (typeof mg[name] !== "function") fail("C18", "XB.minigames." + name + " 不是函数");
-  });
-  if (mg.itemIds("door").length !== 8) fail("C18", "门板物品应为 8 件，实际 " + mg.itemIds("door").length);
-  if (mg.itemIds("abandon").length !== 7) fail("C18", "弃物物品应为 7 件，实际 " + mg.itemIds("abandon").length);
-  if (mg.usedSlots(["pot"], true) !== 4) fail("C18", "门板+铁锅应占 4 格");
-  if (mg.canPack(["pot", "medicine", "barley"], "raincloth", true) !== false) fail("C18", "门板+锅+药+青稞+雨布应放不下");
-  if (mg.crewForTrust(0) !== 12 || mg.crewForTrust(6) !== 37) fail("C18", "船工表端点应为 12/37");
-  notes.push("C18 OK 四关 API、深冻结、8+7 物品、容量/船工纯函数");
-}
-
-// C19：结果对象没有 success/score/Game Over，只允许 reason/carried/left/stats
-function checkMinigameResultContract() {
-  var code = stripComments(readProject("minigames.js"));
-  ["success", "score", "gameOver", "game_over"].forEach(function (word) {
-    if (new RegExp("\\b" + word + "\\b", "i").test(code)) fail("C19", "minigames.js 出现结果字段 " + word);
-  });
-  ["reason", "elapsed", "carried", "left", "stats"].forEach(function (field) {
-    if (code.indexOf(field + ":") === -1) fail("C19", "结果对象缺字段 " + field);
-  });
-  notes.push("C19 OK 结果只有 reason/elapsed/carried/left/stats，无成功失败分");
-}
-
-// C20：p024 的 config 只是作者元数据，必须与 RULES 起点一致；p025 标明结果来源
-function checkMinigameStoryContract() {
-  var XB = loadGame();
-  var p024 = XB.core.locate("prologue", "p024").node;
-  if (!p024 || p024.type !== "minigame" || p024.game !== "door") {
-    fail("C20", "p024 不是 door 小游戏节点");
-    return;
-  }
-  var config = p024.config || {};
-  var expected = { duration: 75, capacity: 6, doorCost: 2, items: 8 };
-  Object.keys(expected).forEach(function (key) {
-    if (config[key] !== expected[key]) fail("C20", "p024.config." + key + " 应为 " + expected[key] + "，实际 " + config[key]);
-  });
-  var p025 = XB.core.locate("prologue", "p025").node;
-  if (!p025 || p025.type !== "result") fail("C20", "p025 不是 result 节点");
-  else {
-    if (p025.source !== "minigame") fail("C20", "p025 缺 source=minigame");
-    if (p025.game !== "door") fail("C20", "p025 缺 game=door");
-  }
-  notes.push("C20 OK p024 config 75/6/2/8 与 RULES 一致，p025 标明 minigame/door");
-}
-
-// C21：结算重建必须从旗标/背包出发，刷新后仍能说出同一组代价
-function checkMinigameRebuild() {
   var engine = stripComments(readProject("engine.js"));
-  ["applyMinigameResult", "buildResultView", "node.source !== \"minigame\"", "choice.xiangjiang.abandoned", "choice.jinsha.trips", "lights_lost", "inventory.items"].forEach(function (needle) {
-    if (engine.indexOf(needle) === -1) fail("C21", "engine.js 缺重建标记 " + needle);
+  ["renderMultiChoice", "toggleMultiChoice", "resolveMultiChoice", "aria-checked", "recordMode", "slotLoad", "multi-toggle", "multi-confirm", "vn-multichoice"].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C18", "engine.js 缺多选标记 " + needle);
   });
-  if (engine.indexOf("vn-result__stats") === -1) fail("C21", "结果页缺 stats DOM");
-  // 旗标必须是数值区间；字符串边界会让夹取悄悄失效（负例 N4）。
-  if (engine.indexOf("lights_lost: [0, 22]") === -1) fail("C21", "lights_lost 必须是数值区间 [0, 22]");
-  if (engine.indexOf('"choice.jinsha.trips": [0, 18]') === -1) fail("C21", "choice.jinsha.trips 必须是数值区间 [0, 18]");
-  notes.push("C21 OK 门板/弃物/渡船/攀索结果均按持久旗标重建");
+  var p024 = XB.core.locate("prologue", "p024").node;
+  if (!p024 || p024.type !== "multichoice") fail("C18", "p024 不是 multichoice 节点");
+  else {
+    if (p024.min !== 0 || p024.max !== 3) fail("C18", "p024 min/max 应为 0/3");
+    if (p024.options.length !== 5) fail("C18", "p024 应有 5 个选项");
+    if (p024.slotLoad !== true) fail("C18", "p024 应重算行囊格数");
+  }
+  var state = XB.core.defaults();
+  if (!XB.core.startChapter(state, "prologue", "p024")) {
+    fail("C18", "定位不到 p024");
+    return;
+  }
+  var picked = XB.core.applyMultiChoice(state, p024, ["medicine", "homepot"]);
+  if (!picked) fail("C18", "p024 选两件结算失败");
+  if (state.flags["item.medicine"] !== true || state.flags["item.homepot"] !== true) fail("C18", "p024 没有写 item.* 布尔");
+  if (state.flags.load !== 2) fail("C18", "无门板选两件行囊应为 2，实际 " + state.flags.load);
+  if (state.inventory.items.join(",") !== "roster,pencil,medicine,pot") fail("C18", "p024 背包回填不对：" + state.inventory.items.join(","));
+  if (state.choices[state.choices.length - 1].option !== "MULTI") fail("C18", "p024 没有记 MULTI 日志");
+  if (XB.core.applyMultiChoice(state, p024, ["medicine", "barley", "raincloth", "shoes"]) !== null) fail("C18", "p024 超过 max 仍结算");
+  if (XB.core.applyMultiChoice(state, p024, ["nope"]) !== null) fail("C18", "p024 未知选项仍结算");
+  var x015 = XB.core.locate("xiangjiang", "x015").node;
+  var xstate = XB.core.defaults();
+  if (!XB.core.startChapter(xstate, "xiangjiang", "x015")) {
+    fail("C18", "定位不到 x015");
+    return;
+  }
+  var left = XB.core.applyMultiChoice(xstate, x015, ["xray", "press", "files"]);
+  if (!left || left.left.join(",") !== "medkit,radio,silver") fail("C18", "x015 留在岸上的三样不对");
+  if (xstate.flags["choice.xiangjiang.abandoned"].join(",") !== "medkit,radio,silver") fail("C18", "x015 没有写 abandoned");
+  if (xstate.flags["choice.xiangjiang.take.xray"] !== true || xstate.flags["choice.xiangjiang.take.medkit"] !== false) fail("C18", "x015 take 布尔不对");
+  notes.push("C18 OK applyMultiChoice 校验 min/max/未知 id、写 item.*/take.*、重算行囊、MULTI 日志");
 }
 
-// C22：RULES 是唯一数值源，tuning 的 §4 表必须逐行同值
-function checkMinigameTuning() {
+// C19：四段选择的数据契约与即时/后续回写节点
+function checkChoiceSegments() {
   var XB = loadGame();
-  var tuning = readRoot("docs/minigame-tuning.md");
-  var values = {};
-  tuning.split(/\r?\n/).forEach(function (line) {
-    var match = /^\|\s*((?:door|abandon|boat|climb)\.[a-zA-Z]+)\s*\|\s*([^|]+?)\s*\|/.exec(line);
-    if (match) values[match[1]] = match[2].trim();
+  var nodes = {};
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) { nodes[node.id] = node; });
   });
-  Object.keys(XB.minigames.RULES).forEach(function (gameId) {
-    var group = XB.minigames.RULES[gameId];
-    Object.keys(group).forEach(function (key) {
-      var path = gameId + "." + key;
-      if (!(path in values)) {
-        fail("C22", "tuning 表缺 " + path);
-        return;
-      }
-      var actual = group[key];
-      var documented = values[path];
-      if (Array.isArray(actual)) {
-        var numbers = documented.replace(/[^0-9,]/g, "").split(",").filter(Boolean).map(Number);
-        if (numbers.join(",") !== actual.join(",")) fail("C22", path + " 文档 " + documented + " 与 RULES " + actual.join(",") + " 不一致");
-      } else if (Number(documented) !== actual) {
-        fail("C22", path + " 文档 " + documented + " 与 RULES " + actual + " 不一致");
-      }
+  ["j010", "j011", "l013", "l014"].forEach(function (id) {
+    if (nodes[id]) fail("C19", "已删除的小游戏节点还在：" + id);
+  });
+  Object.keys(nodes).forEach(function (id) {
+    if (nodes[id].type === "minigame") fail("C19", "剧情还有 minigame 节点：" + id);
+  });
+  var p024 = nodes.p024;
+  var x015 = nodes.x015;
+  if (!p024 || p024.type !== "multichoice" || p024.options.length !== 5) fail("C19", "序章行囊多选不完整");
+  if (!x015 || x015.type !== "multichoice" || x015.options.length !== 6) fail("C19", "湘江弃物多选不完整");
+  if (!x015 || x015.min !== 3 || x015.max !== 3 || x015.record !== "choice.xiangjiang.abandoned" || x015.recordMode !== "left") fail("C19", "x015 的 3 选/recordMode 不对");
+  if (nodes.p025.source !== "items" || nodes.x016.source !== "abandon") fail("C19", "结算页 source 应为 items/abandon");
+  var j024 = nodes.j024;
+  if (!j024 || j024.type !== "choice" || j024.options.length !== 3) fail("C19", "金沙江先渡谁不是三选一");
+  else {
+    var mirrors = j024.options.map(function (option) {
+      return option.set && option.set["choice.jinsha.main"] === true ? "main" :
+        option.set && option.set["choice.jinsha.wounded"] === true ? "wounded" :
+        option.set && option.set["choice.jinsha.kettle"] === true ? "kettle" : "none";
     });
+    if (mirrors.join(",") !== "main,wounded,kettle") fail("C19", "j024 缺 choice.jinsha.* 镜像布尔");
+  }
+  ["j024a", "j024b", "j024c", "j026a", "j026b", "j026c", "j029a", "j029b", "j029c"].forEach(function (id) {
+    if (!nodes[id]) fail("C19", "金沙江回写节点缺失：" + id);
   });
-  notes.push("C22 OK tuning §4 与 RULES 同名同值（" + Object.keys(values).length + " 行）");
+  if (!nodes.j024a || nodes.j024a.when !== "choice.jinsha.main") fail("C19", "j024a 的 when 不对");
+  var l019 = nodes.l019;
+  if (!l019 || l019.type !== "choice" || l019.record !== "choice.luding.door") fail("C19", "泸定门板选择不完整");
+  ["l019a", "l019b", "l021a", "l021b", "l021c"].forEach(function (id) {
+    if (!nodes[id]) fail("C19", "泸定回写节点缺失：" + id);
+  });
+  if (nodes.l020.when !== "!item.door && !choice.luding.door") fail("C19", "l020 的 when 应排除已铺门板");
+  var story = stripComments(readProject("story.js"));
+  if (story.indexOf("choice.jinsha.trips") !== -1) fail("C19", "story 仍在写 choice.jinsha.trips");
+  notes.push("C19 OK 四段选择齐全；j010/j011/l013/l014 与 minigame 节点消失；金沙江/泸定镜像与回写节点就位");
 }
 
-// C23：小游戏画面不出现 X 光机、牺牲人数、Game Over、成功/失败大字
-function checkMinigameWords() {
-  var code = stripComments(readProject("minigames.js"));
-  ["X 光机", "X光机", "Game Over", "gameOver", "牺牲"].forEach(function (word) {
-    if (code.indexOf(word) !== -1) fail("C23", "minigames.js 出现禁用词「" + word + "」");
+// C20：结算页只读持久旗标，刷新后能重建同一组带走/留下
+function checkResultRebuild() {
+  var engine = stripComments(readProject("engine.js"));
+  ["PACK_ITEMS", "ABANDON_ITEMS", "collectItemLabels", 'node.source === "items"', 'node.source === "abandon"', "choice.xiangjiang.abandoned", "vn-result__stats"].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C20", "engine.js 缺结算重建标记 " + needle);
   });
-  var parts = code.split("drawText(");
-  parts.slice(1).forEach(function (part) {
-    var call = part.slice(0, part.indexOf(");"));
-    if (/成功|失败/.test(call)) fail("C23", "小游戏画面出现成功/失败大字");
+  ["lastMinigameResult", "applyMinigameResult", "XB.minigames"].forEach(function (needle) {
+    if (engine.indexOf(needle) !== -1) fail("C20", "engine.js 仍依赖小游戏结果 " + needle);
   });
-  notes.push("C23 OK 无 X 光机/牺牲/Game Over/成功失败大字");
+  notes.push("C20 OK 行囊/弃物结算只读 item.*/take.*/abandoned，刷新可重建");
+}
+
+// C21：小游戏文件、入口、DOM 与 CSS 全部移除
+function checkMinigameRemoved() {
+  if (fs.existsSync(path.join(PROJECT_DIR, "minigames.js"))) fail("C21", "project/minigames.js 仍存在");
+  var html = readProject("index.html");
+  ["vn-minigame", "minigame-canvas", "minigames.js", "?minigame"].forEach(function (needle) {
+    if (html.indexOf(needle) !== -1) fail("C21", "index.html 仍有小游戏残留 " + needle);
+  });
+  var css = readProject("style.css");
+  [".vn-minigame", ".minigame-canvas", ".minigame-pause", ".minigame-fallback"].forEach(function (needle) {
+    if (css.indexOf(needle) !== -1) fail("C21", "style.css 仍有小游戏样式 " + needle);
+  });
+  var engine = stripComments(readProject("engine.js"));
+  ["soloMode", "startSolo", "?minigame", "minigameRun", "MINIGAME_LABEL"].forEach(function (needle) {
+    if (engine.indexOf(needle) !== -1) fail("C21", "engine.js 仍有小游戏入口 " + needle);
+  });
+  notes.push("C21 OK minigames.js 已删；无画布/小游戏入口/solo 调试/小游戏 CSS");
+}
+
+// C22：旧档接回——j010/j011→j012、l013/l014→l015，背包/弃物反推布尔
+function checkLegacySaveMigration() {
+  var XB = loadGame();
+  var save = XB.core.serialize(XB.core.defaults());
+  save.scene = "vn";
+  save.chapterId = "jinsha";
+  save.nodeId = "j010";
+  save.flags = {};
+  save.inventory = { door: false, items: ["roster", "pencil", "medicine", "pot"] };
+  var first = XB.core.normalize(save);
+  if (first.issue) fail("C22", "旧金沙江档被判坏档：" + first.issue);
+  else {
+    if (first.state.nodeId !== "j012") fail("C22", "j010 没有接回 j012，实际 " + first.state.nodeId);
+    if (first.migrated !== "jinsha") fail("C22", "jinsha 迁移标记缺失");
+    if (first.state.flags["item.medicine"] !== true || first.state.flags["item.homepot"] !== true) fail("C22", "旧背包没有反推 item.*");
+  }
+  var second = XB.core.serialize(XB.core.defaults());
+  second.scene = "vn";
+  second.chapterId = "luding";
+  second.nodeId = "l013";
+  second.flags = { "choice.xiangjiang.abandoned": ["medkit", "radio", "silver"] };
+  second.inventory = { door: false, items: [] };
+  var third = XB.core.normalize(second);
+  if (third.issue) fail("C22", "旧泸定档被判坏档：" + third.issue);
+  else {
+    if (third.state.nodeId !== "l015") fail("C22", "l013 没有接回 l015，实际 " + third.state.nodeId);
+    if (third.migrated !== "luding") fail("C22", "luding 迁移标记缺失");
+    if (third.state.flags["choice.xiangjiang.take.xray"] !== true || third.state.flags["choice.xiangjiang.take.medkit"] !== false) fail("C22", "旧 abandoned 没有反推 take.*");
+  }
+  notes.push("C22 OK 旧档 j010/j011→j012、l013/l014→l015；背包/弃物反推布尔一次");
 }
 
 
@@ -732,12 +765,12 @@ function checkMinigameWords() {
 function checkChapterTable() {
   var XB = loadGame();
   var expected = [
-    { id: "prologue", prefix: "p", count: 49, next: "xiangjiang" },
-    { id: "xiangjiang", prefix: "x", count: 43, next: "zunyi" },
+    { id: "prologue", prefix: "p", count: 52, next: "xiangjiang" },
+    { id: "xiangjiang", prefix: "x", count: 51, next: "zunyi" },
     { id: "zunyi", prefix: "z", count: 33, next: "jinsha" },
-    { id: "jinsha", prefix: "j", count: 35, next: "luding" },
-    { id: "luding", prefix: "l", count: 36, next: "grass" },
-    { id: "grass", prefix: "g", count: 32, next: "wuqi" },
+    { id: "jinsha", prefix: "j", count: 42, next: "luding" },
+    { id: "luding", prefix: "l", count: 41, next: "grass" },
+    { id: "grass", prefix: "g", count: 35, next: "wuqi" },
     { id: "wuqi", prefix: "w", count: 49, next: "ending" }
   ];
   var doc = readRoot("docs/chapter-integration.md");
@@ -774,7 +807,7 @@ function checkChapterTable() {
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 七章 49/43/33/35/36/32/49 共 277 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 七章 52/51/33/42/41/35/49 共 303 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -1162,12 +1195,11 @@ checkChoiceRules();
 checkReadingDom();
 checkConditionWhitelist();
 checkSaveAndCodex();
-checkMinigameApi();
-checkMinigameResultContract();
-checkMinigameStoryContract();
-checkMinigameRebuild();
-checkMinigameTuning();
-checkMinigameWords();
+checkMultichoiceApi();
+checkChoiceSegments();
+checkResultRebuild();
+checkMinigameRemoved();
+checkLegacySaveMigration();
 checkChapterTable();
 checkCodexNodes();
 checkEndingData();
@@ -1195,5 +1227,5 @@ if (failures.length) {
   console.log("\n共 " + failures.length + " 处问题");
   process.exitCode = 1;
 } else {
-  console.log("OK：构建自检 38 项全绿");
+  console.log("OK：构建自检 " + notes.length + " 项全绿");
 }

@@ -1,6 +1,7 @@
 # 《向北》小游戏数值（步骤四定稿）
 
-> 唯一生效值在 `project/minigames.js` 的 `RULES`；本表与它同名同值。调参只改 RULES，再回填本表与 `docs/minigame-system.md` §8，最后跑 `check-build` C22。
+> 状态：**v1.1.1 历史文档**。v1.2.0-dev（2026-11-06）已删除四关与 `project/minigames.js`，以下数值不再生效，也不再被 `check-build` 校验；保留用于回滚对照。
+> 原文：唯一生效值在 `project/minigames.js` 的 `RULES`；本表与它同名同值。调参只改 RULES，再回填本表与 `docs/minigame-system.md` §8，最后跑 `check-build` C22。
 > 参考《60 Seconds!》《Papers, Please》《Mini Metro》《Celeste》的节奏，不照搬数值；不追求硬核平衡，先保证 20 分钟能走完。
 
 ## 1. 时长口径

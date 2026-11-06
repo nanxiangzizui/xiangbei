@@ -5,16 +5,16 @@
 
 ## 1. 七章表
 
-| 顺序 | 章节 id | 前缀 | 节点 | line | choice | interact | minigame | result | title | codex | end | 下一章 |
+| 顺序 | 章节 id | 前缀 | 节点 | line | choice | multichoice | interact | result | title | codex | end | 下一章 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | prologue | p | 49 | 42 | 2 | 0 | 1 | 1 | 1 | 1 | 1 | xiangjiang |
-| 2 | xiangjiang | x | 43 | 36 | 2 | 0 | 1 | 1 | 1 | 1 | 1 | zunyi |
+| 1 | prologue | p | 52 | 45 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | xiangjiang |
+| 2 | xiangjiang | x | 51 | 44 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | zunyi |
 | 3 | zunyi | z | 33 | 26 | 3 | 0 | 0 | 1 | 1 | 1 | 1 | jinsha |
-| 4 | jinsha | j | 35 | 27 | 1 | 1 | 1 | 2 | 1 | 1 | 1 | luding |
-| 5 | luding | l | 36 | 29 | 2 | 0 | 1 | 1 | 1 | 1 | 1 | grass |
-| 6 | grass | g | 32 | 27 | 2 | 0 | 0 | 0 | 1 | 1 | 1 | wuqi |
-| 7 | wuqi | w | 49 | 45 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | ending |
-| — | 合计 | — | **277** | **232** | **13** | **2** | **4** | **6** | **6** | **7** | **7** | — |
+| 4 | jinsha | j | 42 | 36 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | luding |
+| 5 | luding | l | 41 | 36 | 2 | 0 | 0 | 0 | 1 | 1 | 1 | grass |
+| 6 | grass | g | 35 | 30 | 2 | 0 | 0 | 0 | 1 | 1 | 1 | wuqi |
+| 7 | wuqi | w | 49 | 45 | 1 | 0 | 1 | 0 | 0 | 1 | 1 | ending |
+| — | 合计 | — | **303** | **262** | **13** | **2** | **2** | **4** | **6** | **7** | **7** | — |
 
 - 七章全部 `playable: true`；序章 p900 → 湘江 x001，逐章直落，不要求玩家回地图。
 - 终章 w900 的 `next` 是字符串 `"ending"`，不是章节 id；`finishChapter` 在这里写 ending 快照并切 `scene:"ending"`。

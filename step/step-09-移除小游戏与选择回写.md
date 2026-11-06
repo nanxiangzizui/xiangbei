@@ -425,11 +425,11 @@
 
 | 日期 | 任务 | 证据 | 结论 |
 |---|---|---|---|
-| 2026-11-05 | 文件口径 + 本计划 | README/quality-bar/test-cases/计划/CLAUDE；tag `pre-minigame-removal` = `359b320` | 计划完成，未改代码、未部署 |
-| 待填 | T9.1–T9.5 | 浏览器截图/结果 JSON | 待执行 |
-| 待填 | T9.6–T9.7 | check-build/smoke/check-script | 待执行 |
-| 待填 | T9.8 | 完整流程 4 路径 + 移动/file/旧档 | 待执行 |
-| 待填 | T9.9 | 打包/部署确认 | 待用户确认 |
+| 2026-11-05 | 文件口径 + 本计划 | README/quality-bar/test-cases/计划/CLAUDE；tag `pre-minigame-removal` 实际指向 `8beb09a`（文档曾写 `359b320`，代码同为 v1.1.1） | 计划完成，未改代码、未部署 |
+| 2026-11-06 | T9.1–T9.5 四段选择 | `step9-http-target-20261105-202404` 34/34、`step9-http-mobile-target-20261105-202742` 37/37、`step9-http-segments-20261105-202458` 19/19 | 行囊/弃物多选、金沙江先渡谁、泸定门板/记名全部通过；键盘/触摸/刷新可用 |
+| 2026-11-06 | T9.6–T9.7 删小游戏与工具 | check-build **37/37**、smoke **46/46**、check-script OK；C21 无残留、C22 旧档迁移 | `minigames.js`/画布/HUD/`?minigame=`/solo 全删；工具与文档同步 |
+| 2026-11-06 | T9.8 回归 | `step9-http-flow-20261105-202531` 14/14 71s、`step9-file-flow-20261105-202917` 14/14 72s、`step9-http-mobile-flow-20261105-202754` 17/17 78s、`step9-http-flow-20261106-082332` 14/14 242s、`step9-http-migration-20261105-202508` 19/19 | 2 多选 + 11 单选、5 卡 / 7 名、0 console error；旧档可继续；完整记录见 `docs/evidence/step-09/run-log.md` |
+| 2026-11-06 | T9.9 打包/部署 | 未执行 | 按本步禁区不打包、不部署；等用户确认后再做 v1.2.0-dev 发布 |
 
 ---
 

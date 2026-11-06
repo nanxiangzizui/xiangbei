@@ -1,12 +1,12 @@
 # 《向北》音频与动效系统（步骤六 + v1.1.0 素材增强）
 
-> 状态：步骤六实现规格（2026-11-02），v1.1.0（2026-11-04）补入外置环境声与配乐。运行时仍只有 `project/engine.js` 内的 `XB.audio` 与 `XB.fx`；不新建 `audio.js` / `fx.js`。外置音频只用 `<audio>` + `MediaElementSource`（或 `file://` 直连回退），不引入 CDN、ES module 或 `fetch`。
+> 状态：步骤六实现规格（2026-11-02），v1.1.0（2026-11-04）补入外置环境声与配乐；v1.2.0-dev（2026-11-06）删除四关小游戏，保留床/通用 cue/五音动机。运行时仍只有 `project/engine.js` 内的 `XB.audio` 与 `XB.fx`；不新建 `audio.js` / `fx.js`。外置音频只用 `<audio>` + `MediaElementSource`（或 `file://` 直连回退），不引入 CDN、ES module 或 `fetch`。
 > 声音是氛围与反馈，不是得分奖励：没有成功/失败音、没有 Game Over 音、没有战斗音效。
 
 ## 1. 边界与非目标
 
 - 管：环境床、交互 cue、原创五音动机、首次手势解锁、静音/音量、暂停/图鉴 duck、页面隐藏暂停、转场/闪白/震动/划名。
-- 不管：剧情节点、旗标、结局快照、小游戏结果结构（仍由 `story.js` / `engine.js` / `minigames.js` 现有契约负责）。
+- 不管：剧情节点、旗标、结局快照、选择结果结构（仍由 `story.js` / `engine.js` 现有契约负责；v1.2.0-dev 无 `minigames.js`）。
 - 不做：语音、歌曲、自动播放、Web Audio 之外的音频 API。v1.0 不引入音频文件；v1.1.0 只引入已授权的 5 条环境声与 8 首配乐 MP3，并用 `<audio>` 接入。
 - 减少动效：系统 `prefers-reduced-motion: reduce` 与设置「减少动效」任一开启，都关闭转场/闪白/震动，划名立即到终态。
 
@@ -43,8 +43,8 @@
 映射规则：
 
 - `BED_BY_SCENE` 共 18 项：15 个剧情背景 + `title` / `map` / `ending`；未知场景回退 `wind_title` 并只警告一次。
-- 场景切换由 `renderTitle` / `renderMap` / `renderVn` / `renderEnding` 调 `XB.audio.setScene`；不在小游戏循环里切床。
-- 同一场景重复渲染不重启动；小游戏覆盖层不换床。
+- 场景切换由 `renderTitle` / `renderMap` / `renderVn` / `renderEnding` 调 `XB.audio.setScene`；v1.2.0-dev 无小游戏循环。
+- 同一场景重复渲染不重启动；多选/结算覆盖层不换床。
 
 ## 4. 交互 cue（12 个）
 
@@ -57,15 +57,15 @@
 | `drum` | 需要鼓点的章节演出 | 92→48Hz 下滑正弦，0.42s |
 | `rollcall-answer` | 点名答到 | 660/990Hz 两个短音，像点名册上的应答 |
 | `rollcall-miss` | 点名漏答/替答失败 | 92Hz 低音 + 低通噪声，不做惩罚音 |
-| `result` | 小游戏结算面板出现 | 一记轻鼓 + 短噪声，只报“结束了” |
-| `door-place` | 门板装入/取出 | 118Hz 木钝响 + 低通噪声 |
-| `boat-oar` | 发船/靠岸/弃物发船 | 两段带通水声，模拟桨划水 |
-| `climb-fire` | 攀索失误/火墙压过来 | 高频噪声 + 70Hz 短音，不刺耳 |
+| `result` | 选择结算面板出现（v1.2.0-dev 由渲染层调用） | 一记轻鼓 + 短噪声，只报“结束了” |
+| `door-place` | **v1.1.1 历史**：门板装入/取出 | 118Hz 木钝响 + 低通噪声；v1.2.0-dev 无调用点 |
+| `boat-oar` | **v1.1.1 历史**：发船/靠岸/弃物发船 | 两段带通水声；v1.2.0-dev 无调用点 |
+| `climb-fire` | **v1.1.1 历史**：攀索失误/火墙压过来 | 高频噪声 + 70Hz 短音；v1.2.0-dev 无调用点 |
 | `ending` | 首次进入结局 | 完整五音动机 + 轻鼓 + 长气息 |
 
 - `cue(name)` 先查 12 项白名单；未知、无 ctx、静音、80–120ms 内重复都返回 `false`，不抛错。
-- 小游戏通过 `beginMinigame` 传入的 `callbacks.onCue` 调用；`minigames.js` 只在门板装入/取出、弃物发船、渡船发船/靠岸、攀索失误时调用，不改结果对象。
-- 结算统一由 `handleMinigameEnd` 发 `result`；同一动作不重复叠加。
+- v1.2.0-dev 只由引擎调用：单选 `choice-select`/`choice-timeout`，多选确认 `choice-select`，章首 `chapter`，图鉴 `codex`，结局 `ending`。
+- `door-place` / `boat-oar` / `climb-fire` 与 `result` 保留在 12 项白名单里只为旧代码/旧文档兼容，四关删除后没有小游戏回调；同一动作不重复叠加。
 
 ## 5. 原创五音动机
 
@@ -105,9 +105,10 @@
 - 首次进入泸定桥场景闪一次：120ms、峰值透明度 0.12、间隔至少 2000ms；只闪一次（`ludingFlashed`）。
 - 闪白只叠在画面层，不改变文字对比度；减少动效时完全不闪。
 
-### 7.3 攀索震动
+### 7.3 攀索震动（v1.1.1 历史）
 
-- 攀索结算 `stats.lost > 0` 时 `#stage` 震动：180ms、水平 ±2px；keyframes 里保留 `scale(var(--scale))`，不破坏舞台缩放。
+- v1.1.1 攀索结算 `stats.lost > 0` 时 `#stage` 震动：180ms、水平 ±2px；keyframes 里保留 `scale(var(--scale))`，不破坏舞台缩放。
+- v1.2.0-dev 已无攀索与小游戏结算，`XB.fx.shake` 只保留通用 API，不再由关卡触发。
 - 同一时刻只一个震动；300ms 内重复调用直接返回。
 
 ### 7.4 墨迹划名

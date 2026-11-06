@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 纯状态层烟测（开发期脚本，不进运行时）：node project/tools/smoke.js
-// 不依赖浏览器：把四个脚本按页面顺序放进 vm，只调 XB.core 与 XB.story。
+// 不依赖浏览器：把三个脚本按页面顺序放进 vm，只调 XB.core 与 XB.story。
 "use strict";
 
 const fs = require("node:fs");
@@ -10,7 +10,7 @@ const { BANNED, REAL } = require("./redlines");
 
 const PROJECT_DIR = path.resolve(__dirname, "..");
 const ROOT_DIR = path.resolve(PROJECT_DIR, "..");
-const GAME_FILES = ["art.js", "story.js", "minigames.js", "engine.js"];
+const GAME_FILES = ["art.js", "story.js", "engine.js"];
 
 const sandbox = {
   console: console,
@@ -125,7 +125,7 @@ check("S05", "locate 下标与未知节点", function () {
   assertEqual(XB.core.locate("prologue", "p001").index, 0, "p001");
   assertEqual(XB.core.locate("prologue", "p020").index, 19, "p020");
   assertEqual(XB.core.locate("prologue", "p021").index, 20, "p021");
-  assertEqual(XB.core.locate("prologue", "p900").index, 48, "p900");
+  assertEqual(XB.core.locate("prologue", "p900").index, 51, "p900");
   assertEqual(XB.core.locate("prologue", "nope"), null, "未知节点");
 });
 
@@ -172,18 +172,18 @@ check("S09", "七章元数据", function () {
   assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"], "章节 id");
   assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7], "顺序");
   assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true], "七章全部可玩");
-  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [49, 43, 33, 35, 36, 32, 49], "七章节点数");
+  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [52, 51, 33, 42, 41, 35, 49], "七章节点数");
 });
 
 check("S10", "序章节点 id 唯一、七种类型齐全", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 49, "节点数");
+  assertEqual(nodes.length, 52, "节点数");
   var ids = nodes.map(function (node) { return node.id; });
   assertEqual(ids.length, new Set(ids).size, "id 唯一");
   var types = nodes.map(function (node) { return node.type; });
   var unique = types.filter(function (type, index) { return types.indexOf(type) === index; }).sort();
-  assertEqual(unique, ["choice", "codex", "end", "line", "minigame", "result", "title"], "类型集合");
-  assertEqual(nodes[48].type, "end", "末节点是 end");
+  assertEqual(unique, ["choice", "codex", "end", "line", "multichoice", "result", "title"], "类型集合");
+  assertEqual(nodes[51].type, "end", "末节点是 end");
 });
 
 check("S11", "背景指令落在四处换景", function () {
@@ -277,11 +277,23 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "十条旗标与八项设置默认值", function () {
+check("S18", "25 条旗标与八项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
-  assertEqual(Object.keys(flags).sort(), ["choice.jinsha.trips", "choice.xiangjiang.abandoned", "choice.zunyi.admit", "choice.zunyi.missed", "fire", "item.door", "item.pot", "lights_lost", "load", "trust"], "旗标键");
-  assertEqual(flags["item.door"], false, "item.door");
-  assertEqual(flags["item.pot"], false, "item.pot");
+  assertEqual(Object.keys(flags).sort(), [
+    "choice.jinsha.kettle", "choice.jinsha.main", "choice.jinsha.trips", "choice.jinsha.wounded",
+    "choice.luding.door", "choice.xiangjiang.abandoned",
+    "choice.xiangjiang.take.files", "choice.xiangjiang.take.medkit", "choice.xiangjiang.take.press",
+    "choice.xiangjiang.take.radio", "choice.xiangjiang.take.silver", "choice.xiangjiang.take.xray",
+    "choice.zunyi.admit", "choice.zunyi.missed", "fire",
+    "item.barley", "item.door", "item.homepot", "item.medicine", "item.pot", "item.raincloth", "item.shoes",
+    "lights_lost", "load", "trust"
+  ], "旗标键");
+  ["item.door", "item.pot", "item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes"].forEach(function (key) {
+    assertEqual(flags[key], false, key);
+  });
+  ["choice.jinsha.main", "choice.jinsha.wounded", "choice.jinsha.kettle", "choice.luding.door"].forEach(function (key) {
+    assertEqual(flags[key], false, key);
+  });
   assertEqual(flags.load, 0, "load");
   assertEqual(flags.trust, 0, "trust");
   assertEqual(flags.fire, 50, "fire");
@@ -366,10 +378,10 @@ check("S21", "applyChoice 写旗标与选择日志", function () {
 
 check("S22", "序章结构统计与分支同位置", function () {
   var nodes = chapter().nodes;
-  assertEqual(nodes.length, 49, "节点数");
-  assertEqual(nodesOfType("line").length, 42, "line");
+  assertEqual(nodes.length, 52, "节点数");
+  assertEqual(nodesOfType("line").length, 45, "line");
   assertEqual(nodesOfType("choice").length, 2, "choice");
-  assertEqual(nodesOfType("minigame").length, 1, "minigame");
+  assertEqual(nodesOfType("multichoice").length, 1, "multichoice");
   assertEqual(nodesOfType("result").length, 1, "result");
   assertEqual(nodesOfType("title").length, 1, "title");
   assertEqual(nodesOfType("codex").length, 1, "codex");
@@ -408,10 +420,11 @@ check("S24", "p900 指向湘江且不再前进", function () {
   assertEqual(XB.core.chapterById("xiangjiang").nodes[0].id, "x001", "湘江首节点");
 });
 
-check("S25", "engine 已接 minigames、无外部加载", function () {
+check("S25", "engine 已接多选、无小游戏依赖", function () {
   var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
-  assert(/XB\.minigames\b/.test(engine), "engine 没接 XB.minigames");
   assert(/XB\.art\b/.test(engine), "engine 没接 XB.art");
+  assert(engine.indexOf("applyMultiChoice") !== -1 && engine.indexOf("renderMultiChoice") !== -1, "engine 没接多选");
+  assert(!/XB\.minigames\b/.test(engine), "engine 仍接 XB.minigames");
   assert(!/fetch\s*\(|XMLHttpRequest|document\.write|\.innerHTML\b/.test(engine), "engine 含禁用 API");
   assert(!/type\s*=\s*["']module["']/.test(engine), "engine 不是 module");
 });
@@ -431,41 +444,44 @@ check("S26", "默认旗标一路走到 p900，没有隐藏 end", function () {
   assertEqual(XB.core.currentNode(state2).id, "p900", "带门板终点");
 });
 
-check("S27", "小游戏 API 与四关注册", function () {
-  var mg = XB.minigames;
-  assert(mg && typeof mg === "object", "XB.minigames 缺失");
-  assertEqual(mg.SCENES, ["door", "abandon", "boat", "climb"], "SCENES");
-  ["start", "stop", "isActive", "resize", "labelFor", "itemIds", "crewForTrust", "usedSlots", "canPack"].forEach(function (name) {
-    assert(typeof mg[name] === "function", name + " 不是函数");
-  });
-  assert(Object.isFrozen(mg.RULES), "RULES 未冻结");
-  assert(Object.isFrozen(mg.ITEMS), "ITEMS 未冻结");
-  assertEqual(mg.itemIds("door").length, 8, "门板 8 件");
-  assertEqual(mg.itemIds("abandon").length, 7, "弃物 7 件");
+check("S27", "多选 API：行囊 0–3 件与背包回填", function () {
+  assertEqual(typeof XB.core.applyMultiChoice, "function", "applyMultiChoice 缺失");
+  var node = XB.core.locate("prologue", "p024").node;
+  assertEqual(node.type, "multichoice", "p024 类型");
+  var state = XB.core.defaults();
+  XB.core.startChapter(state, "prologue", "p024");
+  var picked = XB.core.applyMultiChoice(state, node, ["medicine", "homepot"]);
+  assert(picked, "结算失败");
+  assertEqual(state.flags["item.medicine"], true, "medicine");
+  assertEqual(state.flags["item.homepot"], true, "homepot");
+  assertEqual(state.flags.load, 2, "无门板两件 2 格");
+  assertEqual(state.inventory.items, ["roster", "pencil", "medicine", "pot"], "背包");
+  assertEqual(state.choices[state.choices.length - 1].option, "MULTI", "MULTI 日志");
+  assertEqual(XB.core.applyMultiChoice(state, node, ["medicine", "barley", "raincloth", "shoes"]), null, "超 max 应拒绝");
+  assertEqual(XB.core.applyMultiChoice(state, node, ["nope"]), null, "未知 id 应拒绝");
 });
 
-check("S28", "门板容量与船工纯函数", function () {
-  assertEqual(XB.minigames.usedSlots([], true), 2, "空手+门板 2 格");
-  assertEqual(XB.minigames.usedSlots(["medicine", "pot"], true), 5, "门板+药+锅 5 格");
-  assertEqual(XB.minigames.canPack(["pot", "medicine", "barley"], "raincloth", true), false, "再装雨布超 6 格");
-  assertEqual(XB.minigames.canPack(["pot", "medicine", "barley"], "raincloth", false), true, "无门板 5 格可装");
-  assertEqual(XB.minigames.crewForTrust(-1), 12, "trust 下限");
-  assertEqual(XB.minigames.crewForTrust(0), 12, "trust 0");
-  assertEqual(XB.minigames.crewForTrust(5), 37, "trust 5");
-  assertEqual(XB.minigames.crewForTrust(6), 37, "trust 6 按 5");
+check("S28", "弃物 3 选写留岸数组与 take 布尔", function () {
+  var node = XB.core.locate("xiangjiang", "x015").node;
+  assertEqual(node.type, "multichoice", "x015 类型");
+  assertEqual([node.min, node.max], [3, 3], "恰好三样");
+  var state = XB.core.defaults();
+  XB.core.startChapter(state, "xiangjiang", "x015");
+  var summary = XB.core.applyMultiChoice(state, node, ["xray", "press", "files"]);
+  assert(summary, "结算失败");
+  assertEqual(state.flags["choice.xiangjiang.abandoned"], ["medkit", "radio", "silver"], "留岸三样");
+  assertEqual(state.flags["choice.xiangjiang.take.xray"], true, "xray 上船");
+  assertEqual(state.flags["choice.xiangjiang.take.medkit"], false, "medkit 留岸");
+  assertEqual(state.flags.load, 0, "弃物不重算行囊");
 });
 
-check("S29", "start 失败可降级、stop/resize 幂等", function () {
-  var errors = captureConsoleError(function () {
-    assertEqual(XB.minigames.start({ gameId: "nope" }), false, "非法 id");
-    assertEqual(XB.minigames.start({ gameId: "door" }), false, "无画布");
-  });
-  assert(errors.length >= 2, "失败应报错并返回 false");
-  assertEqual(XB.minigames.isActive(), false, "未启动");
-  XB.minigames.stop();
-  XB.minigames.stop();
-  XB.minigames.resize();
-  XB.minigames.resize();
+check("S29", "小游戏文件/入口已移除", function () {
+  assert(!fs.existsSync(path.join(PROJECT_DIR, "minigames.js")), "minigames.js 还在");
+  var html = fs.readFileSync(path.join(PROJECT_DIR, "index.html"), "utf8");
+  assert(html.indexOf("minigame") === -1, "index.html 还有小游戏入口");
+  var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
+  assert(engine.indexOf("soloMode") === -1 && engine.indexOf("?minigame") === -1, "engine 还有小游戏调试入口");
+  assert(!XB.minigames, "运行时仍挂 XB.minigames");
 });
 
 check("S30", "默认旗标：abandoned 数组、trips/missed/lights 夹取", function () {
@@ -488,36 +504,31 @@ check("S30", "默认旗标：abandoned 数组、trips/missed/lights 夹取", fun
   assertEqual(errors.length, 1, "非数组应报错一次");
 });
 
-check("S31", "p024 config 与 p025 结果来源", function () {
+check("S31", "p024 多选字段与 p025 结果来源", function () {
   var p024 = XB.core.locate("prologue", "p024").node;
-  assertEqual(p024.type, "minigame", "p024 类型");
-  assertEqual(p024.game, "door", "p024 game");
-  assertEqual(p024.config, { duration: 75, capacity: 6, doorCost: 2, items: 8 }, "p024 config");
+  assertEqual(p024.type, "multichoice", "p024 类型");
+  assertEqual([p024.min, p024.max], [0, 3], "p024 数量");
+  assertEqual(p024.slotLoad, true, "p024 重算行囊");
+  assertEqual(p024.options.length, 5, "p024 五件");
   var p025 = XB.core.locate("prologue", "p025").node;
   assertEqual(p025.type, "result", "p025 类型");
-  assertEqual(p025.source, "minigame", "p025 source");
-  assertEqual(p025.game, "door", "p025 game");
+  assertEqual(p025.source, "items", "p025 source");
 });
 
 check("S32", "结算重建与结果页字段", function () {
   var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
-  ["applyMinigameResult", "buildResultView", "node.source !== \"minigame\"", "choice.xiangjiang.abandoned", "choice.jinsha.trips", "lights_lost", "vn-result__stats"].forEach(function (needle) {
+  ["PACK_ITEMS", "ABANDON_ITEMS", "buildResultView", 'node.source === "items"', 'node.source === "abandon"', "choice.xiangjiang.abandoned", "vn-result__stats"].forEach(function (needle) {
     assert(engine.indexOf(needle) !== -1, "缺 " + needle);
   });
+  assert(engine.indexOf("lastMinigameResult") === -1, "engine 仍依赖小游戏结果");
   assert(!/\bsuccess\b|\bscore\b/i.test(engine), "engine 结果出现 success/score");
 });
 
-check("S33", "四关代码无外部加载、无禁用画面词", function () {
-  var code = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "minigames.js"), "utf8"));
-  assert(!/fetch\s*\(|XMLHttpRequest|import\s*\(|type\s*=\s*["']module["']|document\.write|\.innerHTML\b/.test(code), "minigames.js 含禁用 API");
-  ["X 光机", "X光机", "Game Over", "gameOver", "牺牲"].forEach(function (word) {
-    assert(code.indexOf(word) === -1, "出现「" + word + "」");
-  });
-  var parts = code.split("drawText(");
-  parts.slice(1).forEach(function (part) {
-    var call = part.slice(0, part.indexOf(");"));
-    assert(!/成功|失败/.test(call), "画面出现成功/失败大字");
-  });
+check("S33", "四段选择无评分字段、无小游戏画面词", function () {
+  var story = JSON.stringify(XB.story);
+  assert(!/\bsuccess\b|\bscore\b|Game Over|gameOver/i.test(story), "剧情出现评分/Game Over");
+  var engine = stripComments(fs.readFileSync(path.join(PROJECT_DIR, "engine.js"), "utf8"));
+  assert(!/成功|失败/.test(engine.slice(engine.indexOf("buildResultView"), engine.indexOf("renderResult"))), "结算页出现成功/失败大字");
 });
 
 

@@ -12,7 +12,7 @@
 - 体验底线：20 分钟通关；每关 60–90 秒；没有 Game Over，失败只改变代价；单一结局 + 可变细节，不做多结局树
 - 评审注意力：最好的文本与演出放在前 5 分钟与最后 2 分钟；“史实图鉴”和“结局五卡”放在显眼位置
 
-> **v1.2.0-dev 口径（2026-11-05，未实现）**：移除四关小游戏（门板/弃物/渡船/攀索），改为 4 段选择——序章行囊多选、湘江弃物多选、金沙江先渡谁、泸定门板/记名；核心剧情、史实、7 张图鉴、五张精神卡、点名结局不变。当前线上 v1.1.1 仍为四关；执行卡见 `step/step-09-移除小游戏与选择回写.md`。
+> **v1.2.0-dev 口径（2026-11-06，已实现，未打包/未部署）**：移除四关小游戏（门板/弃物/渡船/攀索），改为 4 段选择——序章行囊多选、湘江弃物多选、金沙江先渡谁、泸定门板/记名；核心剧情、史实、7 张图鉴、五张精神卡、点名结局不变。当前线上 v1.1.1 仍为四关，`dist/` 未重打包；执行与实测见 `step/step-09-移除小游戏与选择回写.md`、`docs/evidence/step-09/`。
 
 ## 技术栈（按步骤）
 
@@ -45,9 +45,9 @@
 | 八·六 阅读与演出增强 | ✅ 完成（2026-11-04，v1.1.0；已部署 `f8b2045`） | 用户游玩反馈 | 照片章首卡（6 个章节卡 + 日期/地点）、图鉴缩略图与照片年代说明、照片 28s 推拉 + 预加载、总/配乐/环境三档音量与 file:// 直连淡入淡出、暂停花名册、`?fonts=fallback` 保留 | check-build 38/38、smoke 46/46、专项 21/21；http 201.585s / 405 line、file:// 197.639s / 406 line、844×390 207.978s / 405 line，均 5 卡 / 7 名 / 0 划名、0 错误；四关 20/20；六张章节卡 6/6；移动阅读层 7 缩略图 / 花名册可见；2026-11-04 部署 `f8b2045` |
 | 八·七 慢网与竖屏适配 | ✅ 完成（2026-11-05，v1.1.1；已部署 `88771d3`） | 用户游玩反馈 | 底图 480 WebP 占位 → 1600 WebP → 1920 JPEG 兜底；标题占位预加载；竖屏提示改用系统浏览器；`release.py` 资源清单 | check-build 38/38、smoke 46/46；7 场景定向、竖屏/横屏、file:// 通过；公网标题 1.74s、占位 1.75s、全图 3.28s、0 error；site 73 / 31,356,254 B，ZIP 75 / 30,818,357 B；未重跑 200s 全流程 |
 | 八·八 Netlify 主站 | ✅ 完成（2026-11-05，v1.1.1；已上线） | 用户反馈（GitHub 慢） | `dist/site` 静态直传 Netlify；用户认领 `xiangbei`；无密码；GitHub Pages 保留备用 | `https://xiangbei.netlify.app/` 标题/序章通过，0 error / 0 404；site 73 / 31,356,254 B；未重跑公网完整流程 |
-| 九 移除小游戏与选择回写 | 🚧 计划（2026-11-05，v1.2.0-dev；未实现） | 用户反馈 | 删除四关与 `minigames.js`、`?minigame=`；新增 `multichoice`；行囊/弃物多选；金沙江先渡谁、泸定门板/记名保留；即时 + 后续回写；旧存档旗标保留 | 4 段选择可玩；无小游戏入口/文件；20 分钟；check-build/smoke/全流程更新；执行卡 `step/step-09-移除小游戏与选择回写.md` |
+| 九 移除小游戏与选择回写 | ✅ 完成（2026-11-06，tag `step-9-done`；v1.2.0-dev 未打包/未部署） | 用户反馈 | 删除四关与 `minigames.js`、`?minigame=`；新增 `multichoice` 组件；行囊/弃物多选；金沙江先渡谁、泸定门板/记名保留；即时 + 后续回写；旧存档旗标回填与节点迁移 | 4 段选择可玩（键鼠/触摸/刷新）；无小游戏文件/入口/画布；check-build 37/37、smoke 46/46、check-script OK；target 34/34、segments 19/19、migration 19/19；http flow 14/14 71s/432 line（flow.lines 对话推进计数）、file flow 14/14 72s、844×390 flow 17/17 78s；0 console error；旧档可继续；执行卡 `step/step-09-移除小游戏与选择回写.md` |
 
-## 项目结构（计划）
+## 项目结构
 
 ```text
 ./                             # 当前项目根：D:\deepseek harness\新建文件夹
@@ -57,7 +57,6 @@
 │  ├─ style.css                # 版式、配色、UI 组件、纸纹
 │  ├─ engine.js                # 状态机、输入、存档、转场、音频模块
 │  ├─ story.js                 # 七章剧情数据、选项、旗标、史实注（由 docs/script 誊写）
-│  ├─ minigames.js             # v1.1.1 四关；v1.2.0-dev 待删除（不再加载）
 │  ├─ art.js                   # 程序化版画/纹理/剪影
 │  ├─ assets/
 │  │  └─ fonts/                # 仅在授权与体积允许时打包
@@ -72,11 +71,11 @@
 │  │  ├─ README.md             # 行格式/字数口径/统计表
 │  │  └─ 00-prologue.md … 06-wuqi.md
 │  ├─ style-guide.md           # 术语/文风/史实审校
-│  ├─ state-schema.md          # 存档 JSON/旗标/迁移（v1，11 键）
-│  ├─ audio-system.md          # 9 床/12 cue/五音/生命周期/duck/fx 上限
-│  ├─ minigame-tuning.md       # 数值表/参考游戏
-│  ├─ ui-layout.md             # 1280×720 坐标/线框（§9 特效层）
-│  ├─ test-cases.md            # T01–T38 验收用例
+│  ├─ state-schema.md          # 存档 JSON/旗标/迁移（v1.4，25 旗标，11 顶层键）
+│  ├─ audio-system.md          # 9 床/12 cue/五音/生命周期/duck/fx 上限（v1.1.1 小游戏 cue 标历史）
+│  ├─ minigame-tuning.md       # v1.1.1 历史数值（v1.2.0-dev 起不适用）
+│  ├─ ui-layout.md             # 1280×720 坐标/线框（§3 多选与结算）
+│  ├─ test-cases.md            # T01–T51 + C01–C08 验收用例
 │  ├─ demo-script.md           # 3 分钟演示逐字稿
 │  ├─ quality-bar.md           # 可访问性/性能预算
 │  ├─ design-note.md           # 交差用一页设计说明（步骤八）
@@ -90,13 +89,13 @@
    └─ rules/xiangbei.mdc       # Cursor 常驻项目规则（本文件摘要）
 ```
 
-## 当前进度（2026-11-05）
+## 当前进度（2026-11-06）
 
 - 项目根目录：`D:\deepseek harness\新建文件夹`（当前工作区；如移动/改名，命令同步改）。
 - **本文件是唯一状态源**；`SKILL.md` 不再维护独立状态，只链接到这里。
 - Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。原 `.cursor/rules/000`–`040` 编码规范已合并进同一文件，不再单独维护。
-- **代码目录约定（用户指令）**：所有代码/运行文件放 `project/`（index.html、style.css、engine.js、story.js、minigames.js、art.js、assets/、tools/）；docs、step、.claude、.cursor 留在根目录。
-- 已有：`向北-项目计划书.md`（唯一权威计划）、`README.md`（交差入口）、`docs/`（story-bible / sources / codex / script×8 / style-guide / state-schema / audio-system / chapter-integration / minigame-tuning / minigame-system / ui-layout / visual-system / visual-reading / test-cases / demo-script / quality-bar / design-note / release-record / credits）、`step/`（step-00 … step-09 执行卡）、`docs/test-record.md`（步骤七实测与有条件交差）、`project/`（五运行时 + v1.1.1 遗留 `minigames.js` + assets/ + CREDITS.txt + tools/ 含 ui-preview.html / ui-preview.js / redlines.js / check-build.js / smoke.js / check-script.js / count-words.js / release.py / _pw-step8.js / design-note.html）、`docs/evidence/step-01|…|step-08/`（浏览器证据与实测记录，gitignored）。
+- **代码目录约定（用户指令）**：所有代码/运行文件放 `project/`（index.html、style.css、engine.js、story.js、art.js、assets/、tools/）；docs、step、.claude、.cursor 留在根目录。
+- 已有：`向北-项目计划书.md`（唯一权威计划）、`README.md`（交差入口）、`docs/`（story-bible / sources / codex / script×8 / style-guide / state-schema / audio-system / chapter-integration / minigame-tuning / minigame-system / ui-layout / visual-system / visual-reading / test-cases / demo-script / quality-bar / design-note / release-record / credits）、`step/`（step-00 … step-09 执行卡）、`docs/test-record.md`（步骤七实测与有条件交差）、`project/`（四运行时 index/style/engine/story/art + assets/ + CREDITS.txt + tools/ 含 ui-preview.html / ui-preview.js / redlines.js / check-build.js / smoke.js / check-script.js / count-words.js / release.py / _pw-step8.js / _pw-step9.js / design-note.html）、`docs/evidence/step-01|…|step-09/`（浏览器证据与实测记录，gitignored）。
 - 步骤零：✅ 完成（2026-11-01）。七章剧本 4108 字 / 229 beat / 12 抉择点 / 26 选项 / 9 限时；口播 A 口径 11:22，整章合计 19:44；7 张史实注（120–220 字，含 4 项争议口径）；红线 10/10；T0.0–T0.9 逐卡记录见 `step/step-00-定题史料与剧本.md` §11.1；tag `step-0-done`。
 - 步骤一：✅ 完成（2026-11-01，tag `step-1-done`）。固定 1280×720 舞台等比缩放；title/map/vn 三场景 + 暂停遮罩；`XB.core` 纯状态层 + `XB.engine`；`xiangbei.save.v1` 每 beat 存档、坏档备份 `.bad`/`.bak` 后回标题；序章 p001–p020（20 句逐字）+ p900 临时章末；工具 redlines / check-build（9 项）/ smoke（14 项）；浏览器实测 12 项全绿（Edge 156 + Playwright，file:// 与本地 http）。记录见 `step/step-01-工程骨架.md` §11。
 - 步骤二：✅ 完成（2026-11-01，tag `step-2-done`）。`style.css` 重写为令牌层（:root 五色 + 派生 + 字号/间距/z-index/动效/--paper-texture，组件只写 var()）；`art.js` 四场景程序化版画（title / map / yudu_river / yudu_night，FNV-1a→mulberry32 定种，DPR 上限 2，paint 0.04–0.18ms）；单画布 `#stage-art` 取代 `.vn-bg`，engine 接入 paintStage + 失败隐藏画布 + 一次性 toast；标题 96px + 朱砂印章「北」+ 门板刻痕；10 类 `xb-*` 组件壳（btn / dialog / choice / title-card / codex / ending / pause / settings / hud / feedback）+ `project/tools/ui-preview.html` 预览页；`?fonts=fallback` 回退开关。修复两处实测 bug：手机横屏改用 `clientWidth`（innerWidth 被 shrink-to-fit 放大到 1062）与 ?debug 画布尺寸过期（updateDebug 移入 resize rAF 回调）。check-build 12/12、smoke 17/17、check-script OK；浏览器 B1–B14 全绿、0 console error；记录见 `step/step-02-视觉系统.md` §11 与 `docs/evidence/step-02/run-log.md`。
@@ -112,8 +111,8 @@
 - 已知欠账：①真人外读已做（1 人，2026-11-02）：首轮 3/5，错误卡/点名 2 问不清；修文后同读者复读两问均正确，T51 PASS，X9 关闭；2026-11-01 的 AI 替代记录在 step-00 §11.4，不再算数；②本机默认沙箱下 pwsh 子进程初始化失败（0xC0000142），步骤七测试均在 `danger-full-access` 下完成；默认策略下仍不可执行，仅记环境事实；③浏览器：仅 Edge headless（含移动模拟 + touch）；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受；真机触摸未验；20 分钟计时 A–D 通过；隐私模式与断网 ZIP 通过；④字体：v1.0.0 本机未安装得意黑/霞鹜文楷，系统回退（字体 0 字节）；v1.1.0 已随包 OFL 子集（约 552 KB），本机字体缺失不再影响正文字形；⑤file:// localStorage 在 Edge 可用；隐私模式降级已测（提示“本局无法存档”，可继续）；⑥已修：844×390 ending 字号 ≥14 CSS px、面板可滚且五卡可达（S2-02/04）；⑦自动/跳过用本会话已读集合，刷新后归零（设计如此，不写档）；⑧已修：手机横屏暂停改 96 逻辑≈52 CSS px（S2-01）；⑨音频主观听感未验收——B49 headless 峰值采样为 0（只证明 <0.99），真机/耳机试听、真实切后台（B48 用 `document.hidden` 属性模拟）、真机首次手势与锁屏（B54 为移动模拟）仍作为 P1 例外保留；B50 转场与 B53 划名未录屏。
 - 八·七 慢网与竖屏适配：✅ 完成（2026-11-05，v1.1.1，已部署 `88771d3`）。底图改为 480×270 WebP 占位先出、1600×900 WebP 随后替换、1920 JPEG 兜底；`index.html` 预加载标题占位图；竖屏遮罩增加“若转屏无反应，用系统浏览器打开”的提示。`art.js` 定向测试 7 个场景全部到达 `is-photo`，占位图约 32ms、大图约 5s（人为延迟 5s）；390×844 显示竖屏提示、844×390 进入舞台；file:// 标题与字体正常；0 console error / 0 failed request。check-build 38/38、smoke 46/46。公网标题页 1.74s 可交互、占位图 1.75s、全图 3.28s；7/7 关键文件哈希一致；site 73 文件 / 31,356,254 B、ZIP 75 条目 / 30,818,357 B、PDF 303,713 B。未重跑 200s 全流程/公网四关/96 用例。
 - 八·八 Netlify 主站：✅ 完成（2026-11-05，v1.1.1）。用户反馈 GitHub Pages 慢后，把 `dist/site` 73 文件静态直传 Netlify；匿名部署生成可认领站点，用户用 GitHub 登录认领并命名 `xiangbei`，无密码公开。公网 https://xiangbei.netlify.app/ 标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；Netlify 在 `index.html` 注入约 326 B 注释（14,326 B vs 本地 14,000 B），其他关键文件同包。GitHub Pages https://nanxiangzizui.github.io/xiangbei/ 保留备用。未在 Netlify 重跑完整流程/四关/移动/96 用例，不能写成“公网完整流程通过”。
-- 九 移除小游戏与选择回写：🚧 计划（2026-11-05，v1.2.0-dev，未实现）。用户确认四关全删、不留互动；结尾统计删渡船“X/18 趟、船工 N 人”，保留结局点名数字；先改口径并写执行卡，未动代码。回滚 tag `pre-minigame-removal` 指向 `359b320`（v1.1.1 线上）。执行卡 `step/step-09-移除小游戏与选择回写.md`：行囊多选（5 件选 3）、弃物多选（6 件带 3）、金沙江先渡谁、泸定门板/记名；每段即时 + 后续回写。
-- 建议下一步：先按 `step-09` 实现 v1.2.0-dev（四关删除 + 四段选择 + 即时/后续回写），完成后再重打包；第 8 项（清理/兼容性，含未用 `plate_loushan`、Chrome/Safari/真机、移动 WebP）继续后置。v1.1.1 已部署 GitHub（`88771d3`）与 Netlify 主站（https://xiangbei.netlify.app/），源码 `0290d58` + tag `v1.1.1`；本次回滚点 tag `pre-minigame-removal` = `359b320`。
+- 九 移除小游戏与选择回写：✅ 完成（2026-11-06，tag `step-9-done`，v1.2.0-dev 本地完成，未打包/未部署）。四关与小游戏层全部删除（`project/minigames.js`、`?minigame=`、画布/HUD/暂停入口、solo 运行态、`XB.minigames` 引用）；新增 `multichoice` 类型与 `#vn-multichoice` 组件（整卡 `role=checkbox`、数字键 1–9、Enter 确认、Esc 暂停、确认后 300ms 锁定）。序章行囊（5 件选 3，门板占 2 格）、湘江弃物（6 件带 3，`choice.xiangjiang.abandoned` 记留在岸上）、金沙江先渡谁（j024 + 镜像布尔回写）、泸定门板/记名保留；五件行囊与六件弃物均有即时 + 后续回写，结局五卡与点名未破坏。旧档 `j010/j011→j012`、`l013/l014→l015` 迁移并 toast，`inventory.items` 反推 `item.*`、`abandoned` 反推 `take.*`；键名仍 `xiangbei.save.v1`，顶层 11 键。实测：check-build 37/37、smoke 46/46、check-script OK；target 34/34、segments 19/19、migration 19/19；http 完整流程 14/14（71s/432 line（flow.lines 对话推进计数））、file:// 14/14（72s）、844×390 移动 17/17（78s）；2 个多选 + 11 个单选、5 卡/7 名、0 console error/pageerror/请求失败。移动多选确认按钮 51.99 CSS px、选项 44.42 CSS px。证据 `docs/evidence/step-09/`；未重打包 `dist/`，线上 Netlify/GitHub Pages 仍为 v1.1.1 四关版。tag `pre-minigame-removal` 实际指向 `8beb09a`（文档曾记 `359b320`，代码同为 v1.1.1，不影响回滚）。
+- 建议下一步：先由用户确认是否重打包 v1.2.0-dev（`dist/site`、ZIP、设计说明 PDF、部署）——当前只完成本地实现与实测；第 8 项（清理/兼容性，含未用 `plate_loushan`、Chrome/Safari/真机、移动 WebP）继续后置。
 
 ## 关键约束与红线
 
@@ -180,7 +179,6 @@ python -m http.server 8080 --directory project
 # 语法与构建自检（开发期脚本，不进运行时）
 node --check project/engine.js
 node --check project/story.js
-node --check project/minigames.js
 node --check project/art.js
 node project/tools/check-build.js
 node project/tools/smoke.js

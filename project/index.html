@@ -61,6 +61,16 @@
       <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
       <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
 
+      <!-- 多选：行囊/弃物。整卡可点，数字键切换，Enter 确认；没有倒计时 -->
+      <div id="vn-multichoice" class="vn-multichoice" role="group" aria-label="多选" hidden>
+        <p id="vn-multi-prompt" class="vn-multi-prompt"></p>
+        <div id="vn-multi-options" class="vn-multi-options"></div>
+        <div class="vn-multi-foot">
+          <p id="vn-multi-status" class="vn-multi-status" aria-live="polite"></p>
+          <button type="button" id="vn-multi-confirm" class="xb-btn xb-btn--primary vn-multi-confirm" data-action="multi-confirm" disabled>确认</button>
+        </div>
+      </div>
+
       <!-- 点名 / 记名：DOM 覆盖层，不走小游戏画布 -->
       <div id="vn-interact" class="vn-interact" role="group" aria-label="点名" hidden>
         <div class="vn-interact__panel">
@@ -74,15 +84,6 @@
         </div>
       </div>
 
-      <!-- 小游戏覆盖层：单画布 + 可访问状态；结算只用 DOM，不把 canvas 当唯一信息源 -->
-      <div id="vn-minigame" class="vn-minigame" role="group" aria-label="小游戏" hidden>
-        <canvas id="minigame-canvas" class="minigame-canvas" width="1280" height="720" tabindex="0" role="application" aria-label="小游戏画面" aria-describedby="minigame-help"></canvas>
-        <p id="minigame-hud" class="sr-only"></p>
-        <p id="minigame-help" class="sr-only"></p>
-        <p id="minigame-live" class="sr-only" aria-live="polite"></p>
-        <button type="button" id="minigame-pause" class="minigame-pause" data-action="pause" aria-label="暂停小游戏">Ⅱ</button>
-        <p id="minigame-fallback" class="minigame-fallback" hidden>小游戏无法载入；按 Esc 可暂停。</p>
-      </div>
       <div id="vn-result" class="vn-result" role="group" aria-label="结算" hidden></div>
 
       <!-- 章节标题卡：全屏，1200ms 自动关 -->
@@ -236,10 +237,9 @@
     <p class="orientation-hint">如果转动手机没有反应，请点右上角菜单，选择“在浏览器打开”。</p>
   </div>
 
-  <!-- 顺序固定：art → story → minigames → engine；全部经典 script，不用 module -->
+  <!-- 顺序固定：art → story → engine；全部经典 script，不用 module -->
   <script src="./art.js"></script>
   <script src="./story.js"></script>
-  <script src="./minigames.js"></script>
   <script src="./engine.js"></script>
 </body>
 </html>

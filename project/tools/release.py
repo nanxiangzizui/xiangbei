@@ -39,7 +39,6 @@ RUNTIME = [
     "style.css",
     "engine.js",
     "story.js",
-    "minigames.js",
     "art.js",
 ]
 SITE_EXTRA = ["CREDITS.txt", "design-note.pdf"]
