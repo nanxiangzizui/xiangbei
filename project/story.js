@@ -1071,7 +1071,7 @@
           {
             id: "g008",
             type: "choice",
-            prompt: "炒面只剩半袋。",
+            prompt: "连队的炒面只剩半袋。",
             record: "choice.grass.share",
             timeout: 20,
             defaultOption: "A",

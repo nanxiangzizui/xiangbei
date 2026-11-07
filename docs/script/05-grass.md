@@ -3,7 +3,7 @@
 - 定稿: 586 字 ｜ 39 beat ｜ 时长(B) 2:31
 - bg: grass_marsh, grass_dawn ｜ sfx: wind_low, water_step, fire_miss, bugle_short
 - 演出: 黑草与水的横移 / 门板当床 / 火苗不起来
-- 注意: 不写具体减员数；不做血腥；死亡只用“蹲下没再站起来”和划名
+- 注意: 不写具体减员数；不做血腥；死亡只用“蹲下没再站起来”和划名；炒面是连队公粮，个人干粮看 item.barley
 
 [[bg:grass_marsh]]
 【旁白】草地。八月，没有一棵树。
