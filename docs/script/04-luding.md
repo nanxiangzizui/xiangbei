@@ -3,7 +3,7 @@
 - 定稿: 741 字 ｜ 40 beat ｜ 时长(B) 3:11
 - bg: luding_bridge, luding_after ｜ sfx: river_roar, iron, wind, gunfire_far
 - 演出: 十三根铁索横在河上 / 光点一个一个亮 / 桥板一块一块铺
-- 注意: 22 名突击队员只写“光点”和数字，不写姓名（姓名有佚散，难以确定）
+- 注意: 22 名突击队员只写“光点”和数字，不写姓名（姓名有佚散，难以确定）；门板铺桥后 item.door 变 false，l019x 用 !choice.luding.door 防止同一回合二次触发
 
 [[bg:luding_bridge]]
 【旁白】大渡河。水声像打雷，站在桥头说话要靠喊。
@@ -26,12 +26,12 @@
 【旁白】走到中间，看见桥板上有一道划痕，像谁用指甲刻的。
 
 >> 选项｜限时 12s｜默认 C｜记录到 choice.luding.door｜when: item.door
-A｜把门板铺上桥面｜set: item.door=false, trust=+1, strain=+1, fate.feimao.dead=false, memory.fly_bridge=true｜cost: 你的门板成了第三块桥板
-B｜先给他上药｜requires: item.medicine｜set: item.medicine=false, strain=+1, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
+A｜把门板铺上桥面｜set: item.door=false, doorOutcome=bridge, trust=+1, rescues=+1, quality.feimao=3, fate.feimao.dead=false, memory.fly_bridge=true｜cost: 你的门板成了第三块桥板
+B｜先给他上药｜requires: item.medicine｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
 C｜抱着门板先过桥｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你过去了。他没有。
 
 >> 选项｜限时 12s｜默认 B｜记录到 choice.luding.door｜when: !item.door && !choice.luding.door
-A｜把药敷在他背上｜requires: item.medicine｜set: item.medicine=false, strain=+1, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
+A｜把药敷在他背上｜requires: item.medicine｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
 B｜继续走｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你没有停。
 
 [[if:choice.luding.door]]
@@ -68,11 +68,13 @@ B｜继续走｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你没
 【旁白】飞毛腿没过来。他的号挂在桥头的木桩上，还热着。
 【旁白】我把号取下来，塞进背包。号嘴上有牙印，他咬的。
 【冬生】号给我。
-【满崽】就剩一个了。
-【冬生】我知道。他吹的时候，我在后面听。
 [[end]]
 [[if:!fate.feimao.dead]]
 【旁白】冬生把水壶递给他。他喝了一口，又吐出来，说水太凉。
+[[end]]
+[[if:fate.feimao.dead]]
+【满崽】就剩一个了。
+【冬生】我知道。他吹的时候，我在后面听。
 [[end]]
 
 >> 选项｜限时 12s｜默认 A｜记录到 choice.luding.names

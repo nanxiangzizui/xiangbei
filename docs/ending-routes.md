@@ -486,12 +486,42 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 | T11-14 | 回归 | 7 图鉴、五卡、名册、音频、章节卡、`file://` |
 | T11-15 | 工具 | check-build/smoke/check-script 全绿；0 console/pageerror/失败请求 |
 
-## 12. 实施记录（待回填）
+## 12. 实施记录（2026-11-07）
 
-- 2026-11-07：T11.0 设计定稿落库；代码/剧情/存档尚未按 v1.4 修改。
-- 实现顺序：T11.1 数据/存档 → T11.2 物资 → T11.3 状态 → T11.4 结局 → T11.5 UI → T11.6–T11.10 剧情 → T11.11 迁移/名册 → T11.12 测试/文档/tag。
-- 证据目录：`docs/evidence/step-11/`；截图命名 `ending-7-1.png` … `ending-bad.png`、`pack-4slots.png`、`status-warning.png`、`door-discard.png`、`legacy-v13.png`。
-- `dist/` 不打包、不部署；分支 `v1.4-dev` 不合并 main。
+### 12.1 已实现
+
+- 数据与存档：`xiangbei.save.v2`（保留 v1 迁移）；47 个旗标；状态 `condition` 0–4、救人数 `rescues` 0–3、`quality.*`、`doorOutcome`、`fate.player.dead`、`fate.seven5`、`fate.badend`、`grass.settled`。
+- 物资：4 格 = 8 个半格；药/青稞 0.5、鞋 1、锅/雨布/门板 2；5 种配方；门板不可用；雨布仅草地；限时选项禁用物资栏；冬生赠青稞不占格。
+- 状态：初始良好；救人按 `rescuePenalty` 扣级；草地结束 -1；救满 3 人且状态为差时触发一次“三人帮助”回勉强；0 死；1 弹差警告；物资面板与门板舍弃弹窗。
+- 结局：带板 7(1)–7(5) + 无板 8(1)–8(5) + 坏结局，共 11 条；顺序先判死，再判 7(5)/坏结局，再按带板/无板与救人数收束；林先生只在我死时死；没有全活。
+- 剧情：序章 4 格口径；泸定飞毛腿“门板铺桥/药/抱板走”；草地灶王“青稞/锅/不救”、冬生“鞋/雨布/不救”并赠青稞；`g027a` 草地结算；`g028h` 三人帮助；`g898` 坏结局、`g899` 空页、`g900` 吴起；隐藏 `badend` 章。
+- UI：左上角状态 HUD、物资按钮/面板、差警告、门板弹窗、结局页 `routeLabel`（“结局7(1)”“坏结局”）、名册回廊。
+- 工具：`check-build` 39/39、`smoke` 46/46、`check-script` 9 剧本 OK；新增 `project/tools/_pw-step11.js`。
+
+### 12.2 测试结果（Edge 156 headless）
+
+| 用例 | 实测 | 结果 |
+|---|---|---|
+| T11-01/02 物资 | pack 26/26：带板 4/4、无板四件 4/4、药+青稞到优秀、超重拒绝 | PASS |
+| T11-03/04/05/06 状态与危机 | crises 64/64：救人降级、三人帮助、差警告、0/坏结局、门板三条件/舍弃 | PASS |
+| T11-07 11 结局 | routes 123/123：7(1)–7(5)、8(1)–8(5)、bad 各一次；路线行/名册 0·7·8 名/五卡/companyEnd 18·19/快照 | PASS |
+| T11-08 林先生 | coda 20/20：仅 7(5)/bad 缺席；coda 有“没等到收容队” | PASS |
+| T11-09 旧档 | migration 21/21：v1 wuqi / grass / kongye 可续，不白屏 | PASS |
+| T11-10 刷新 | refresh 15/15：g027a 幂等、物资消耗不复活 | PASS |
+| T11-11 移动 | mobile 13/13：844×390 面板/选项/关闭 ≥44 CSS px | PASS |
+| T11-12 键盘/焦点 | 现有 Esc/Tab/数字键沿用；本步未写独立键盘专项 | **部分（P1）** |
+| T11-13 时长 | 完整流程 http 150s / 244 步（快速点击）；真人 11 路线未计时 | **未验证（P1）** |
+| T11-14 回归 | http flow 12/12（150s，7(2) 桥板）、file:// flow 12/12（149s）、file routes 123/123、file coda 20/20；7 图鉴/五卡/名册/章节卡/音频入口通过 | PASS |
+| T11-15 工具与错误 | 三件套全绿；全部 0 console error / pageerror / 失败请求 / HTTP 错误 / 外部请求 | PASS |
+
+证据：`docs/evidence/step-11-routes`、`-coda`、`-crises`、`-pack`、`-migration`、`-refresh`、`-mobile`、`-flow`、`-file-flow`、`-file-routes`、`-file-coda`（各含 `run.log`、`result.json`、截图）。
+
+### 12.3 未做/例外
+
+- 真人 11 路线计时与真人 20 分钟验收未做；当前只有文本估算（单周目约 13–17 分钟）与 150 秒快速点击证据。
+- Chrome/Safari、真机触摸、隐私模式未在 v1.4 重跑；沿用 v1.3 的 P0/P1 例外。
+- 公网仍是 v1.1.1；`dist/` 未重打包，未部署。
+- `main` 保留 v1.3 / tag `step-10-done`；本步在 `v1.4-dev` 分支完成，tag `step-11-done`。
 
 ## 13. v1.3 历史（只读）
 

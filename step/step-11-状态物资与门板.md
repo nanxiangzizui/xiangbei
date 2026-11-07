@@ -1,7 +1,7 @@
 # 步骤十一 · 状态、物资与门板（v1.4.0-dev 执行卡）
 
-> 性质：**执行计划，不是状态源**。进度与步骤状态只看 `.claude/CLAUDE.md`；范围看 `向北-项目计划书.md`；v1.4 设计口径在 T11.0 落到 `docs/ending-routes.md`，之前以桌面设计稿 `改进.txt` 为准。
-> 写卡时间：2026-11-07。写卡时**没有改运行时**：`story.js`、`engine.js`、`index.html`、`style.css`、存档键与 `dist/` 都未动。
+> 性质：**执行计划与执行记录，不是状态源**。进度与步骤状态只看 `.claude/CLAUDE.md`；范围看 `向北-项目计划书.md`；v1.4 设计口径以 `docs/ending-routes.md` 为准。
+> 写卡时间：2026-11-07；执行完成：2026-11-07（`v1.4-dev`）。执行前的运行时未动；执行后代码/剧情/存档/UI 已迁到 v1.4，`dist/` 仍未打包。
 > 分支：`v1.4-dev`（从 `main` 的 `8fd0d9f` / tag `step-10-done` 切出）。`main` 保留 v1.3.0-dev，可随时回退；本步**不合并 main、不打包、不部署**。
 > 版本口径：本步实现 v1.4.0-dev；线上 Netlify / GitHub Pages 仍是 v1.1.1 四关版。
 > 冲突顺序：用户最新指令 > `向北-项目计划书.md` > `.claude/CLAUDE.md` > `docs/ending-routes.md` > 本卡。若本卡与设计稿冲突，先改设计稿，再动代码。
@@ -15,7 +15,7 @@
 | 设计来源 | 桌面 `改进.txt`（149 行，2026-11-07）；T11.0 重写为 `docs/ending-routes.md`，作为仓库内唯一设计稿 |
 | 状态源 | `.claude/CLAUDE.md`（步骤表、当前进度、红线、验收表） |
 | 回滚点 | `main` 的 `8fd0d9f`；tag `step-10-done`；本步开始前的 `dist/` 与线上不动 |
-| 本步出口 | 4 格物资、状态 0–4、门板三条件、带板 5 种 + 无板 5 种 + 坏结局；旧 v1.3 档可续；移动/键盘/刷新/`file://` 可玩；测试、证据、提交与 `step-11-done` 完成 |
+| 本步出口 | 4 格物资、状态 0–4、门板三条件、带板 5 种 + 无板 5 种 + 坏结局；旧 v1.3 档可续；移动/刷新/`file://` 可玩；测试、证据、提交与 `step-11-done` 完成；键盘专项与真人计时记 P1 |
 | 时间盒 | 标准 900 分钟 / 压缩 600 分钟（见 §9） |
 | 不可逆动作 | 合并 `main`、打包 `dist/`、部署上线、删除 `xiangbei.save.v1`、清空名册——**本步全部不做**；部署需用户单独确认 |
 | 性质 | 数据模型重写 + 状态机 + 物资 UI + 剧情分支 + 存档迁移 + 测试/文档 |
@@ -559,7 +559,7 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ## 13. 交接接口
 
-- `engine.js` 导出：`ITEM_UNITS`、`PACK_SLOTS`、`packUsage`、`canAddMultiOption`、`useItem`、`applyRescue`、`applyGrassEnd`、`routeOf`、`buildEnding`、`resolveRollCall`。
+- `engine.js` 导出：`ITEM_UNITS`、`PACK_SLOTS`、`PACK_UNITS`、`packUsage`、`canAddMultiOption`、`usePackItems`、`settleGrass`、`resolveGrassWarning`、`settleDoor`、`routeOf`、`buildEnding`、`resolveRollCall`。
 - `story.js` 只写作者数据：`choice/requires/set/rescue`、`fate/quality`、`doorOutcome`；不在剧本里重复状态公式。
 - `index.html/style.css` 只读 `XB.core` 的展示状态；不自己算路线/容量。
 - 测试用 `?debug=1` 读 `node/type/chapter/condition/rescues/door`；新增 debug 行。
@@ -570,10 +570,11 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 | 日期 | 任务 | 证据 | 结论 |
 |---|---|---|---|
 | 2026-11-07 | 分支创建 | `git branch --show-current` = v1.4-dev；HEAD 8fd0d9f | 完成 |
-|  | T11.0 |  |  |
-|  | T11.1–T11.5 |  |  |
-|  | T11.6–T11.10 |  |  |
-|  | T11.11–T11.12 |  |  |
+| 2026-11-07 | T11.0 | `docs/ending-routes.md` v1.4 定稿；CLAUDE/cursor/计划书/state-schema/story-bible 口径 | 完成 |
+| 2026-11-07 | T11.1–T11.5 | save v2 + v1 迁移、4 格/半格物资、状态 0–4、11 结局、状态 HUD/物资面板/门板弹窗 | 完成 |
+| 2026-11-07 | T11.6–T11.10 | 序章 4 格、泸定/草地三次危机、草地结算、吴起/coda/badend；`docs/script` 00–08 逐句一致 | 完成 |
+| 2026-11-07 | T11.11–T11.12 | routes 123/123、crises 64/64、coda 20/20、pack 26/26、migration 21/21、refresh 15/15、mobile 13/13、flow http 12/12（150s）/file 12/12（149s）；check-build 39/39、smoke 46/46、check-script OK | 完成；T11-12 键盘专项、T11-13 真人计时为 P1 |
+| 2026-11-07 | 打包/部署 | `dist/` 未重打包；Netlify/GitHub Pages 仍 v1.1.1 | 按本步禁区，未做 |
 
 ---
 

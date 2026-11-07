@@ -3,7 +3,7 @@
 - 定稿: 1004 字 ｜ 52 beat ｜ 时长(B) 4:19
 - bg: wuqi_dawn, wuqi_wall ｜ sfx: wind_dry, footstep_earth, chalk, name_call
 - 演出: 黄土镇口 / 门板靠墙、背面“北”字 / 点名时名册上一行一行亮起 / 红漆与铅笔
-- 注意: 历史终点只有一个；人物命运按 fate.* 分叉，不做“全活”；“8.6 万→7000 余人”为史实，连队 104→19 标“虚构”
+- 注意: 历史终点只有一个；人物命运按 fate.* 分叉，不做“全活”；“8.6 万→7000 余人”为史实，连队 104→19 标“虚构”；林先生只在我死（coda/bad_end）时缺席，wuqi 里她活着
 
 [[bg:wuqi_dawn]]
 【旁白】1935年10月19日，吴起镇。土是黄的，天很高。
@@ -20,18 +20,17 @@
 【满崽】我。
 【林先生】留着。标语写在正面，字写在背面，正好。
 【旁白】她先用粉笔打格子。一个字一格，写一个，退后两步看看，再写下一个。
-
->> 选项｜限时 20s｜默认 A｜记录到 choice.wuqi.door
-A｜把门板留在吴起｜set: item.door=false, memory.door=true｜cost: 你从此没有那块板了
-B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回家的路还很长
 [[end]]
 [[if:!item.door && !fate.lin.dead]]
 【旁白】林先生想借门板写标语。我背后空着，她只好找了一面石墙。
-[[else]]
+[[end]]
 [[if:!item.door && fate.lin.dead]]
 【旁白】石墙上有一行旧标语，红漆褪成了粉色。是林先生在路上写的。
 [[end]]
-[[end]]
+
+>> 选项｜限时 20s｜默认 A｜记录到 choice.wuqi.door｜when: item.door
+A｜把门板留在吴起｜set: item.door=false, doorOutcome=wuqi, memory.door=true｜cost: 你从此没有那块板了
+B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回家的路还很长
 
 [[if:!item.door && !fate.lin.dead]]
 【旁白】我站在墙边，看她把标语写在石头上。
@@ -62,7 +61,6 @@ B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回�
 【旁白】点名的时候，天刚亮。念到没人应的名字，我替他答。
 【旁白】念到的人答“到”。队伍站成三排，前一排能看见后一排的鞋。
 【旁白】名册翻到第三页。纸已经软了，像一块布。
-
 【旁白】念到何指导员。他在别的连，那边有人应了一声。
 【旁白】念到细妹。她答“到”，声音比平时高。
 [[if:!fate.lin.dead]]
@@ -70,6 +68,7 @@ B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回�
 [[else]]
 【旁白】念到林先生。没有人应。她没等到收容队。
 [[end]]
+【旁白】念到老周。队伍里没有人应。
 [[if:fate.zaowang.dead]]
 【旁白】念到灶王。没有人应。
 [[else]]
@@ -81,22 +80,20 @@ B｜带回于都｜set: item.door=true, memory.door=false, load=+1｜cost: 回�
 【旁白】念到飞毛腿。他把号举了举。
 [[end]]
 
-【旁白】念到老周。队伍里没有人应。
-
 【交互】点名｜45s｜按名册顺序念名；活着的人自己答，没人应的由玩家替他答
 【结算】点名｜全连出发 104 人，到吴起 19 人（虚构）；中央红军出发 8.6 万余人，到陕甘 7000 余人（史实）
 
 [[if:memory.rollcall_missed_any]]
 【旁白】有几个名字，我没有替他们答上来。
-[[else]]
-[[if:fate.all.dead]]
-【旁白】四个人的名字，我都替他们答了。
-[[else]]
+[[end]]
+[[if:!memory.rollcall_missed_any && !fate.all.dead]]
 【旁白】三个人的名字，我都替他们答了。
 [[end]]
+[[if:!memory.rollcall_missed_any && fate.all.dead]]
+【旁白】四个人的名字，我都替他们答了。
 [[end]]
 【旁白】后来有人告诉我，出发的时候，中央红军八万六千人；到陕北，七千余人。
-[[if:!strain.dying]]
+[[if:!fate.player.dead]]
 【旁白】全连出发一百零四，到吴起十九。
 【旁白】十九个人，站成三排。前排空着的位置，风从那儿过。
 [[end]]

@@ -31,7 +31,7 @@ files.forEach((file) => {
   } else {
     found.push(`${file} 缺 - id:`);
   }
-  const endLine = /^【结束】next=([a-z]+)\s*$/m.exec(raw);
+  const endLine = /^【结束】next=([a-z]+)(?:\s*｜.*)?\s*$/m.exec(raw);
   let endNext = null;
   if (endLine) {
     endNext = endLine[1];
@@ -58,9 +58,11 @@ files.forEach((file) => {
     }
   });
 
-  for (const [tag, label] of [["【史实注】", "史实注"], ["【结束】", "结束"], ["- id:", "文件头"]]) {
+  for (const [tag, label] of [["【结束】", "结束"], ["- id:", "文件头"]]) {
     if (!raw.includes(tag)) found.push(`${file} 缺 ${label}`);
   }
+  // 隐藏章 badend 不弹史实注；其余章每章一张。
+  if (header && header[1] !== "badend" && !raw.includes("【史实注】")) found.push(`${file} 缺 史实注`);
   // 以 ending/map/coda 收束的章不需要下一章标题卡（吴起、隐藏终章）。
   const needsTitle = endNext && endNext !== "ending" && endNext !== "map" && endNext !== "coda";
   if (needsTitle && !raw.includes("【标题卡】")) found.push(`${file} 缺标题卡`);
@@ -71,7 +73,7 @@ files.forEach((file) => {
 });
 
 if (!hasDisclaimer) found.push("全部剧本缺“虚构声明”");
-if (files.length !== 8) found.push(`剧本应为 8 章，实际 ${files.length}`);
+if (files.length !== 9) found.push(`剧本应为 9 章，实际 ${files.length}`);
 
 const byId = {};
 for (const file of files) {
@@ -79,17 +81,20 @@ for (const file of files) {
   const id = /^- id:\s*([a-z]+)/m.exec(raw);
   if (id) byId[id[1]] = raw;
 }
-if (!byId.luding || !byId.luding.includes("默认 C") || !byId.luding.includes("默认 B")) {
+if (!byId.luding || !byId.luding.includes(">> 选项｜限时 12s｜默认 C") || !byId.luding.includes(">> 选项｜限时 12s｜默认 B")) {
   found.push("泸定危机缺有板默认 C / 无板默认 B");
 }
-if (!byId.grass || (byId.grass.match(/默认 D/g) || []).length < 2) {
-  found.push("草地两次危机应各有一个默认 D");
+if (!byId.grass || (byId.grass.match(/默认 C/g) || []).length < 2) {
+  found.push("草地两次危机应各有一个默认 C（不救）");
 }
 if (!byId.wuqi || !byId.wuqi.includes("隐藏章: coda")) {
   found.push("吴起章缺隐藏章 coda 标记");
 }
 if (!byId.coda || !byId.coda.includes("八人点名") || !byId.coda.includes("满崽由冬生代答")) {
   found.push("隐藏终章缺点名八人/满崽代答");
+}
+if (!byId.badend || !byId.badend.includes("隐藏章")) {
+  found.push("坏结局缺隐藏章 badend");
 }
 
 endTargets.forEach((item) => {
@@ -99,7 +104,7 @@ endTargets.forEach((item) => {
 });
 
 if (found.length === 0) {
-  console.log(`OK：${files.length} 个剧本文件；禁用词 0；真实人物 0；选项缺项 0；requires 格式合法；危机默认与隐藏 coda 完整；声明已标注`);
+  console.log(`OK：${files.length} 个剧本文件；禁用词 0；真实人物 0；选项缺项 0；requires 格式合法；危机默认与隐藏 coda/badend 完整；声明已标注`);
 } else {
   for (const f of found) console.log("× " + f);
   console.log(`\n共 ${found.length} 处问题`);

@@ -110,7 +110,7 @@ check("S02", "合法存档 normalize 通过", function () {
 
 check("S03", "version-too-new", function () {
   var save = XB.core.serialize(XB.core.defaults());
-  save.version = 2;
+  save.version = XB.core.SAVE_VERSION + 1;
   assertEqual(XB.core.normalize(save).issue, "version-too-new", "issue");
 });
 
@@ -171,13 +171,13 @@ check("S08", "serialize → JSON → normalize 往返", function () {
   assertEqual(XB.core.serialize(result.state), save, "往返后的持久字段");
 });
 
-check("S09", "七章元数据", function () {
+check("S09", "九章元数据", function () {
   var chapters = XB.story.chapters;
-  assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "coda"], "章节 id");
-  assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7, 8], "顺序");
-  assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true, true], "八章全部可玩");
-  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [50, 51, 30, 42, 46, 47, 56, 12], "八章节点数");
-  assertEqual(chapters.map(function (c) { return c.hidden === true; }), [false, false, false, false, false, false, false, true], "只有 coda 隐藏");
+  assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "coda", "badend"], "章节 id");
+  assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7, 8, 9], "顺序");
+  assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true, true, true], "九章全部可玩");
+  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [50, 51, 30, 42, 46, 51, 56, 13, 6], "九章节点数");
+  assertEqual(chapters.map(function (c) { return c.hidden === true; }), [false, false, false, false, false, false, false, true, true], "只有 coda 与 badend 隐藏");
 });
 
 check("S10", "序章节点 id 唯一、七种类型齐全", function () {
@@ -280,17 +280,20 @@ check("S17", "SCENES 覆盖四场景，story 背景全部命中", function () {
   });
 });
 
-check("S18", "34 条旗标与八项设置默认值", function () {
+check("S18", "47 条旗标与八项设置默认值", function () {
   var flags = XB.core.FLAG_DEFAULTS;
   assertEqual(Object.keys(flags).sort(), [
     "choice.jinsha.kettle", "choice.jinsha.main", "choice.jinsha.trips", "choice.jinsha.wounded",
     "choice.luding.door", "choice.xiangjiang.abandoned",
     "choice.xiangjiang.take.files", "choice.xiangjiang.take.medkit", "choice.xiangjiang.take.press",
     "choice.xiangjiang.take.radio", "choice.xiangjiang.take.silver", "choice.xiangjiang.take.xray",
-    "choice.zunyi.admit", "choice.zunyi.missed", "fate.all.dead", "fate.dongsheng.dead",
-    "fate.feimao.dead", "fate.lin.dead", "fate.zaowang.dead", "fire", "had.door",
+    "choice.zunyi.admit", "choice.zunyi.missed", "condition", "doorOutcome",
+    "fate.all.dead", "fate.badend", "fate.dongsheng.dead", "fate.feimao.dead", "fate.lin.dead",
+    "fate.player.dead", "fate.seven5", "fate.zaowang.dead", "fire", "grass.settled", "had.door",
+    "help.used", "inventory.giftBarley",
     "item.barley", "item.door", "item.homepot", "item.medicine", "item.pot", "item.raincloth", "item.shoes",
-    "lights_lost", "load", "strain", "strain.dying", "strain.hurt", "trust"
+    "lights_lost", "load", "memory.help", "quality.dongsheng", "quality.feimao", "quality.zaowang",
+    "rescues", "strain", "strain.dying", "strain.hurt", "trust"
   ], "旗标键");
   ["item.door", "item.pot", "item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes"].forEach(function (key) {
     assertEqual(flags[key], false, key);
@@ -298,12 +301,18 @@ check("S18", "34 条旗标与八项设置默认值", function () {
   ["choice.jinsha.main", "choice.jinsha.wounded", "choice.jinsha.kettle", "choice.luding.door"].forEach(function (key) {
     assertEqual(flags[key], false, key);
   });
-  ["fate.all.dead", "fate.dongsheng.dead", "fate.feimao.dead", "fate.lin.dead", "fate.zaowang.dead", "had.door", "strain.dying", "strain.hurt"].forEach(function (key) {
+  ["fate.all.dead", "fate.badend", "fate.dongsheng.dead", "fate.feimao.dead", "fate.lin.dead",
+    "fate.player.dead", "fate.seven5", "fate.zaowang.dead", "grass.settled", "had.door",
+    "help.used", "inventory.giftBarley", "memory.help", "strain.dying", "strain.hurt"].forEach(function (key) {
     assertEqual(flags[key], false, key);
   });
   assertEqual(flags.load, 0, "load");
   assertEqual(flags.trust, 0, "trust");
   assertEqual(flags.strain, 0, "strain");
+  assertEqual(flags.rescues, 0, "rescues");
+  assertEqual(flags.condition, 3, "condition");
+  assertEqual(flags["quality.feimao"], 0, "quality.feimao");
+  assertEqual(flags.doorOutcome, "none", "doorOutcome");
   assertEqual(flags.fire, 50, "fire");
   assertEqual(flags.lights_lost, 0, "lights_lost");
   assertEqual(flags["choice.xiangjiang.abandoned"], [], "abandoned");
@@ -453,7 +462,7 @@ check("S26", "默认旗标一路走到 p900，没有隐藏 end", function () {
   assertEqual(XB.core.currentNode(state2).id, "p900", "带门板终点");
 });
 
-check("S27", "多选 API：行囊 0–3 件与背包回填", function () {
+check("S27", "多选 API：行囊 4 格与半格单位回填", function () {
   assertEqual(typeof XB.core.applyMultiChoice, "function", "applyMultiChoice 缺失");
   var node = XB.core.locate("prologue", "p024").node;
   assertEqual(node.type, "multichoice", "p024 类型");
@@ -463,10 +472,10 @@ check("S27", "多选 API：行囊 0–3 件与背包回填", function () {
   assert(picked, "结算失败");
   assertEqual(state.flags["item.medicine"], true, "medicine");
   assertEqual(state.flags["item.homepot"], true, "homepot");
-  assertEqual(state.flags.load, 2, "无门板两件 2 格");
+  assertEqual(state.flags.load, 5, "药 1 + 铁锅 4 = 5 半格");
   assertEqual(state.inventory.items, ["roster", "pencil", "medicine", "pot"], "背包");
   assertEqual(state.choices[state.choices.length - 1].option, "MULTI", "MULTI 日志");
-  assertEqual(XB.core.applyMultiChoice(state, node, ["medicine", "barley", "raincloth", "shoes"]), null, "超 max 应拒绝");
+  assertEqual(XB.core.applyMultiChoice(state, node, ["medicine", "barley", "homepot", "raincloth", "shoes"]), null, "超过 8 半格应拒绝");
   assertEqual(XB.core.applyMultiChoice(state, node, ["nope"]), null, "未知 id 应拒绝");
 });
 
@@ -516,8 +525,8 @@ check("S30", "默认旗标：abandoned 数组、trips/missed/lights 夹取", fun
 check("S31", "p024 多选字段与 p025 结果来源", function () {
   var p024 = XB.core.locate("prologue", "p024").node;
   assertEqual(p024.type, "multichoice", "p024 类型");
-  assertEqual([p024.min, p024.max], [0, 3], "p024 数量");
-  assertEqual(p024.slotLoad, true, "p024 重算行囊");
+  assertEqual([p024.min, p024.max], [0, 5], "p024 数量");
+  assertEqual(p024.slotLoad, undefined, "p024 不再用静态 slotLoad");
   assertEqual(p024.options.length, 5, "p024 五件");
   var p025 = XB.core.locate("prologue", "p025").node;
   assertEqual(p025.type, "result", "p025 类型");

@@ -3,19 +3,20 @@
 > 本文件是七章节点表、结局快照、点名状态机、五卡、图鉴、章末记忆与调试/刷新的规格源。
 > 代码实现见 `project/story.js` / `project/engine.js`；改结构先改本文件，再同步代码与 `check-build` C24–C30。
 
-## 1. 七章表
+## 1. 九章表（v1.4）
 
-| 顺序 | 章节 id | 前缀 | 节点 | line | choice | multichoice | interact | result | title | codex | end | 下一章 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | prologue | p | 50 | 43 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | xiangjiang |
-| 2 | xiangjiang | x | 51 | 44 | 2 | 1 | 0 | 1 | 1 | 1 | 1 | zunyi |
-| 3 | zunyi | z | 30 | 23 | 3 | 0 | 0 | 1 | 1 | 1 | 1 | jinsha |
-| 4 | jinsha | j | 42 | 36 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | luding |
-| 5 | luding | l | 46 | 40 | 3 | 0 | 0 | 0 | 1 | 1 | 1 | grass |
-| 6 | grass | g | 47 | 39 | 4 | 0 | 0 | 0 | 1 | 1 | 2 | wuqi / coda |
-| 7 | wuqi | w | 56 | 52 | 1 | 0 | 1 | 0 | 0 | 1 | 1 | ending |
-| 8 | coda（隐藏） | c | 12 | 8 | 0 | 0 | 1 | 0 | 1 | 1 | 1 | ending |
-| — | 合计 | — | **334** | **285** | **16** | **2** | **3** | **4** | **7** | **8** | **8** | — |
+| 顺序 | 章节 id | 前缀 | 节点 | line | choice | multichoice | settle | interact | result | title | codex | end | 下一章 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | prologue | p | 50 | 43 | 2 | 1 | 0 | 0 | 1 | 1 | 1 | 1 | xiangjiang |
+| 2 | xiangjiang | x | 51 | 44 | 2 | 1 | 0 | 0 | 1 | 1 | 1 | 1 | zunyi |
+| 3 | zunyi | z | 30 | 23 | 3 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | jinsha |
+| 4 | jinsha | j | 42 | 36 | 1 | 0 | 0 | 1 | 1 | 1 | 1 | 1 | luding |
+| 5 | luding | l | 46 | 40 | 3 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | grass |
+| 6 | grass | g | 51 | 41 | 4 | 0 | 1 | 0 | 0 | 1 | 1 | 3 | wuqi / coda / badend |
+| 7 | wuqi | w | 56 | 52 | 1 | 0 | 0 | 1 | 0 | 0 | 1 | 1 | ending |
+| 8 | coda（隐藏） | c | 13 | 9 | 0 | 0 | 0 | 1 | 0 | 1 | 1 | 1 | ending |
+| 9 | badend（隐藏） | b | 6 | 4 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | ending |
+| — | 合计 | — | **345** | **292** | **16** | **2** | **1** | **3** | **4** | **9** | **8** | **9** | — |
 
 - 七章全部 `playable: true`；序章 p900 → 湘江 x001，逐章直落，不要求玩家回地图。
 - 第八个 `coda` 是隐藏章（`hidden: true`，不进地图、不弹解锁），只有草地里 `strain.dying` 时经 g899 进入；c012 → ending。

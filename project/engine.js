@@ -10,7 +10,7 @@
      XB.core：纯状态层（不碰 DOM，可在 Node/vm 里单独测）
      ===================================================================== */
 
-  var SAVE_VERSION = 1;
+  var SAVE_VERSION = 2;
 
   // 场景只用于“现在该显示哪一层”；剧情推进本身按 nodeId 定位，不用栈。
   // 小游戏/结算/选项都是 vn 视图内的分派，不再单独占 scene 值。
@@ -79,6 +79,22 @@
     "fate.lin.dead": false,
     "fate.all.dead": false,
     "had.door": false,
+    // v1.4.0：状态 0–4、成功救人数、三人帮助、我是否倒下、门板去向。
+    condition: 3,
+    rescues: 0,
+    "help.used": false,
+    "memory.help": false,
+    "fate.player.dead": false,
+    // 由引擎派生：7(5) 与坏结局是互斥出口，剧本条件语法没有 OR。
+    "fate.seven5": false,
+    "fate.badend": false,
+    "grass.settled": false,
+    "quality.feimao": 0,
+    "quality.zaowang": 0,
+    "quality.dongsheng": 0,
+    doorOutcome: "none",
+    "inventory.giftBarley": false,
+    // v1.3 兼容：strain 只由引擎按 3-rescues 反推，剧本不再写。
     strain: 0,
     "strain.hurt": false,
     "strain.dying": false
@@ -93,6 +109,11 @@
     "choice.zunyi.missed": [0, 1],
     "choice.zunyi.admit": [0, 3],
     "choice.jinsha.trips": [0, 18],
+    condition: [0, 4],
+    rescues: [0, 3],
+    "quality.feimao": [0, 3],
+    "quality.zaowang": [0, 3],
+    "quality.dongsheng": [0, 3],
     strain: [0, 3]
   };
 
@@ -114,14 +135,32 @@
     "choice.zunyi.admit",
     "choice.jinsha.trips",
     "strain",
-    "had.door"
+    "had.door",
+    "condition",
+    "rescues",
+    "help.used",
+    "fate.player.dead",
+    "doorOutcome",
+    "inventory.giftBarley"
   ];
 
   // 唯一允许的 list flag：弃物留下清单。顺序也是存档与结果页的排序。
   var ABANDON_ORDER = ["xray", "press", "files", "medkit", "radio", "silver", "door"];
   var INVENTORY_IDS = ["roster", "pencil", "medicine", "barley", "pot", "raincloth", "shoes"];
-  // v1.3 行囊共三格：门板占两格，带板时只剩一件。旧档不裁剪，显示时以已装数为下限，避免出现 5/3。
-  var PACK_SLOTS = 3;
+  // v1.4 行囊四格＝八个半格；门板单独占四单位。旧档超重不裁剪，UI 用 max(4, 已占) 兜底。
+  var PACK_SLOTS = 4;
+  var PACK_UNITS = 8;
+  var ITEM_UNITS = {
+    roster: 0,
+    pencil: 0,
+    medicine: 1,
+    barley: 1,
+    pot: 4,
+    raincloth: 4,
+    shoes: 2
+  };
+  var DOOR_UNITS = 4;
+  var DOOR_OUTCOMES = ["none", "carried", "bridge", "grass", "wuqi", "others"];
   // 行囊五件：p024 多选直接写这五个布尔。item.pot 仍是草地“灶王的小锅”，别混用。
   var ITEM_FLAGS = ["item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes"];
   var ITEM_FLAG_BY_INVENTORY = {
@@ -141,10 +180,21 @@
     silver: "choice.xiangjiang.take.silver"
   };
   // fate.* 由三次救人危机写生死；strain 是救人消耗，had.door 记“序章带过门板”。
-  var FLAG_PREFIXES = ["memory.", "choice.", "fate."];
+  var FLAG_PREFIXES = ["memory.", "choice.", "fate.", "quality."];
   // 引擎派生布尔：只由 syncDerivedFlags 写，剧本只读。fate.all.dead 让吴起“四个人的名字”不用 OR。
-  var DERIVED_FLAGS = ["fate.lin.dead", "fate.all.dead", "strain.hurt", "strain.dying"];
-  var BOOLEAN_FLAGS = ["had.door", "fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead"].concat(DERIVED_FLAGS);
+  var DERIVED_FLAGS = [
+    "fate.lin.dead", "fate.all.dead", "fate.seven5", "fate.badend", "strain.hurt", "strain.dying"
+  ];
+  var BOOLEAN_FLAGS = [
+    "had.door",
+    "fate.feimao.dead",
+    "fate.zaowang.dead",
+    "fate.dongsheng.dead",
+    "fate.player.dead",
+    "grass.settled",
+    "help.used",
+    "inventory.giftBarley"
+  ].concat(DERIVED_FLAGS);
   var CHOICE_LOG_LIMIT = 64;
   var TEXT_SCALES = [1, 1.15, 1.3];
 
@@ -170,6 +220,203 @@
     return ABANDON_ORDER.filter(function (id) {
       return seen[id] === true;
     });
+  }
+
+  function isDoorHeld(state) {
+    return state.flags["item.door"] === true || state.inventory.door === true;
+  }
+
+  function packUnitsForIds(state, ids) {
+    var units = isDoorHeld(state) ? DOOR_UNITS : 0;
+    (ids || []).forEach(function (id) {
+      units += isFiniteNumber(ITEM_UNITS[id]) ? ITEM_UNITS[id] : 0;
+    });
+    return units;
+  }
+
+  // 物资占格按半格单位算：门板 4，药/青稞 1，鞋 2，锅/雨布 4。
+  function packUsage(state) {
+    return packUnitsForIds(state, state.inventory.items);
+  }
+
+  function packCapacity(state) {
+    return Math.max(PACK_UNITS, packUsage(state));
+  }
+
+  function optionUnits(option) {
+    if (!option) return 0;
+    if (option.inventoryId && isFiniteNumber(ITEM_UNITS[option.inventoryId])) {
+      return ITEM_UNITS[option.inventoryId];
+    }
+    if (isFiniteNumber(option.units)) return option.units;
+    if (isFiniteNumber(option.slots)) return option.slots * 2;
+    return 0;
+  }
+
+  // selectedOptions 传选项对象而不是 id：多选 id 与 inventoryId 不一定同名（homepot/pot）。
+  function canAddMultiOption(state, option, selectedOptions) {
+    if (!option) return false;
+    var chosen = Array.isArray(selectedOptions) ? selectedOptions : [];
+    var ids = state.inventory.items.slice();
+    var extra = 0;
+    chosen.forEach(function (item) {
+      if (item && item.inventoryId) ids.push(item.inventoryId);
+      else if (item) extra += optionUnits(item);
+    });
+    return packUnitsForIds(state, ids) + extra + optionUnits(option) <= PACK_UNITS;
+  }
+
+  var CONDITION_LABELS = ["0", "差", "勉强", "良好", "优秀"];
+  function conditionLabel(value) {
+    var at = Math.round(clamp(isFiniteNumber(value) ? value : 3, 0, 4));
+    return CONDITION_LABELS[at];
+  }
+
+  // 救第 n 人的累计惩罚：无板 0/1/1，有板 0/1/2。用差值写回 condition，避免剧本重复写公式。
+  function rescuePenalty(rescues, hasDoor) {
+    var count = Math.round(clamp(isFiniteNumber(rescues) ? rescues : 0, 0, 3));
+    if (count <= 1) return 0;
+    if (count === 2) return 1;
+    return hasDoor ? 2 : 1;
+  }
+
+  function doorCarried(state) {
+    var flags = state.flags;
+    return flags["had.door"] === true && (
+      flags["item.door"] === true ||
+      flags.doorOutcome === "carried" ||
+      flags.doorOutcome === "wuqi" ||
+      flags.doorOutcome === "others"
+    );
+  }
+
+  // 门板 A/B/C 三条件并列：优秀；4 人存活且一人良好；3 人存活且两人良好（我可计入）。
+  function doorCanCarry(state) {
+    var flags = state.flags;
+    if (flags["had.door"] !== true) return false;
+    if (flags.condition === 4) return true;
+    var good = [flags["quality.feimao"], flags["quality.zaowang"], flags["quality.dongsheng"]].filter(function (q) {
+      return q === 3;
+    }).length;
+    if (flags.rescues === 3) return good >= 1;
+    if (flags.rescues === 2) return good + (flags.condition >= 3 ? 1 : 0) >= 2;
+    return false;
+  }
+
+  function hasPackItem(state, id) {
+    if (id === "giftBarley") return state.inventory.giftBarley === true;
+    return state.inventory.items.indexOf(id) !== -1;
+  }
+
+  function consumePackItem(state, id) {
+    if (id === "giftBarley") {
+      state.inventory.giftBarley = false;
+      state.flags["inventory.giftBarley"] = false;
+      return;
+    }
+    state.inventory.items = state.inventory.items.filter(function (item) {
+      return item !== id;
+    });
+    var flag = ITEM_FLAG_BY_INVENTORY[id];
+    if (flag) state.flags[flag] = false;
+  }
+
+  // 物资使用：组合合法才扣；优秀时不给用，避免把“状态足够”误写成消耗。
+  function usePackItems(state, ids) {
+    var asked = Array.isArray(ids) ? ids.filter(function (id, index, list) {
+      return typeof id === "string" && list.indexOf(id) === index;
+    }) : [];
+    var recipe = null;
+    var key = asked.slice().sort().join("+");
+    if (key === "shoes") recipe = { delta: 1, items: ["shoes"] };
+    else if (key === "pot") recipe = { delta: 2, items: ["pot"] };
+    else if (key === "raincloth") recipe = { delta: 1, items: ["raincloth"] };
+    else if (key === "barley+medicine") recipe = { delta: 1, items: ["barley", "medicine"] };
+    else if (key === "barley+giftBarley") recipe = { delta: 2, items: ["barley", "giftBarley"] };
+    else if (key === "giftBarley+medicine") recipe = { delta: 1, items: ["giftBarley", "medicine"] };
+    if (!recipe) return { ok: false, reason: "不认识这组物资。" };
+    if (recipe.items.indexOf("raincloth") !== -1 && state.chapterId !== "grass") {
+      return { ok: false, reason: "雨布只能在草地使用。" };
+    }
+    if (state.flags.condition >= 4) return { ok: false, reason: "状态已足够。" };
+    for (var i = 0; i < recipe.items.length; i += 1) {
+      if (!hasPackItem(state, recipe.items[i])) return { ok: false, reason: "行囊里没有这件东西。" };
+    }
+    recipe.items.forEach(function (id) {
+      consumePackItem(state, id);
+    });
+    state.flags.condition = Math.round(clamp(state.flags.condition + recipe.delta, 0, 4));
+    state.flags.load = packUsage(state);
+    syncDerivedFlags(state);
+    return { ok: true, delta: recipe.delta, used: recipe.items, condition: state.flags.condition };
+  }
+
+  // 草地结束：先 -1，再看救满 3 人的帮助；0 直接判死（7(5) 例外由 settleDoor 收口）。
+  function settleGrass(state) {
+    var flags = state.flags;
+    if (flags["grass.settled"] === true) {
+      return {
+        condition: flags.condition,
+        dead: flags["fate.player.dead"] === true,
+        needPack: flags.condition === 1,
+        doorCarry: doorCanCarry(state)
+      };
+    }
+    flags["grass.settled"] = true;
+    flags.condition = Math.round(clamp(flags.condition - 1, 0, 4));
+    if (flags.rescues === 3 && flags["help.used"] !== true && flags.condition === 1) {
+      flags.condition = 2;
+      flags["help.used"] = true;
+      flags["memory.help"] = true;
+    }
+    if (flags.condition === 0) flags["fate.player.dead"] = true;
+    if (flags["fate.player.dead"] === true && flags["had.door"] === true && flags.rescues === 3) {
+      flags.doorOutcome = "others";
+      flags["item.door"] = false;
+    }
+    syncDerivedFlags(state);
+    return {
+      condition: flags.condition,
+      dead: flags["fate.player.dead"] === true,
+      needPack: flags.condition === 1,
+      doorCarry: doorCanCarry(state)
+    };
+  }
+
+  // 差状态关闭物资面板/选择“继续”时调用：仍 <=1 就死；7(5) 已是 others，不再重复判。
+  function resolveGrassWarning(state) {
+    if (state.flags.condition <= 1) state.flags["fate.player.dead"] = true;
+    syncDerivedFlags(state);
+  }
+
+  // 草地末门板去向：能带则 carried；不能带且不是桥板/吴起已留，落草地。
+  function settleDoor(state) {
+    var flags = state.flags;
+    if (flags["had.door"] !== true) {
+      flags.doorOutcome = "none";
+      flags["item.door"] = false;
+      return "none";
+    }
+    if (flags["fate.player.dead"] === true) {
+      if (flags.rescues === 3) {
+        flags.doorOutcome = "others";
+      } else {
+        flags.doorOutcome = "grass";
+      }
+      flags["item.door"] = false;
+      return flags.doorOutcome;
+    }
+    if (flags["item.door"] === true && doorCanCarry(state)) {
+      flags.doorOutcome = "carried";
+      return "carried";
+    }
+    if (flags.doorOutcome === "bridge" || flags.doorOutcome === "wuqi") {
+      flags["item.door"] = false;
+      return flags.doorOutcome;
+    }
+    flags.doorOutcome = "grass";
+    flags["item.door"] = false;
+    return "grass";
   }
 
   // v1.1.1 及以前的档没有 item.* / take.* 布尔：只在“一个新增键都没有”的旧档上反推一次。
@@ -219,35 +466,84 @@
     return at !== -1 && marker !== -1 && at >= marker;
   }
 
-  // v1.2 旧档没有 fate.*：按“停在哪儿”补生死，不反推“救过谁”，避免把旧档误判成新路线。
+  // v1.3→v1.4 迁移：旧档的 strain 实际是“救过几人”，不是剩余体力；rescues 直接取它。
+  // 生死按“停在哪儿”补，不反推具体选择；旧 ending 快照只补 legacy，不重算。
   function migrateLegacyFate(state, save) {
     var source = isPlainObject(save.flags) ? save.flags : {};
     var flags = state.flags;
+    var legacyVersion = save.version < 2;
+    var changed = null;
     if (!hasOwn(source, "had.door")) {
       flags["had.door"] = source["choice.prologue.door"] === true ||
         flags["item.door"] === true ||
         flags["choice.luding.door"] === true;
+      changed = "fate";
     }
-    if (hasOwn(source, "fate.feimao.dead")) return null;
-    if (state.chapterId === "wuqi") {
-      flags["fate.feimao.dead"] = true;
-      flags["fate.zaowang.dead"] = true;
-      flags["fate.dongsheng.dead"] = false;
-      flags.strain = 1;
-      return "fate";
+    if (!hasOwn(source, "fate.feimao.dead")) {
+      if (state.chapterId === "wuqi" || state.chapterId === "coda") {
+        flags["fate.feimao.dead"] = true;
+        flags["fate.zaowang.dead"] = true;
+        flags["fate.dongsheng.dead"] = false;
+        flags.strain = 1;
+        changed = "fate";
+      } else if (passedNode(state, "luding", "l022") && flags["fate.feimao.dead"] !== true) {
+        flags["fate.feimao.dead"] = true;
+        flags.strain = 0;
+        changed = "fate";
+      }
+      if (passedNode(state, "grass", "g019") && flags["fate.zaowang.dead"] !== true) {
+        flags["fate.zaowang.dead"] = true;
+        changed = "fate";
+      }
     }
-    var changed = false;
-    if (passedNode(state, "luding", "l022") && flags["fate.feimao.dead"] !== true) {
-      flags["fate.feimao.dead"] = true;
-      flags.strain = 0;
-      changed = true;
+
+    if (legacyVersion || !hasOwn(source, "rescues")) {
+      // 不要拿 flags.strain 兜底：上面的 syncDerivedFlags 已按新档重算过它。
+      var oldStrain = isFiniteNumber(source.strain) ? source.strain : 0;
+      var oldRescues = Math.round(clamp(oldStrain, 0, 3));
+      flags.rescues = oldRescues;
+      // 旧档没有状态：按累计救人惩罚回推，再按是否过了草地补 -1。
+      flags.condition = Math.round(clamp(3 - rescuePenalty(oldRescues, flags["had.door"] === true), 0, 4));
+      if (passedNode(state, "grass", "g027")) flags.condition = Math.round(clamp(flags.condition - 1, 0, 4));
+      changed = "fate";
     }
-    if (passedNode(state, "grass", "g019") && flags["fate.zaowang.dead"] !== true) {
-      flags["fate.zaowang.dead"] = true;
-      changed = true;
+    if (!hasOwn(source, "fate.player.dead")) {
+      // 读原始快照：normalizeEnding 已把 v1.3 的 kongye 折成 legacy，拿它判断会漏掉空页。
+      var oldRoute = save.ending && save.ending.route;
+      flags["fate.player.dead"] = source["strain.dying"] === true ||
+        state.chapterId === "coda" ||
+        oldRoute === "kongye";
+      if (flags["fate.player.dead"] === true && flags.condition > 0 && !hasOwn(source, "condition")) {
+        // 旧空页是明确死亡；旧档其他情况没有 player.dead，不在这里硬改 condition。
+        flags.condition = state.chapterId === "coda" || oldRoute === "kongye" ? 0 : flags.condition;
+      }
+      changed = "fate";
+    }
+    if (legacyVersion || !hasOwn(source, "quality.feimao")) {
+      flags["quality.feimao"] = flags["fate.feimao.dead"] === true ? 0 : 2;
+      flags["quality.zaowang"] = flags["fate.zaowang.dead"] === true ? 0 : 2;
+      flags["quality.dongsheng"] = flags["fate.dongsheng.dead"] === true ? 0 : 2;
+      changed = "fate";
+    }
+    if (legacyVersion || !hasOwn(source, "doorOutcome")) {
+      if (flags["item.door"] === true) flags.doorOutcome = "carried";
+      else if (flags["memory.door"] === true) flags.doorOutcome = "wuqi";
+      else if (flags["choice.luding.door"] === true) flags.doorOutcome = "bridge";
+      else if (flags["had.door"] === true) flags.doorOutcome = "grass";
+      else flags.doorOutcome = "none";
+      changed = "fate";
+    }
+    if (legacyVersion) {
+      flags["help.used"] = false;
+      flags["memory.help"] = false;
+    }
+    // 旧空页（7(5)）门板是“别人带到吴起”，不能落成草地；这条要压过上面的通用推断。
+    if (legacyVersion && flags["fate.player.dead"] === true && flags.rescues === 3 && flags["had.door"] === true) {
+      flags.doorOutcome = "others";
+      flags["item.door"] = false;
     }
     // 返回非空值会触发一次即时落档与“已补记人物命运”提示；否则旧档要等到下一句才写入。
-    return changed ? "fate" : null;
+    return changed;
   }
 
   function isFiniteNumber(value) {
@@ -278,8 +574,50 @@
 
   var CARD_IDS = ["ideal", "sacrifice", "truth", "overall", "people"];
   var NAME_STATUS = ["self", "remote", "player", "missed"];
-  // legacy 只给 v1.2 旧结局快照补位，不参与新一局的路线判定。
-  var ROUTE_IDS = ["sidao", "menban", "qiaoban", "kongye", "legacy"];
+  // v1.4：11 个结局标签；legacy 只给 v1.3 及以前的旧快照补位，不参与新一局判定。
+  var ROUTE_IDS = [
+    "door_excellent",
+    "door_grass_one",
+    "door_carry_two",
+    "door_grass_many",
+    "door_others",
+    "no_door_zero",
+    "no_door_one",
+    "no_door_two",
+    "no_door_three",
+    "no_door_three_excellent",
+    "bad_end",
+    "legacy"
+  ];
+  var ROUTE_DEFS = {
+    door_excellent: { index: 1, label: "7(1)", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_grass_one: {
+      index: 2,
+      label: "7(2)",
+      title: "门板",
+      lede: "门板留在了草地。你到了吴起。",
+      bridgeTitle: "桥板",
+      bridgeLede: "门板留在了桥上。你到了吴起。"
+    },
+    door_carry_two: { index: 3, label: "7(3)", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_grass_many: {
+      index: 4,
+      label: "7(4)",
+      title: "门板",
+      lede: "门板留在了草地。你到了吴起。",
+      bridgeTitle: "桥板",
+      bridgeLede: "门板留在了桥上。你到了吴起。"
+    },
+    door_others: { index: 5, label: "7(5)", title: "空页", lede: "名册上多了一个名字，又划掉了。" },
+    no_door_zero: { index: 6, label: "8(1)", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_one: { index: 7, label: "8(2)", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_two: { index: 8, label: "8(3)", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_three: { index: 9, label: "8(4)", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_three_excellent: { index: 10, label: "8(5)", title: "空手", lede: "你空着手，走到了吴起。" },
+    bad_end: { index: 11, label: "坏结局", title: "没有走出草地", lede: "草地没有尽头。" },
+    legacy: { index: 0, label: "旧档", title: "旧档", lede: "" }
+  };
+  var LEGACY_ROUTES = ["sidao", "menban", "qiaoban", "kongye"];
   var ENDING_STATS = { companyStart: 104, companyEnd: 19, redStart: 86000, redEnd: 7000 };
   // 章末记忆：只置 true，不覆盖已有的 true；金沙江记名与吴起门板另有交互写。
   var CHAPTER_MEMORY = {
@@ -292,7 +630,8 @@
 
   // 吴起是 7 人，空页 coda 是 8 人（多一个由冬生代答的满崽）。
   function validEndingNames(names) {
-    if (!Array.isArray(names) || (names.length !== 7 && names.length !== 8)) return false;
+    // 0 名只用于坏结局：没有走到吴起，名册没有翻开。
+    if (!Array.isArray(names) || (names.length !== 0 && names.length !== 7 && names.length !== 8)) return false;
     var seen = {};
     return names.every(function (entry) {
       if (!isPlainObject(entry)) return false;
@@ -328,7 +667,12 @@
 
   function validEndingFate(fate) {
     if (!isPlainObject(fate)) return false;
-    var keys = ["feimao", "zaowang", "dongsheng", "lin"];
+    var required = ["feimao", "zaowang", "dongsheng", "lin"];
+    if (!required.every(function (key) {
+      return fate[key] === "dead" || fate[key] === "alive";
+    })) return false;
+    if (Object.keys(fate).length === required.length) return true;
+    var keys = required.concat(["player"]);
     return keys.every(function (key) {
       return fate[key] === "dead" || fate[key] === "alive";
     }) && Object.keys(fate).length === keys.length;
@@ -337,7 +681,11 @@
   // 点名结束会先写 names/answered/missed，结尾再补 stats/cards；两种形状都收，但键必须干净。
   function normalizeEnding(value) {
     if (!isPlainObject(value)) return null;
-    var allowed = ["stats", "names", "answered", "missed", "cards", "route", "routeTitle", "routeLede", "fate", "strain", "recorded"];
+    var allowed = [
+      "stats", "names", "answered", "missed", "cards",
+      "route", "routeIndex", "routeLabel", "routeTitle", "routeLede",
+      "fate", "condition", "rescues", "doorOutcome", "strain", "recorded"
+    ];
     var keys = Object.keys(value);
     if (keys.some(function (key) { return allowed.indexOf(key) === -1; })) return null;
     var clean = {};
@@ -373,8 +721,27 @@
       };
     }
     if (value.route !== undefined) {
-      if (typeof value.route !== "string" || ROUTE_IDS.indexOf(value.route) === -1) return null;
-      clean.route = value.route;
+      if (typeof value.route !== "string") return null;
+      if (ROUTE_IDS.indexOf(value.route) === -1 && LEGACY_ROUTES.indexOf(value.route) === -1) return null;
+      if (LEGACY_ROUTES.indexOf(value.route) !== -1) {
+        clean.route = "legacy";
+        clean.routeTitle = "旧档";
+        clean.routeLede = "";
+      } else {
+        clean.route = value.route;
+      }
+    }
+    if (clean.route === "legacy") {
+      clean.routeIndex = 0;
+      clean.routeLabel = "旧档";
+    }
+    if (value.routeIndex !== undefined) {
+      if (!isFiniteNumber(value.routeIndex) || value.routeIndex < 0 || value.routeIndex > 11) return null;
+      clean.routeIndex = Math.round(value.routeIndex);
+    }
+    if (value.routeLabel !== undefined) {
+      if (typeof value.routeLabel !== "string") return null;
+      clean.routeLabel = value.routeLabel;
     }
     if (value.routeTitle !== undefined) {
       if (typeof value.routeTitle !== "string") return null;
@@ -386,7 +753,26 @@
     }
     if (value.fate !== undefined) {
       if (!validEndingFate(value.fate)) return null;
-      clean.fate = { feimao: value.fate.feimao, zaowang: value.fate.zaowang, dongsheng: value.fate.dongsheng, lin: value.fate.lin };
+      clean.fate = {
+        feimao: value.fate.feimao,
+        zaowang: value.fate.zaowang,
+        dongsheng: value.fate.dongsheng,
+        lin: value.fate.lin,
+        // v1.3 快照没有 player 键；空页即玩家已死，其余路线补 alive。
+        player: value.fate.player || (value.route === "kongye" ? "dead" : "alive")
+      };
+    }
+    if (value.condition !== undefined) {
+      if (!isFiniteNumber(value.condition) || value.condition < 0 || value.condition > 4) return null;
+      clean.condition = Math.round(value.condition);
+    }
+    if (value.rescues !== undefined) {
+      if (!isFiniteNumber(value.rescues) || value.rescues < 0 || value.rescues > 3) return null;
+      clean.rescues = Math.round(value.rescues);
+    }
+    if (value.doorOutcome !== undefined) {
+      if (DOOR_OUTCOMES.indexOf(value.doorOutcome) === -1) return null;
+      clean.doorOutcome = value.doorOutcome;
     }
     if (value.strain !== undefined) {
       if (!isFiniteNumber(value.strain) || value.strain < 0 || value.strain > 3) return null;
@@ -429,8 +815,8 @@
   }
 
   function rollcallEntries(state) {
-    var dying = !!(state && state.flags && state.flags["strain.dying"] === true);
-    return resolveRollCall(state || defaults(), dying);
+    var dead = !!(state && state.flags && state.flags["fate.player.dead"] === true);
+    return resolveRollCall(state || defaults(), dead);
   }
 
   // 没走到点名就进结局（调试/异常档）时的默认：不在场的人按“没应”算；有代答人的按代答算。
@@ -448,16 +834,27 @@
     return { names: names, answered: answered, missed: missed };
   }
 
-  // 路线只在结局算一次；strain.dying 优先于救人数，保证“三次全救”必是空页。
+  // v1.4 路线只在结局算一次：先判死（7(5) 优先），再判无板 8(1)–(5)，最后判带板 7(1)–(4)。
   function routeOf(flags) {
-    var saves = 3 -
-      (flags["fate.feimao.dead"] === true ? 1 : 0) -
-      (flags["fate.zaowang.dead"] === true ? 1 : 0) -
-      (flags["fate.dongsheng.dead"] === true ? 1 : 0);
-    if (flags["strain.dying"] === true) return "kongye";
-    if (saves === 0) return "sidao";
-    if (flags["item.door"] === true || flags["memory.door"] === true) return "menban";
-    return "qiaoban";
+    var f = flags || {};
+    var rescues = Math.round(clamp(isFiniteNumber(f.rescues) ? f.rescues : 0, 0, 3));
+    var hadDoor = f["had.door"] === true;
+    var dead = f["fate.player.dead"] === true;
+    if (dead) {
+      return hadDoor && rescues === 3 ? "door_others" : "bad_end";
+    }
+    if (!hadDoor) {
+      if (rescues === 0) return "no_door_zero";
+      if (rescues === 1) return "no_door_one";
+      if (rescues === 2) return "no_door_two";
+      return f.condition === 4 ? "no_door_three_excellent" : "no_door_three";
+    }
+    var carried = f["item.door"] === true || f.doorOutcome === "carried" ||
+      f.doorOutcome === "wuqi" || f.doorOutcome === "others";
+    if (rescues <= 1) {
+      return carried && f.condition === 4 ? "door_excellent" : "door_grass_one";
+    }
+    return carried ? "door_carry_two" : "door_grass_many";
   }
 
   // 五卡只算一次：finishChapter 调 buildEnding 落成快照，重进结局直接读快照。
@@ -465,24 +862,27 @@
     var storyEnding = (XB.story && XB.story.ending) || {};
     var flags = state.flags || {};
     var previous = normalizeEnding(state.ending) || {};
-    var fallback = defaultEndingNames(state);
-    var names = previous.names || fallback.names;
-    var answered = previous.answered !== undefined ? previous.answered : fallback.answered;
-    var missed = previous.missed !== undefined ? previous.missed : fallback.missed;
-
     var route = routeOf(flags);
-    var routeDef = ((storyEnding.routes) || {})[route] || {};
-    var routeTitle = routeDef.title || "";
-    var routeLede = routeDef.lede || "";
-    // 同一 qiaoban 路线，有没有带过门板是两种质感：桥板 / 石墙。
-    if (route === "qiaoban" && flags["had.door"] !== true) {
-      routeTitle = routeDef.altTitle || routeTitle;
-      routeLede = routeDef.altLede || routeLede;
+    var baseDef = ROUTE_DEFS[route] || {};
+    var storyDef = ((storyEnding.routes) || {})[route] || {};
+    var routeTitle = storyDef.title || baseDef.title || "";
+    var routeLede = storyDef.lede || baseDef.lede || "";
+    // 7(2)/7(4) 的同一“没带出”，门板留在桥上时叫桥板，留草地时叫门板。
+    if ((route === "door_grass_one" || route === "door_grass_many") && flags.doorOutcome === "bridge") {
+      routeTitle = storyDef.bridgeTitle || baseDef.bridgeTitle || routeTitle;
+      routeLede = storyDef.bridgeLede || baseDef.bridgeLede || routeLede;
     }
+    var isBad = route === "bad_end";
+    var fallback = defaultEndingNames(state);
+    var names = isBad ? [] : (previous.names || fallback.names);
+    // 7(5) 必是 8 名；旧快照若只有 7 名（异常档），以当前点名补齐。
+    if (route === "door_others" && names.length !== 8) names = fallback.names;
+    var answered = isBad ? 0 : (previous.answered !== undefined ? previous.answered : fallback.answered);
+    var missed = isBad ? 0 : (previous.missed !== undefined ? previous.missed : fallback.missed);
 
     var conditions = {
       ideal: isFiniteNumber(flags.fire) && flags.fire >= 20,
-      sacrifice: route === "kongye" || flags["choice.xiangjiang.hold"] === true,
+      sacrifice: flags["fate.player.dead"] === true || flags["choice.xiangjiang.hold"] === true,
       truth: Number(flags["choice.zunyi.admit"] || 0) >= 2,
       overall: flags["choice.jinsha.priority"] === "main",
       people: Number(flags.trust || 0) >= 3 && flags["memory.zhang"] === true
@@ -491,8 +891,8 @@
     var cards = ((storyEnding.cards) || []).map(function (card) {
       var lit = conditions[card.id] === true;
       var line = lit ? card.litLine : card.unlitLine;
-      if (card.id === "sacrifice" && lit && route === "kongye") {
-        line = storyEnding.kongyeSacrificeLine || line;
+      if (card.id === "sacrifice" && lit && flags["fate.player.dead"] === true) {
+        line = storyEnding.kongyeSacrificeLine || storyEnding.sacrificeLine || line;
       }
       return { id: card.id, lit: lit, line: line };
     });
@@ -500,7 +900,7 @@
     return {
       stats: {
         companyStart: ENDING_STATS.companyStart,
-        companyEnd: route === "kongye" ? 18 : ENDING_STATS.companyEnd,
+        companyEnd: (route === "door_others" || isBad) ? 18 : ENDING_STATS.companyEnd,
         redStart: ENDING_STATS.redStart,
         redEnd: ENDING_STATS.redEnd
       },
@@ -509,14 +909,20 @@
       missed: missed,
       cards: cards,
       route: route,
+      routeIndex: baseDef.index || 0,
+      routeLabel: baseDef.label || "",
       routeTitle: routeTitle,
       routeLede: routeLede,
       fate: {
         feimao: flags["fate.feimao.dead"] === true ? "dead" : "alive",
         zaowang: flags["fate.zaowang.dead"] === true ? "dead" : "alive",
         dongsheng: flags["fate.dongsheng.dead"] === true ? "dead" : "alive",
-        lin: flags["fate.lin.dead"] === true ? "dead" : "alive"
+        lin: flags["fate.lin.dead"] === true ? "dead" : "alive",
+        player: flags["fate.player.dead"] === true ? "dead" : "alive"
       },
+      condition: isFiniteNumber(flags.condition) ? flags.condition : 3,
+      rescues: isFiniteNumber(flags.rescues) ? flags.rescues : 0,
+      doorOutcome: flags.doorOutcome || "none",
       strain: isFiniteNumber(flags.strain) ? flags.strain : 0,
       recorded: previous.recorded === true
     };
@@ -529,7 +935,7 @@
       chapterId: "prologue",
       nodeId: null,
       flags: cloneJson(FLAG_DEFAULTS),
-      inventory: { door: false, items: [] },
+      inventory: { door: false, items: [], giftBarley: false },
       choices: [],
       codex: [],
       settings: cloneJson(DEFAULT_SETTINGS),
@@ -545,7 +951,7 @@
     if (!isPlainObject(save)) return { issue: "shape", state: defaults() };
     if (!isFiniteNumber(save.version)) return { issue: "version", state: defaults() };
     if (save.version > SAVE_VERSION) return { issue: "version-too-new", state: defaults() };
-    if (save.version < SAVE_VERSION) return { issue: "version-old", state: defaults() };
+    if (save.version < 1) return { issue: "version-old", state: defaults() };
 
     var state = defaults();
 
@@ -586,6 +992,7 @@
     BOOLEAN_FLAGS.forEach(function (key) {
       flags[key] = flags[key] === true;
     });
+    if (DOOR_OUTCOMES.indexOf(flags.doorOutcome) === -1) flags.doorOutcome = "none";
     Object.keys(ABANDON_TAKE_FLAGS).forEach(function (id) {
       flags[ABANDON_TAKE_FLAGS[id]] = flags[ABANDON_TAKE_FLAGS[id]] === true;
     });
@@ -593,8 +1000,9 @@
     backfillLegacyFlags(save, flags);
     syncDerivedFlags({ flags: flags });
     state.flags = flags;
-    // inventory.door 只是 flags 的镜像，避免两处状态打架。
+    // inventory.door/giftBarley 只是 flags 的镜像，避免两处状态打架。
     state.inventory.door = flags["item.door"];
+    state.inventory.giftBarley = flags["inventory.giftBarley"] === true;
 
     var items = save.inventory && save.inventory.items;
     state.inventory.items = Array.isArray(items)
@@ -746,17 +1154,33 @@
     return true;
   }
 
-  // 救人消耗 strain 是唯一数值，其余命运状态全是派生布尔；evalWhen 只认布尔键。
+  // 派生只在这里写：condition/rescues 夹取，quality 与 fate 互镜，strain 仅保留兼容。
   function syncDerivedFlags(state) {
     var flags = state.flags;
-    var strain = isFiniteNumber(flags.strain) ? Math.round(clamp(flags.strain, 0, 3)) : 0;
-    flags.strain = strain;
-    flags["strain.hurt"] = strain >= 2;
-    flags["strain.dying"] = strain >= 3;
-    flags["fate.lin.dead"] = strain >= 2 && strain < 3;
+    flags.condition = Math.round(clamp(isFiniteNumber(flags.condition) ? flags.condition : 3, 0, 4));
+    flags.rescues = Math.round(clamp(isFiniteNumber(flags.rescues) ? flags.rescues : 0, 0, 3));
+    flags["help.used"] = flags["help.used"] === true;
+    flags["fate.player.dead"] = flags["fate.player.dead"] === true || flags.condition === 0;
+    ["feimao", "zaowang", "dongsheng"].forEach(function (id) {
+      var key = "quality." + id;
+      flags[key] = Math.round(clamp(isFiniteNumber(flags[key]) ? flags[key] : 0, 0, 3));
+      if (flags["fate." + id + ".dead"] === true) flags[key] = 0;
+    });
+    flags["fate.lin.dead"] = flags["fate.player.dead"] === true;
+    flags["fate.seven5"] = flags["fate.player.dead"] === true &&
+      flags["had.door"] === true &&
+      flags.rescues === 3;
+    flags["fate.badend"] = flags["fate.player.dead"] === true && flags["fate.seven5"] !== true;
     flags["fate.all.dead"] = flags["fate.feimao.dead"] === true &&
       flags["fate.zaowang.dead"] === true &&
       flags["fate.dongsheng.dead"] === true;
+    // v1.3 的 strain 是“救过几人”；v1.4 反过来只当作剩余体力，供旧句兼容。
+    flags.strain = 3 - flags.rescues;
+    flags["strain.hurt"] = flags.rescues >= 2;
+    flags["strain.dying"] = flags["fate.player.dead"] === true;
+    if (state.inventory) {
+      state.inventory.giftBarley = flags["inventory.giftBarley"] === true;
+    }
   }
 
   function isVisible(state, node) {
@@ -884,8 +1308,13 @@
       return false;
     }
 
-    if (path === "item.door" || path === "item.pot" || ITEM_FLAGS.indexOf(path) !== -1) {
+    if (BOOLEAN_FLAGS.indexOf(path) !== -1 || path === "item.pot" || ITEM_FLAGS.indexOf(path) !== -1) {
       next = next === true;
+    } else if (path === "doorOutcome") {
+      if (DOOR_OUTCOMES.indexOf(next) === -1) {
+        console.error("[XB] 门板去向不认识：" + next);
+        return false;
+      }
     } else if (FLAG_LIMITS[path]) {
       if (!isFiniteNumber(next)) {
         console.error("[XB] 数值旗标收到非数值：" + path);
@@ -895,8 +1324,22 @@
       next = Math.round(clamp(next, range[0], range[1]));
     }
 
+    // 救人数增加时按“第几人”补扣状态；剧本只写 rescues，不重复写 condition。
+    if (path === "rescues") {
+      var oldRescues = Math.round(clamp(isFiniteNumber(state.flags.rescues) ? state.flags.rescues : 0, 0, 3));
+      var newRescues = Math.round(clamp(next, 0, 3));
+      if (newRescues > oldRescues) {
+        var hasDoor = state.flags["had.door"] === true;
+        var penalty = rescuePenalty(newRescues, hasDoor) - rescuePenalty(oldRescues, hasDoor);
+        state.flags.condition = Math.round(clamp((isFiniteNumber(state.flags.condition) ? state.flags.condition : 3) - penalty, 0, 4));
+      }
+      next = newRescues;
+    }
+
     state.flags[path] = next;
     if (path === "item.door") state.inventory.door = next;
+    if (path === "inventory.giftBarley") state.inventory.giftBarley = next === true;
+    syncDerivedFlags(state);
     return true;
   }
 
@@ -963,6 +1406,16 @@
       console.error("[XB] " + node.id + " 选择数量越界：" + chosen.length);
       return null;
     }
+    var chosenExtraUnits = 0;
+    var chosenInventoryIds = [];
+    chosen.forEach(function (option) {
+      if (option.inventoryId) chosenInventoryIds.push(option.inventoryId);
+      else chosenExtraUnits += optionUnits(option);
+    });
+    if (packUnitsForIds(state, state.inventory.items.concat(chosenInventoryIds)) + chosenExtraUnits > PACK_UNITS) {
+      console.error("[XB] " + node.id + " 行囊超重");
+      return null;
+    }
 
     options.forEach(function (option) {
       applySet(state, option.setOff, node.id);
@@ -970,14 +1423,6 @@
     chosen.forEach(function (option) {
       applySet(state, option.setOn, node.id);
     });
-
-    if (node.slotLoad === true) {
-      var load = state.flags["item.door"] === true ? 2 : 0;
-      chosen.forEach(function (option) {
-        load += isFiniteNumber(option.slots) ? option.slots : 1;
-      });
-      setFlag(state, "load", load);
-    }
 
     var left = options.filter(function (option) {
       return chosen.indexOf(option) === -1;
@@ -1000,6 +1445,7 @@
       });
       state.inventory.items = packed;
     }
+    setFlag(state, "load", packUsage(state));
 
     state.choices.push({
       chapter: state.chapterId,
@@ -1020,7 +1466,11 @@
     PERSIST_KEYS.forEach(function (key) {
       save[key] = cloneJson(state[key]);
     });
-    save.inventory = { door: !!state.inventory.door, items: cloneJson(state.inventory.items) };
+    save.inventory = {
+      door: !!state.inventory.door,
+      items: cloneJson(state.inventory.items),
+      giftBarley: state.inventory.giftBarley === true
+    };
     return save;
   }
 
@@ -1052,6 +1502,17 @@
     visibleOptions: visibleOptions,
     defaultOptionKey: defaultOptionKey,
     effectiveMultiMax: effectiveMultiMax,
+    optionUnits: optionUnits,
+    packUsage: packUsage,
+    packCapacity: packCapacity,
+    canAddMultiOption: canAddMultiOption,
+    usePackItems: usePackItems,
+    conditionLabel: conditionLabel,
+    doorCanCarry: doorCanCarry,
+    doorCarried: doorCarried,
+    settleGrass: settleGrass,
+    resolveGrassWarning: resolveGrassWarning,
+    settleDoor: settleDoor,
     syncDerivedFlags: syncDerivedFlags,
     resolveRollCall: resolveRollCall,
     routeOf: routeOf,
@@ -2119,7 +2580,9 @@
      XB.engine：DOM 层
      ===================================================================== */
 
-  var SAVE_KEY = "xiangbei.save.v1";
+  // v1.4 起主存档写 v2；旧 v1 只读，迁移后保留原键作为回滚余地。
+  var SAVE_KEY = "xiangbei.save.v2";
+  var LEGACY_SAVE_KEY = "xiangbei.save.v1";
   var MAX_SAVE_BYTES = 4096;
   var PAGE_HEIGHT = 66;
   var INPUT_LOCK_MS = 100;
@@ -2200,6 +2663,9 @@
     "map-stations",
     "map-route",
     "vn-chapter",
+    "vn-condition",
+    "vn-pack-button",
+    "vn-pack-count",
     "vn-toolbar",
     "vn-auto",
     "vn-skip",
@@ -2261,7 +2727,18 @@
     "roster-gallery",
     "roster-gallery-close",
     "roster-gallery-count",
-    "roster-gallery-pages"
+    "roster-gallery-pages",
+    "pack-panel",
+    "pack-warning",
+    "pack-title",
+    "pack-summary",
+    "pack-list",
+    "pack-note",
+    "pack-close",
+    "pack-continue",
+    "door-modal",
+    "door-title",
+    "door-discard"
   ];
 
   var state = null;
@@ -2274,6 +2751,8 @@
   var stationsBuilt = false;
   var lastFocused = null;
   var artWarned = false;
+  var packState = { open: false, mode: "browse", onClose: null, previousFocus: null };
+  var doorState = { open: false, previousFocus: null };
   var artResizeFrame = 0;
   var artResizeScale = 1;
   var inputLockUntil = 0;
@@ -2402,6 +2881,7 @@
     render();
     if (legacyMigrated) {
       var migrateText = {
+        save: "旧存档已升级到 v2",
         jinsha: "旧存档已接回金沙江",
         luding: "旧存档已接回泸定",
         fate: "旧存档已按原路线补记人物命运"
@@ -2424,48 +2904,87 @@
     }, 600);
   }
 
-  function loadSave() {
-    var raw = null;
+  function readStorage(key) {
     try {
-      raw = window.localStorage.getItem(SAVE_KEY);
+      return { ok: true, raw: window.localStorage.getItem(key) };
     } catch (err) {
       console.error("[XB] 读取存档失败：" + err.message);
+      return { ok: false, raw: null };
+    }
+  }
+
+  // v2 坏了才回头读 v1；v1 只读不写，迁移成功后由 saveNow 落到 v2。
+  function loadSave() {
+    var current = readStorage(SAVE_KEY);
+    var legacy = readStorage(LEGACY_SAVE_KEY);
+    if (!current.ok || !legacy.ok) {
       return { state: defaults(), storageOk: false, exists: false };
+    }
+    var raw = current.raw;
+    var key = SAVE_KEY;
+    var legacyUsed = false;
+    if (!raw && legacy.raw) {
+      raw = legacy.raw;
+      key = LEGACY_SAVE_KEY;
+      legacyUsed = true;
     }
     if (!raw) return { state: defaults(), storageOk: true, exists: false };
 
     var parsed = null;
+    var broken = false;
     try {
       parsed = JSON.parse(raw);
     } catch (err) {
       console.error("[XB] 存档不是合法 JSON：" + err.message);
-      backupSave("bad");
+      backupSave("bad", key);
+      broken = true;
       toast("存档损坏，已重置");
-      return { state: defaults(), storageOk: true, exists: false };
+    }
+    if (!broken) {
+      var result = normalize(parsed);
+      if (result.issue === "version-too-new") {
+        backupSave("bak", key);
+        console.error("[XB] 存档版本过新：" + parsed.version);
+        toast("存档来自更新的版本，已备份");
+        broken = true;
+      } else if (result.issue) {
+        backupSave("bad", key);
+        console.error("[XB] 存档校验失败：" + result.issue);
+        toast("存档与当前版本不匹配，已重置");
+        broken = true;
+      } else {
+        var migrated = legacyUsed || parsed.version < 2 ? "save" : result.migrated || null;
+        return { state: result.state, storageOk: true, exists: true, migrated: migrated };
+      }
     }
 
-    var result = normalize(parsed);
-    if (result.issue === "version-too-new") {
-      backupSave("bak");
-      console.error("[XB] 存档版本过新：" + parsed.version);
-      toast("存档来自更新的版本，已备份");
-      return { state: defaults(), storageOk: true, exists: false };
+    // 主档坏了，还有 v1 就再试一次；v1 也坏则回默认，绝不白屏。
+    if (!legacyUsed && legacy.raw) {
+      var oldParsed = null;
+      try {
+        oldParsed = JSON.parse(legacy.raw);
+      } catch (err) {
+        console.error("[XB] 旧存档不是合法 JSON：" + err.message);
+        backupSave("bad", LEGACY_SAVE_KEY);
+        return { state: defaults(), storageOk: true, exists: false };
+      }
+      var oldResult = normalize(oldParsed);
+      if (!oldResult.issue) {
+        return { state: oldResult.state, storageOk: true, exists: true, migrated: "save" };
+      }
+      backupSave("bad", LEGACY_SAVE_KEY);
+      console.error("[XB] 旧存档校验失败：" + oldResult.issue);
     }
-    if (result.issue) {
-      backupSave("bad");
-      console.error("[XB] 存档校验失败：" + result.issue);
-      toast("存档与当前版本不匹配，已重置");
-      return { state: defaults(), storageOk: true, exists: false };
-    }
-    return { state: result.state, storageOk: true, exists: true, migrated: result.migrated || null };
+    return { state: defaults(), storageOk: true, exists: false };
   }
 
-  function backupSave(suffix) {
+  function backupSave(suffix, key) {
+    var target = key || SAVE_KEY;
     try {
-      var raw = window.localStorage.getItem(SAVE_KEY);
+      var raw = window.localStorage.getItem(target);
       if (raw === null) return;
-      window.localStorage.setItem(SAVE_KEY + "." + suffix, raw);
-      window.localStorage.removeItem(SAVE_KEY);
+      window.localStorage.setItem(target + "." + suffix, raw);
+      window.localStorage.removeItem(target);
     } catch (err) {
       console.error("[XB] 备份存档失败：" + err.message);
     }
@@ -2473,7 +2992,9 @@
 
   function clearSave() {
     try {
+      // 两个键都清：只清 v2 会让下一次启动把旧 v1 迁移回来。
       window.localStorage.removeItem(SAVE_KEY);
+      window.localStorage.removeItem(LEGACY_SAVE_KEY);
     } catch (err) {
       console.error("[XB] 清除存档失败：" + err.message);
     }
@@ -2509,10 +3030,12 @@
 
   function normalizeRosterPage(page) {
     if (!isPlainObject(page)) return null;
-    if (ROUTE_IDS.indexOf(page.route) === -1 || page.route === "legacy") return null;
+    if (page.route === "legacy") return null;
+    if (ROUTE_IDS.indexOf(page.route) === -1 && LEGACY_ROUTES.indexOf(page.route) === -1) return null;
     if (typeof page.title !== "string" || typeof page.at !== "string" || typeof page.note !== "string") return null;
     if (!isFiniteNumber(page.companyEnd)) return null;
-    if (!Array.isArray(page.names) || (page.names.length !== 7 && page.names.length !== 8)) return null;
+    // 坏结局是空名册；旧 v1.3 页保留 7 或 8 名。
+    if (!Array.isArray(page.names) || [0, 7, 8].indexOf(page.names.length) === -1) return null;
     var names = [];
     for (var i = 0; i < page.names.length; i += 1) {
       var entry = page.names[i];
@@ -2704,12 +3227,18 @@
       cancelTyping();
       cancelChoiceTimer();
       stopInteract();
+      if (packState.open) closePackPanel(true);
+      if (doorState.open) {
+        doorState.open = false;
+        els.doorModal.hidden = true;
+      }
     }
     showScene(state.scene);
     if (state.scene === "title") renderTitle();
     else if (state.scene === "map") renderMap();
     else if (state.scene === "vn") renderVn(currentNode(state));
     else if (state.scene === "ending") renderEnding();
+    updateHud();
     updateDebug();
   }
 
@@ -2825,6 +3354,9 @@
       case "result":
         renderResult(found.node);
         break;
+      case "settle":
+        runGrassSettlement();
+        break;
       case "interact":
         startInteract(found.node);
         break;
@@ -2844,6 +3376,7 @@
         console.error("[XB] 未知节点类型：" + found.node.type + "（" + found.node.id + "）");
         toast("节点类型未接入：" + found.node.type);
     }
+    updateHud();
     updateDebug();
   }
 
@@ -3057,6 +3590,7 @@
     cancelChoiceTimer();
     if (!node.timeout) return;
     choiceRun.active = true;
+    updateHud();
     choiceRun.total = node.timeout * 1000;
     choiceRun.remaining = choiceRun.total;
     choiceRun.lastTs = 0;
@@ -3085,6 +3619,7 @@
 
   function cancelChoiceTimer() {
     choiceRun.active = false;
+    updateHud();
     if (choiceRun.rafId) cancelAnimationFrame(choiceRun.rafId);
     choiceRun.rafId = 0;
   }
@@ -3221,6 +3756,11 @@
     });
 
     var count = multiRun.selected.length;
+    var selectedUnits = multiRun.selected.reduce(function (sum, id) {
+      return sum + XB.core.optionUnits(multiOptionById(node, id) || {});
+    }, 0);
+    var usedSlots = (XB.core.packUsage(state) + selectedUnits) / 2;
+    var slotText = (usedSlots % 1 === 0 ? String(usedSlots) : usedSlots.toFixed(1)) + "/4 格";
     if (multiRun.locked) {
       els.vnMultiStatus.textContent = "记下了。";
     } else if (node.min === node.max) {
@@ -3228,7 +3768,7 @@
         ? "已选 " + count + " 样，还差 " + (min - count) + " 样"
         : "已选 " + count + " 样，可以确认";
     } else {
-      els.vnMultiStatus.textContent = "已选 " + count + " 样" + (max ? "，最多 " + max + " 样" : "");
+      els.vnMultiStatus.textContent = "行囊 " + slotText + " · 已选 " + count + " 样" + (max ? "，最多 " + max + " 样" : "");
     }
 
     els.vnMultiConfirm.disabled = multiRun.locked || count < min;
@@ -3245,6 +3785,11 @@
       multiRun.selected.splice(at, 1);
     } else if (multiRun.selected.length >= multiMax(node)) {
       els.vnMultiStatus.textContent = "最多 " + multiMax(node) + " 样。先拿下一件，再放这一件。";
+      return;
+    } else if (!XB.core.canAddMultiOption(state, option, multiRun.selected.map(function (itemId) {
+      return multiOptionById(node, itemId);
+    }).filter(Boolean))) {
+      els.vnMultiStatus.textContent = "行囊放不下。先放下一件，再拿这一件。";
       return;
     } else {
       multiRun.selected.push(id);
@@ -3279,6 +3824,10 @@
         return;
       }
       hideMultiPanel();
+      if (node.id === "p024" && state.flags.condition < 4) {
+        openPackPanel("start", advanceVn);
+        return;
+      }
       advanceVn();
     };
     window.setTimeout(settle, 300);
@@ -3382,9 +3931,10 @@
       var hasDoor = state.flags["item.door"] === true;
       var packed = collectItemLabels(PACK_ITEMS, true);
       var leftAtHome = collectItemLabels(PACK_ITEMS, false);
-      var used = (hasDoor ? 2 : 0) + packed.length;
+      var used = XB.core.packUsage(state) / 2;
       var capacity = Math.max(PACK_SLOTS, used);
-      view.stats = "行囊 " + used + "/" + capacity + " 格" + (hasDoor ? " · 门板占 2 格" : "");
+      var usedText = used % 1 === 0 ? String(used) : used.toFixed(1);
+      view.stats = "行囊 " + usedText + "/" + capacity + " 格" + (hasDoor ? " · 门板占 2 格" : "");
       view.note = (node.note || "") + " 花名册和铅笔一直贴身带着。";
       view.lists = [
         {
@@ -3467,8 +4017,7 @@
     player: "替他答到",
     missed: "未应"
   };
-  // 结局编号只用于展示：四条人物命运路线；桥板/石墙共用结局 3。
-  var ENDING_ROUTE_NUMBERS = { sidao: 1, menban: 2, qiaoban: 3, kongye: 4 };
+
 
   function renderEnding() {
     var storyEnding = (XB.story && XB.story.ending) || {};
@@ -3487,17 +4036,29 @@
     els.endingTitle.textContent = storyEnding.title || "向北";
     els.endingDate.textContent = (storyEnding.date || "") + " · 吴起镇";
     els.endingLede.textContent = storyEnding.lede || "";
-    var routeNumber = ENDING_ROUTE_NUMBERS[state.ending.route];
+    var numberLabel = state.ending.routeLabel || "";
     var routeName = state.ending.routeTitle || "";
-    var routeLabel = routeName
-      ? (routeNumber ? "结局" + routeNumber + "（" + routeName + "）" : routeName)
+    var routeHeading = "";
+    if (numberLabel === "坏结局" || numberLabel === "旧档") {
+      routeHeading = routeName && routeName !== numberLabel ? numberLabel + " · " + routeName : numberLabel;
+    } else if (numberLabel) {
+      routeHeading = "结局" + numberLabel + (routeName ? "（" + routeName + "）" : "");
+    } else {
+      routeHeading = routeName;
+    }
+    var showRouteLede = numberLabel !== "坏结局" && numberLabel !== "旧档";
+    els.endingRoute.textContent = routeHeading
+      ? routeHeading + (showRouteLede && state.ending.routeLede ? " · " + state.ending.routeLede : "")
       : "";
-    els.endingRoute.textContent = routeLabel
-      ? routeLabel + (state.ending.routeLede ? " · " + state.ending.routeLede : "")
-      : "";
-    els.endingRoute.hidden = !routeLabel;
+    els.endingRoute.hidden = !routeHeading;
 
     els.endingNames.textContent = "";
+    if (!state.ending.names.length) {
+      var noNames = document.createElement("li");
+      noNames.className = "xb-ending__name is-missed";
+      noNames.textContent = "名册没有翻到吴起。";
+      els.endingNames.append(noNames);
+    }
     state.ending.names.forEach(function (entry) {
       var row = document.createElement("li");
       row.className = "xb-ending__name is-" + entry.status;
@@ -4065,6 +4626,14 @@
       var meta = document.createElement("p");
       meta.className = "xb-roster-page__meta";
       meta.textContent = page.at + " · 到吴起 " + page.companyEnd + " 人";
+      if (!page.names.length) {
+        var empty = document.createElement("p");
+        empty.className = "xb-roster-page__note";
+        empty.textContent = "名册没有翻到吴起。";
+        section.append(title, meta, empty);
+        els.rosterGalleryPages.append(section);
+        return;
+      }
       var list = document.createElement("ol");
       list.className = "xb-roster-page__names";
       page.names.forEach(function (entry) {
@@ -4111,10 +4680,238 @@
     if (previous && previous.focus && previous !== document.body) previous.focus();
   }
 
+  /* ---------------- 状态与物资 ---------------- */
+
+  function formatSlots(units) {
+    var slots = units / 2;
+    return (slots % 1 === 0 ? String(slots) : slots.toFixed(1)) + " 格";
+  }
+
+  function updateHud() {
+    if (!state || !els.vnCondition) return;
+    var condition = isFiniteNumber(state.flags.condition) ? state.flags.condition : 3;
+    var label = XB.core.conditionLabel(condition);
+    var text = els.vnCondition.querySelector("b");
+    if (text) text.textContent = label;
+    els.vnCondition.className = "vn-condition is-q" + condition;
+    var units = XB.core.packUsage(state);
+    var capacity = Math.max(4, units / 2);
+    els.vnPackCount.textContent = (units / 2).toFixed(units % 2 === 0 ? 0 : 1) + "/" + capacity;
+    els.vnPackButton.disabled = choiceRun.active || interactRun.active;
+    els.vnPackButton.setAttribute("aria-disabled", els.vnPackButton.disabled ? "true" : "false");
+  }
+
+  function packItemRows() {
+    var rows = [];
+    var add = function (id, name, note, units) {
+      rows.push({ id: id, name: name, note: note, units: units });
+    };
+    if (state.inventory.items.indexOf("roster") !== -1) add("roster", "花名册", "一直贴身带着，不占格。", 0);
+    if (state.inventory.items.indexOf("pencil") !== -1) add("pencil", "铅笔", "记名字用的，不占格。", 0);
+    if (state.flags["item.door"] === true) add("door", "门板", "占两格，不能当物资使用；剧情里可以铺桥、挡雨、当床板。", DOOR_UNITS);
+    if (state.inventory.items.indexOf("medicine") !== -1) add("medicine", "药", "两包草药，油纸裹着。半格。", 1);
+    if (state.inventory.items.indexOf("barley") !== -1) add("barley", "青稞", "一小袋炒青稞。半格。", 1);
+    if (state.inventory.items.indexOf("shoes") !== -1) add("shoes", "布鞋", "新纳的底，针脚密。一格。", 2);
+    if (state.inventory.items.indexOf("homepot") !== -1) add("homepot", "铁锅", "家里那口铁锅。两格。", 4);
+    if (state.inventory.items.indexOf("raincloth") !== -1) add("raincloth", "雨布", "补过三次的油布。两格，只能在草地使用。", 4);
+    if (state.inventory.giftBarley === true) add("giftBarley", "冬生的青稞", "他塞给我的，不占格。", 0);
+    return rows;
+  }
+
+  function packRecipes() {
+    var has = function (id) {
+      if (id === "giftBarley") return state.inventory.giftBarley === true;
+      return state.inventory.items.indexOf(id) !== -1;
+    };
+    var recipes = [];
+    if (has("shoes")) recipes.push({ key: "shoes", label: "布鞋", delta: 1, disabled: false });
+    if (has("homepot")) recipes.push({ key: "homepot", label: "铁锅", delta: 2, disabled: false });
+    if (has("raincloth")) recipes.push({
+      key: "raincloth",
+      label: "雨布",
+      delta: 1,
+      disabled: state.chapterId !== "grass",
+      reason: "雨布只能在草地使用。"
+    });
+    if (has("medicine") && has("barley")) recipes.push({ key: "barley+medicine", label: "药 + 青稞", delta: 1, disabled: false });
+    if (has("barley") && has("giftBarley")) recipes.push({ key: "barley+giftBarley", label: "青稞 + 冬生的青稞", delta: 2, disabled: false });
+    if (has("medicine") && has("giftBarley")) recipes.push({ key: "giftBarley+medicine", label: "药 + 冬生的青稞", delta: 1, disabled: false });
+    return recipes;
+  }
+
+  function renderPack() {
+    var warning = packState.mode === "warning";
+    var intro = packState.mode === "start";
+    els.packWarning.hidden = !warning;
+    els.packWarning.textContent = warning ? "你现在是“差”。不用物资，就走不出去。" : "";
+    els.packTitle.textContent = intro ? "出发前" : "物资";
+    var used = XB.core.packUsage(state);
+    var capacity = Math.max(8, used);
+    els.packSummary.textContent =
+      "行囊 " + formatSlots(used) + " / " + formatSlots(capacity) +
+      (state.flags["item.door"] === true ? "（门板占两格）" : "") +
+      " · 状态 " + XB.core.conditionLabel(state.flags.condition);
+    els.packList.textContent = "";
+    packItemRows().forEach(function (row) {
+      var item = document.createElement("div");
+      item.className = "xb-pack__item";
+      var name = document.createElement("span");
+      name.className = "xb-pack__item-name";
+      name.textContent = row.name;
+      var units = document.createElement("span");
+      units.className = "xb-pack__item-units";
+      units.textContent = row.units ? formatSlots(row.units) : "不占格";
+      var note = document.createElement("span");
+      note.className = "xb-pack__item-note";
+      note.textContent = row.note;
+      item.append(name, units, note);
+      els.packList.append(item);
+    });
+
+    var head = document.createElement("p");
+    head.className = "xb-pack__subhead";
+    head.textContent = "可以这样用";
+    els.packList.append(head);
+    var recipes = packRecipes();
+    if (state.flags.condition >= 4) {
+      var full = document.createElement("p");
+      full.className = "xb-pack__empty";
+      full.textContent = "状态已经是优秀，不需要再用物资。";
+      els.packList.append(full);
+    } else if (!recipes.length) {
+      var none = document.createElement("p");
+      none.className = "xb-pack__empty";
+      none.textContent = "现在没有能用的组合。";
+      els.packList.append(none);
+    } else {
+      var actions = document.createElement("div");
+      actions.className = "xb-pack__recipes";
+      recipes.forEach(function (recipe) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "xb-btn xb-btn--sm xb-pack__recipe";
+        button.dataset.action = "pack-use";
+        button.dataset.packUse = recipe.key;
+        button.disabled = recipe.disabled || state.flags.condition >= 4;
+        button.textContent = recipe.label + " · 状态 +" + recipe.delta + (recipe.disabled ? "（" + recipe.reason + "）" : "");
+        actions.append(button);
+      });
+      els.packList.append(actions);
+    }
+    els.packNote.textContent = warning
+      ? "如果不使用，可能走不出草地。"
+      : intro
+        ? "你当前的状态为良好。使用物资可以把状态提到优秀；不用也可以出发。"
+        : "使用物资会消耗它；状态到优秀后不再需要。";
+    els.packClose.textContent = intro ? "不用，出发" : "关闭";
+    els.packClose.hidden = warning;
+    els.packContinue.hidden = !warning;
+  }
+
+  function openPackPanel(mode, onClose) {
+    if (!state || state.scene !== "vn") return;
+    packState.open = true;
+    packState.mode = mode || "browse";
+    packState.onClose = onClose || null;
+    packState.previousFocus = document.activeElement;
+    renderPack();
+    els.packPanel.hidden = false;
+    els.packClose.focus();
+    refreshAudioDuck();
+  }
+
+  function closePackPanel(keepFocus) {
+    if (!packState.open) return;
+    packState.open = false;
+    els.packPanel.hidden = true;
+    var previous = packState.previousFocus;
+    packState.previousFocus = null;
+    if (!keepFocus && previous && previous.focus && previous !== document.body) previous.focus();
+    refreshAudioDuck();
+  }
+
+  function finishPackPanel() {
+    if (!packState.open) return;
+    var mode = packState.mode;
+    var callback = packState.onClose;
+    if (mode === "warning") {
+      XB.core.resolveGrassWarning(state);
+      saveNow();
+    }
+    closePackPanel(false);
+    updateHud();
+    if (callback) callback();
+  }
+
+  function usePackRecipe(key) {
+    var result = XB.core.usePackItems(state, key.split("+"));
+    if (!result.ok) {
+      toast(result.reason);
+      return;
+    }
+    XB.audio.cue("choice-select");
+    saveNow();
+    updateHud();
+    if (packState.mode === "warning" && state.flags.condition > 1) {
+      toast("状态回到" + XB.core.conditionLabel(state.flags.condition) + "，能走了。");
+      finishPackPanel();
+      return;
+    }
+    renderPack();
+  }
+
+  // 草地结束：先扣状态，再按 7(5)/坏结局/门板条件收口；刷新到 g027a 不重复扣。
+  function runGrassSettlement() {
+    var result = XB.core.settleGrass(state);
+    saveNow();
+    updateHud();
+    if (result.condition === 0) {
+      finishGrassSettlement();
+      return;
+    }
+    if (result.condition === 1) {
+      openPackPanel("warning", finishGrassSettlement);
+      return;
+    }
+    finishGrassSettlement();
+  }
+
+  function finishGrassSettlement() {
+    if (state.flags.condition <= 1) XB.core.resolveGrassWarning(state);
+    var outcome = XB.core.settleDoor(state);
+    XB.core.syncDerivedFlags(state);
+    saveNow();
+    updateHud();
+    var needsDoorModal = outcome === "grass" &&
+      state.flags["had.door"] === true &&
+      state.flags["fate.player.dead"] !== true;
+    if (needsDoorModal) {
+      doorState.open = true;
+      doorState.previousFocus = document.activeElement;
+      els.doorModal.hidden = false;
+      els.doorDiscard.focus();
+      refreshAudioDuck();
+      return;
+    }
+    advanceVn();
+  }
+
+  function closeDoorModal() {
+    if (!doorState.open) return;
+    doorState.open = false;
+    els.doorModal.hidden = true;
+    var previous = doorState.previousFocus;
+    doorState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+    refreshAudioDuck();
+    advanceVn();
+  }
+
   // 暂停、图鉴、史实注可能叠在一起，取最安静的一档，不叠乘。
   function refreshAudioDuck() {
     var duck = 1;
     if (codexState.open || galleryState.open || rosterGalleryState.open) duck = Math.min(duck, 0.45);
+    if (packState.open || doorState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
     XB.audio.setDuck(duck);
   }
@@ -4498,6 +5295,7 @@
     var target = event.target;
     if (!target || !target.closest) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
+    if (packState.open || doorState.open) return;
     if (titleCardState.open) {
       closeTitleCard();
       return;
@@ -4521,6 +5319,21 @@
 
   function onKeyDown(event) {
     XB.audio.unlock();
+    if (doorState.open) {
+      if (event.key === "Escape" || event.key === "Enter") {
+        closeDoorModal();
+        event.preventDefault();
+      }
+      return;
+    }
+    if (packState.open) {
+      if (event.key === "Escape") {
+        if (packState.mode === "browse") closePackPanel(false);
+        else finishPackPanel();
+        event.preventDefault();
+      }
+      return;
+    }
     if (event.key === "Escape") {
       if (codexState.open) {
         closeCodex();
@@ -4658,6 +5471,22 @@
         break;
       case "roster-gallery-close":
         closeRosterGallery();
+        break;
+      case "pack":
+        if (!els.vnPackButton.disabled) openPackPanel("browse", null);
+        break;
+      case "pack-use":
+        usePackRecipe(target.dataset.packUse);
+        break;
+      case "pack-close":
+        if (packState.mode === "browse") closePackPanel(false);
+        else finishPackPanel();
+        break;
+      case "pack-continue":
+        finishPackPanel();
+        break;
+      case "door-discard":
+        closeDoorModal();
         break;
       case "interact-answer":
         if (interactRun.mode === "rollcall") answerRollcall();

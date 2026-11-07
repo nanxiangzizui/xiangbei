@@ -1370,7 +1370,7 @@ a:focus-visible,
 }
 
 .xb-ending__names {
-  max-height: 132px;
+  max-height: 172px;
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -2619,6 +2619,197 @@ a:focus-visible,
   color: var(--ink-muted);
 }
 
+/* ---------- 状态 HUD / 物资 / 门板（v1.4） ---------- */
+.vn-condition {
+  position: absolute;
+  left: 32px;
+  top: 60px;
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  font-size: var(--fs-small);
+  letter-spacing: 2px;
+  color: var(--paper-a72);
+  background: var(--scrim);
+  border-radius: var(--radius);
+}
+
+.vn-condition b {
+  font-weight: 400;
+  color: var(--paper-hi);
+}
+
+.vn-condition.is-q1 b,
+.vn-condition.is-q0 b {
+  color: var(--ember);
+}
+
+.vn-pack-button {
+  position: absolute;
+  left: 756px;
+  top: 24px;
+  width: 148px;
+  height: 44px;
+  padding: 0 10px;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  letter-spacing: 1px;
+  color: var(--paper);
+  background: var(--scrim);
+  border: var(--border) solid var(--paper-a72);
+  border-radius: var(--radius);
+  z-index: var(--z-dialogue);
+}
+
+.vn-pack-button span {
+  color: var(--paper-a72);
+}
+
+.vn-pack-button:disabled {
+  color: var(--paper-a72);
+  border-style: dashed;
+}
+
+.xb-pack-overlay,
+.xb-door-modal {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+  z-index: 78;
+}
+
+.xb-door-modal { z-index: 79; }
+
+.xb-pack {
+  width: 760px;
+  max-height: 640px;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-7);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.xb-pack__warning {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  color: var(--paper-hi);
+  background: var(--cinnabar);
+}
+
+.xb-pack__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--fs-chapter);
+  font-weight: 400;
+  letter-spacing: var(--ls-chapter);
+}
+
+.xb-pack__summary {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+
+.xb-pack__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.xb-pack__item {
+  display: grid;
+  grid-template-columns: 160px 90px 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: var(--border) dashed var(--ink-a30);
+}
+
+.xb-pack__item-name {
+  font-size: var(--fs-body);
+}
+
+.xb-pack__item-units {
+  font-size: var(--fs-small);
+  color: var(--cinnabar);
+}
+
+.xb-pack__item-note {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.xb-pack__subhead {
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: var(--fs-small);
+  letter-spacing: 3px;
+  color: var(--cinnabar);
+}
+
+.xb-pack__recipes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.xb-pack__recipe {
+  min-height: 44px;
+}
+
+.xb-pack__empty,
+.xb-pack__note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.xb-pack__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.xb-door {
+  width: 620px;
+  padding: var(--space-6);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.xb-door__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-title);
+  font-size: var(--fs-chapter);
+  font-weight: 400;
+  letter-spacing: var(--ls-chapter);
+  color: var(--cinnabar);
+}
+
+.xb-door__body {
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
 /* 设置里的「减少动效」：与系统偏好同一条规则，两种入口都关掉动效 */
 html.reduce-motion * {
   transition: none !important;
@@ -2705,4 +2896,24 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-roster-page__name { font-size: 24px; }
   .xb-roster-page__mark { font-size: 18px; }
   .xb-roster-page__note { font-size: 20px; }
+
+  /* 物资面板与状态：舞台缩到约 54%，逻辑字号需放大到可读 */
+  .vn-condition { top: 76px; font-size: 22px; padding: 6px 12px; }
+  .vn-pack-button { left: 700px; top: 24px; width: 190px; height: 64px; font-size: 22px; }
+  .xb-pack { width: 920px; max-height: 650px; padding: 24px 32px; }
+  .xb-pack__title { font-size: 38px; }
+  .xb-pack__warning { font-size: 26px; }
+  .xb-pack__summary { font-size: 20px; }
+  .xb-pack__item { grid-template-columns: 220px 120px 1fr; }
+  .xb-pack__item-name { font-size: 26px; }
+  .xb-pack__item-units { font-size: 20px; }
+  .xb-pack__item-note { font-size: 20px; }
+  .xb-pack__subhead { font-size: 20px; }
+  .xb-pack__recipe { min-height: 64px; font-size: 20px; }
+  .xb-pack__empty, .xb-pack__note { font-size: 20px; }
+  .xb-pack__actions .xb-btn { min-height: 64px; font-size: 22px; }
+  .xb-door { width: 760px; padding: 24px 32px; }
+  .xb-door__title { font-size: 38px; }
+  .xb-door__body { font-size: 26px; }
+  .xb-door .xb-btn { min-height: 64px; font-size: 22px; }
 }

@@ -45,7 +45,7 @@
                 text: "带上这块门板",
                 value: true,
                 set: { "item.door": true, "had.door": true, load: "+2", fire: "+10" },
-                cost: "行囊只剩一格，多背三十斤"
+                cost: "行囊只剩两格，多背三十斤"
               },
               {
                 key: "B",
@@ -74,12 +74,10 @@
           {
             id: "p024",
             type: "multichoice",
-            prompt: "娘把五样东西摆在桌上。行囊三格；带门板，占两格。",
+            prompt: "娘把五样东西摆在桌上。行囊四格；带门板，占两格。",
             min: 0,
-            max: 3,
-            maxWhen: [{ when: "item.door", max: 1 }],
+            max: 5,
             confirmLabel: "系好行囊",
-            slotLoad: true,
             inventoryBase: ["roster", "pencil"],
             options: [
               {
@@ -843,8 +841,10 @@
                 value: true,
                 set: {
                   "item.door": false,
+                  doorOutcome: "bridge",
                   trust: "+1",
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.feimao": 3,
                   "fate.feimao.dead": false,
                   "memory.fly_bridge": true
                 },
@@ -857,7 +857,8 @@
                 requires: "item.medicine",
                 set: {
                   "item.medicine": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.feimao": 2,
                   "fate.feimao.dead": false,
                   "memory.fly_medicine": true
                 },
@@ -892,7 +893,8 @@
                 requires: "item.medicine",
                 set: {
                   "item.medicine": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.feimao": 2,
                   "fate.feimao.dead": false,
                   "memory.fly_medicine": true
                 },
@@ -1119,10 +1121,10 @@
           {
             id: "g018x",
             type: "choice",
-            prompt: "火生不起来。灶王蹲在风口上，嘴唇发紫。",
+            prompt: "火生不起来。灶王蹲在风口上，嘴唇发紫。锅里什么都没有。",
             record: "choice.grass.zaowang",
             timeout: 16,
-            defaultOption: "D",
+            defaultOption: "C",
             options: [
               {
                 key: "A",
@@ -1131,7 +1133,8 @@
                 requires: "item.barley",
                 set: {
                   "item.barley": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.zaowang": 2,
                   "fate.zaowang.dead": false,
                   "memory.zaowang_barley": true
                 },
@@ -1144,7 +1147,8 @@
                 requires: "item.homepot",
                 set: {
                   "item.homepot": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.zaowang": 3,
                   "fate.zaowang.dead": false,
                   "memory.zaowang_pot": true
                 },
@@ -1152,21 +1156,8 @@
               },
               {
                 key: "C",
-                text: "替他蹲到风口上",
-                value: "C",
-                requires: "!item.door",
-                set: {
-                  fire: "-10",
-                  strain: "+1",
-                  "fate.zaowang.dead": false,
-                  "memory.zaowang_body": true
-                },
-                cost: "你在风口蹲了半宿，火起来了，你落下了病"
-              },
-              {
-                key: "D",
                 text: "不救了，跟上队伍",
-                value: "D",
+                value: "C",
                 set: {
                   "fate.zaowang.dead": true,
                   "memory.zaowang_leave": true
@@ -1265,7 +1256,7 @@
             prompt: "冬生走不动了，坐在泥里，号抱在怀里。",
             record: "choice.grass.dongsheng",
             timeout: 12,
-            defaultOption: "D",
+            defaultOption: "C",
             options: [
               {
                 key: "A",
@@ -1274,9 +1265,11 @@
                 requires: "item.shoes",
                 set: {
                   "item.shoes": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.dongsheng": 3,
                   "fate.dongsheng.dead": false,
-                  "memory.dongsheng_shoes": true
+                  "memory.dongsheng_shoes": true,
+                  "inventory.giftBarley": true
                 },
                 cost: "你把鞋脱给他，脚上只剩一层布"
               },
@@ -1287,29 +1280,18 @@
                 requires: "item.raincloth",
                 set: {
                   "item.raincloth": false,
-                  strain: "+1",
+                  rescues: "+1",
+                  "quality.dongsheng": 3,
                   "fate.dongsheng.dead": false,
-                  "memory.dongsheng_cloth": true
+                  "memory.dongsheng_cloth": true,
+                  "inventory.giftBarley": true
                 },
                 cost: "雨布裹着他，雨落在你身上"
               },
               {
                 key: "C",
-                text: "背他走",
-                value: "C",
-                requires: "!item.door",
-                set: {
-                  fire: "-10",
-                  strain: "+1",
-                  "fate.dongsheng.dead": false,
-                  "memory.dongsheng_body": true
-                },
-                cost: "你背着他走。走出草地时，腿不是自己的了"
-              },
-              {
-                key: "D",
                 text: "不救，继续走",
-                value: "D",
+                value: "C",
                 set: {
                   "fate.dongsheng.dead": true,
                   "memory.dongsheng_leave": true
@@ -1318,7 +1300,15 @@
               }
             ]
           },
+          {
+            id: "g026y",
+            type: "line",
+            speaker: "旁白",
+            text: "冬生把一小袋青稞塞给我。他说，这个不占地方。",
+            when: "!fate.dongsheng.dead"
+          },
           { id: "g027", type: "line", speaker: "旁白", text: "走出草地那天，前面有人喊：看见房子了。" },
+          { id: "g027a", type: "settle", settle: "grass" },
           {
             id: "g028a",
             type: "line",
@@ -1333,34 +1323,41 @@
             text: "冬生说，到了吴起，我吹给全连听。",
             when: "!fate.dongsheng.dead"
           },
+          {
+            id: "g028h",
+            type: "line",
+            speaker: "旁白",
+            text: "三个人把我从地上架起来。谁也没说话。",
+            when: "memory.help"
+          },
           { id: "g028", type: "line", speaker: "旁白", text: "没有人跑。大家只是把脚步放快了一点。" },
           {
             id: "g028d",
             type: "line",
             speaker: "旁白",
             text: "走出草地那天，我走不动了。",
-            when: "strain.dying"
+            when: "fate.player.dead"
           },
           {
             id: "g028e",
             type: "line",
             speaker: "旁白",
             text: "我把名册解下来，交给冬生。",
-            when: "strain.dying"
+            when: "fate.player.dead"
           },
           {
             id: "g028f",
             type: "line",
             speaker: "旁白",
             text: "我说，别停。",
-            when: "strain.dying"
+            when: "fate.player.dead"
           },
           {
             id: "g028g",
             type: "line",
             speaker: "旁白",
             text: "他背起名册，没回头。队伍没有停。",
-            when: "strain.dying"
+            when: "fate.player.dead"
           },
           {
             id: "g029",
@@ -1369,11 +1366,12 @@
             sub: "一九三五年 · 十月",
             place: "陕北 · 吴起镇",
             bg: "wuqi_dawn",
-            when: "!strain.dying"
+            when: "!fate.player.dead"
           },
           { id: "g030", type: "codex", codexId: "grass" },
-          { id: "g899", type: "end", next: "coda", when: "strain.dying" },
-          { id: "g900", type: "end", next: "wuqi", when: "!strain.dying" }
+          { id: "g898", type: "end", next: "badend", when: "fate.badend" },
+          { id: "g899", type: "end", next: "coda", when: "fate.seven5" },
+          { id: "g900", type: "end", next: "wuqi", when: "!fate.player.dead" }
         ]
       },
       {
@@ -1410,7 +1408,7 @@
                 key: "A",
                 text: "把门板留在吴起",
                 value: false,
-                set: { "item.door": false, "memory.door": true },
+                set: { "item.door": false, doorOutcome: "wuqi", "memory.door": true },
                 cost: "你从此没有那块板了"
               },
               {
@@ -1467,8 +1465,8 @@
           { id: "w027b", type: "line", speaker: "旁白", text: "三个人的名字，我都替他们答了。", when: "!memory.rollcall_missed_any && !fate.all.dead" },
           { id: "w027c", type: "line", speaker: "旁白", text: "四个人的名字，我都替他们答了。", when: "!memory.rollcall_missed_any && fate.all.dead" },
           { id: "w028", type: "line", speaker: "旁白", text: "后来有人告诉我，出发的时候，中央红军八万六千人；到陕北，七千余人。" },
-          { id: "w030", type: "line", speaker: "旁白", text: "全连出发一百零四，到吴起十九。", when: "!strain.dying" },
-          { id: "w031", type: "line", speaker: "旁白", text: "十九个人，站成三排。前排空着的位置，风从那儿过。", when: "!strain.dying" },
+          { id: "w030", type: "line", speaker: "旁白", text: "全连出发一百零四，到吴起十九。", when: "!fate.player.dead" },
+          { id: "w031", type: "line", speaker: "旁白", text: "十九个人，站成三排。前排空着的位置，风从那儿过。", when: "!fate.player.dead" },
           { id: "w032", type: "line", speaker: "旁白", text: "会后，指导员让我把五句话抄在纸上，贴在连部门口。" },
           { id: "w033", type: "line", speaker: "旁白", text: "我抄了五句。抄完，在最后添了一行小字：以上，都是别人教我的。" },
           { id: "w034", type: "line", speaker: "旁白", text: "散了会，我一个人走到镇口。风很大，吹得标语哗哗响。" },
@@ -1483,7 +1481,7 @@
         ]
       },
       {
-        // 隐藏章：只有 strain.dying（空页路线）才从草地走进来，不进地图、不弹解锁。
+        // 隐藏章：只有 7(5)（有门板、救满 3 人、自己死在草地）才从草地走进来。
         id: "coda",
         order: 8,
         title: "终章 · 吴起",
@@ -1496,6 +1494,7 @@
           { id: "c003", type: "line", speaker: "旁白", text: "到吴起那天，全连十八个人。名册上有十九个名字。" },
           { id: "c004", type: "line", speaker: "冬生", text: "满崽的名字，我替他答。" },
           { id: "c005", type: "line", speaker: "旁白", text: "指导员翻开名册，纸边全是毛的。" },
+          { id: "c005a", type: "line", speaker: "旁白", text: "林先生没有来。她在草地找我们，没等到收容队。" },
           {
             id: "c006",
             type: "interact",
@@ -1510,6 +1509,23 @@
           { id: "c011", type: "line", speaker: "旁白", text: "名册上多了一个名字，又划掉了。" },
           { id: "c012", type: "end", next: "ending" }
         ]
+      },
+      {
+        // 坏结局：叙事结算，不重开、不进地图；无名册，结局页 names 为空。
+        id: "badend",
+        order: 9,
+        title: "草地尽头",
+        short: "草地",
+        playable: true,
+        hidden: true,
+        nodes: [
+          { id: "b001", type: "title", text: "草地尽头", sub: "一九三五年 · 八月", place: "松潘草地", bg: "grass_marsh" },
+          { id: "b002", type: "line", speaker: "旁白", text: "我没有走出草地。" },
+          { id: "b003", type: "line", speaker: "旁白", text: "名册留在了冬生那里。" },
+          { id: "b004", type: "line", speaker: "旁白", text: "后来，连队到了吴起。十八个人。" },
+          { id: "b005", type: "line", speaker: "旁白", text: "林先生没有等到收容队。" },
+          { id: "b006", type: "end", next: "ending" }
+        ]
       }
     ],
     // 结局文案源：五卡只存亮/灰两句，亮哪张由引擎按旗标算，不在这里写条件。
@@ -1519,25 +1535,55 @@
       lede: "一块门板，两万五千里。",
       disclaimer: "本作人物与连队均为虚构，非史料人物；史实以《史实注》与《史实出处表》为准。",
       kongyeSacrificeLine: "你把自己，留在了草地尽头。",
-      // 四条人物命运路线，历史终点不变；由引擎按 saves / 门板 / strain 判定，剧本只提供文案。
+      // v1.4：带板 5 条 + 无板 5 条 + 坏结局；历史终点不变，路线只改人物命运与门板去向。
       routes: {
-        sidao: {
-          title: "四道划痕",
-          lede: "名册上四道划痕。门板立在墙根，正面朝外。"
-        },
-        menban: {
+        door_excellent: {
           title: "门板",
           lede: "门板到了吴起。你也是。"
         },
-        qiaoban: {
-          title: "桥板",
-          lede: "门板留在桥上。你到了吴起。",
-          altTitle: "石墙",
-          altLede: "字写在石墙上。你到了吴起。"
+        door_grass_one: {
+          title: "门板",
+          lede: "门板留在了草地。你到了吴起。",
+          bridgeTitle: "桥板",
+          bridgeLede: "门板留在了桥上。你到了吴起。"
         },
-        kongye: {
+        door_carry_two: {
+          title: "门板",
+          lede: "门板到了吴起。你也是。"
+        },
+        door_grass_many: {
+          title: "门板",
+          lede: "门板留在了草地。你到了吴起。",
+          bridgeTitle: "桥板",
+          bridgeLede: "门板留在了桥上。你到了吴起。"
+        },
+        door_others: {
           title: "空页",
           lede: "名册上多了一个名字，又划掉了。"
+        },
+        no_door_zero: {
+          title: "空手",
+          lede: "你空着手，走到了吴起。"
+        },
+        no_door_one: {
+          title: "空手",
+          lede: "你空着手，走到了吴起。"
+        },
+        no_door_two: {
+          title: "空手",
+          lede: "你空着手，走到了吴起。"
+        },
+        no_door_three: {
+          title: "空手",
+          lede: "你空着手，走到了吴起。"
+        },
+        no_door_three_excellent: {
+          title: "空手",
+          lede: "你空着手，走到了吴起。"
+        },
+        bad_end: {
+          title: "没有走出草地",
+          lede: "草地没有尽头。"
         }
       },
       cards: [

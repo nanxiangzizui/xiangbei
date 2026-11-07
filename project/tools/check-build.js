@@ -452,15 +452,16 @@ function checkPrologueGraph() {
 var SET_KEY_EXACT = [
   "item.door", "item.pot", "item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes",
   "load", "trust", "fire", "lights_lost",
-  "had.door", "strain",
-  "fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead", "fate.lin.dead", "fate.all.dead"
+  "had.door", "strain", "condition", "rescues", "help.used", "doorOutcome", "inventory.giftBarley",
+  "fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead", "fate.lin.dead", "fate.all.dead",
+  "fate.player.dead", "quality.feimao", "quality.zaowang", "quality.dongsheng"
 ];
 
 function isAllowedCondition(text) {
   if (typeof text !== "string" || !text.trim()) return false;
   return text.split("&&").every(function (part) {
     var key = part.trim().replace(/^!/, "");
-    return /^(item\.[a-z_]+|strain(\.[a-z]+)?|fate\.[a-z.]+|had\.door|memory\.[a-z0-9_]+|choice\.[a-z0-9._]+)$/.test(key);
+    return /^(item\.[a-z_]+|strain(\.[a-z]+)?|fate\.[a-z.]+|had\.door|condition|rescues|help\.used|doorOutcome|inventory\.giftBarley|quality\.[a-z]+|grass\.settled|memory\.[a-z0-9_]+|choice\.[a-z0-9._]+)$/.test(key);
   });
 }
 
@@ -652,15 +653,15 @@ function checkMultichoiceApi() {
     return;
   }
   var engine = stripComments(readProject("engine.js"));
-  ["renderMultiChoice", "toggleMultiChoice", "resolveMultiChoice", "aria-checked", "recordMode", "slotLoad", "multi-toggle", "multi-confirm", "vn-multichoice"].forEach(function (needle) {
+  ["renderMultiChoice", "toggleMultiChoice", "resolveMultiChoice", "aria-checked", "recordMode", "canAddMultiOption", "multi-toggle", "multi-confirm", "vn-multichoice"].forEach(function (needle) {
     if (engine.indexOf(needle) === -1) fail("C18", "engine.js 缺多选标记 " + needle);
   });
   var p024 = XB.core.locate("prologue", "p024").node;
   if (!p024 || p024.type !== "multichoice") fail("C18", "p024 不是 multichoice 节点");
   else {
-    if (p024.min !== 0 || p024.max !== 3) fail("C18", "p024 min/max 应为 0/3");
+    if (p024.min !== 0 || p024.max !== 5) fail("C18", "p024 min/max 应为 0/5");
     if (p024.options.length !== 5) fail("C18", "p024 应有 5 个选项");
-    if (p024.slotLoad !== true) fail("C18", "p024 应重算行囊格数");
+    if (p024.slotLoad !== undefined || p024.maxWhen !== undefined) fail("C18", "p024 应改由 8 半格容量校验");
   }
   var state = XB.core.defaults();
   if (!XB.core.startChapter(state, "prologue", "p024")) {
@@ -670,10 +671,10 @@ function checkMultichoiceApi() {
   var picked = XB.core.applyMultiChoice(state, p024, ["medicine", "homepot"]);
   if (!picked) fail("C18", "p024 选两件结算失败");
   if (state.flags["item.medicine"] !== true || state.flags["item.homepot"] !== true) fail("C18", "p024 没有写 item.* 布尔");
-  if (state.flags.load !== 2) fail("C18", "无门板选两件行囊应为 2，实际 " + state.flags.load);
+  if (state.flags.load !== 5) fail("C18", "药 1 + 铁锅 4 应占 5 半格，实际 " + state.flags.load);
   if (state.inventory.items.join(",") !== "roster,pencil,medicine,pot") fail("C18", "p024 背包回填不对：" + state.inventory.items.join(","));
   if (state.choices[state.choices.length - 1].option !== "MULTI") fail("C18", "p024 没有记 MULTI 日志");
-  if (XB.core.applyMultiChoice(state, p024, ["medicine", "barley", "raincloth", "shoes"]) !== null) fail("C18", "p024 超过 max 仍结算");
+  if (XB.core.applyMultiChoice(state, p024, ["medicine", "barley", "homepot", "raincloth", "shoes"]) !== null) fail("C18", "p024 超过 8 半格仍结算");
   if (XB.core.applyMultiChoice(state, p024, ["nope"]) !== null) fail("C18", "p024 未知选项仍结算");
   var x015 = XB.core.locate("xiangjiang", "x015").node;
   var xstate = XB.core.defaults();
@@ -685,7 +686,7 @@ function checkMultichoiceApi() {
   if (!left || left.left.join(",") !== "medkit,radio,silver") fail("C18", "x015 留在岸上的三样不对");
   if (xstate.flags["choice.xiangjiang.abandoned"].join(",") !== "medkit,radio,silver") fail("C18", "x015 没有写 abandoned");
   if (xstate.flags["choice.xiangjiang.take.xray"] !== true || xstate.flags["choice.xiangjiang.take.medkit"] !== false) fail("C18", "x015 take 布尔不对");
-  notes.push("C18 OK applyMultiChoice 校验 min/max/未知 id、写 item.*/take.*、重算行囊、MULTI 日志");
+  notes.push("C18 OK applyMultiChoice 校验 min/max/8 半格容量/未知 id、写 item.*/take.*、重算行囊、MULTI 日志");
 }
 
 // C19：四段选择的数据契约与即时/后续回写节点
@@ -795,7 +796,7 @@ function checkLegacySaveMigration() {
 }
 
 
-// C24：八章表、节点数、id 前缀/唯一、end、title/codex 位置与文档表一致
+// C24：九章表、节点数、id 前缀/唯一、end、title/codex 位置与文档表一致
 function checkChapterTable() {
   var XB = loadGame();
   var expected = [
@@ -804,9 +805,10 @@ function checkChapterTable() {
     { id: "zunyi", prefix: "z", count: 30, next: "jinsha", title: true },
     { id: "jinsha", prefix: "j", count: 42, next: "luding", title: true },
     { id: "luding", prefix: "l", count: 46, next: "grass", title: true },
-    { id: "grass", prefix: "g", count: 47, next: "wuqi", title: true, extraEnd: "coda" },
+    { id: "grass", prefix: "g", count: 51, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
     { id: "wuqi", prefix: "w", count: 56, next: "ending", title: false },
-    { id: "coda", prefix: "c", count: 12, next: "ending", title: true, hidden: true, last: "c012" }
+    { id: "coda", prefix: "c", count: 13, next: "ending", title: true, hidden: true, last: "c012" },
+    { id: "badend", prefix: "b", count: 6, next: "ending", title: true, hidden: true, last: "b006", codex: false }
   ];
   var doc = readRoot("docs/chapter-integration.md");
   var docCounts = {};
@@ -831,21 +833,23 @@ function checkChapterTable() {
     var lastId = item.last || item.prefix + "900";
     if (nodes[nodes.length - 1].id !== lastId) fail("C24", item.id + " 末节点应为 " + lastId + "，实际 " + nodes[nodes.length - 1].id);
     var codexCount = nodes.filter(function (node) { return node.type === "codex"; }).length;
-    if (codexCount !== 1) fail("C24", item.id + " 应有 1 个 codex 节点，实际 " + codexCount);
+    if (codexCount !== (item.codex === false ? 0 : 1)) fail("C24", item.id + " codex 节点数不符，实际 " + codexCount);
     var titleCount = nodes.filter(function (node) { return node.type === "title"; }).length;
     if (titleCount !== (item.title ? 1 : 0)) fail("C24", item.id + " title 节点数不符");
     var end = nodes[nodes.length - 1];
     if (end.type !== "end" || end.next !== item.next) fail("C24", item.id + " end.next 应为 " + item.next);
-    if (item.extraEnd && !nodes.some(function (node) { return node.type === "end" && node.next === item.extraEnd; })) {
-      fail("C24", item.id + " 缺少 next=" + item.extraEnd + " 的 end");
-    }
+    (item.extraEnds || []).forEach(function (target) {
+      if (!nodes.some(function (node) { return node.type === "end" && node.next === target; })) {
+        fail("C24", item.id + " 缺少 next=" + target + " 的 end");
+      }
+    });
     nodes.forEach(function (node) {
       if (!(new RegExp("^" + item.prefix + "\\d{3}[a-z]?$")).test(node.id)) fail("C24", item.id + " 节点 id 不合规则：" + node.id);
       if (allIds[node.id]) fail("C24", "节点 id 重复：" + node.id);
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 八章 50/51/30/42/46/47/56/12 共 334 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 九章 50/51/30/42/46/51/56/13/6 共 345 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -897,25 +901,24 @@ function checkEndingData() {
   var w900 = XB.core.locate("wuqi", "w900").node;
   if (!w900 || w900.type !== "end" || w900.next !== "ending") fail("C26", "w900.next 应为 ending");
   if (XB.core.SCENES.indexOf("ending") === -1) fail("C26", "core SCENES 缺 ending");
-  var sidao = XB.core.defaults();
-  ["fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead"].forEach(function (key) { sidao.flags[key] = true; });
-  sidao.flags["had.door"] = true;
-  XB.core.syncDerivedFlags(sidao);
-  var built = XB.core.buildEnding(sidao);
+  var built = XB.core.buildEnding(XB.core.defaults());
   var stats = built.stats;
   if (!stats || stats.companyStart !== 104 || stats.companyEnd !== 19 || stats.redStart !== 86000 || stats.redEnd !== 7000) {
     fail("C26", "ending stats 不是 104/19/86000/7000");
   }
   if (!built.cards || built.cards.length !== 5) fail("C26", "buildEnding 没产出五卡");
   if (!built.names || built.names.length !== 7) fail("C26", "默认路线 buildEnding 应产出七名");
-  if (built.stats.companyEnd !== 19 || built.route !== "sidao") fail("C26", "三人全没时路线应为四道划痕、companyEnd 19");
-  var dying = XB.core.defaults();
-  dying.flags.strain = 3;
-  XB.core.syncDerivedFlags(dying);
-  var kongye = XB.core.buildEnding(dying);
-  if (kongye.route !== "kongye") fail("C26", "strain 3 应判空页，实际 " + kongye.route);
-  if (kongye.names.length !== 8) fail("C26", "空页应产出八名（含满崽）");
-  if (kongye.stats.companyEnd !== 18) fail("C26", "空页 companyEnd 应为 18，实际 " + kongye.stats.companyEnd);
+  if (built.route !== "no_door_zero" || built.stats.companyEnd !== 19) fail("C26", "无板 0 救应为 8(1)、companyEnd 19，实际 " + built.route);
+  var others = XB.core.defaults();
+  ["fate.feimao.dead", "fate.zaowang.dead", "fate.dongsheng.dead"].forEach(function (key) { others.flags[key] = true; });
+  others.flags["had.door"] = true;
+  others.flags.rescues = 3;
+  others.flags.condition = 0;
+  XB.core.syncDerivedFlags(others);
+  var seven5 = XB.core.buildEnding(others);
+  if (seven5.route !== "door_others") fail("C26", "有板救 3 且倒下应判 7(5)，实际 " + seven5.route);
+  if (seven5.names.length !== 8) fail("C26", "7(5) 应产出八名（含满崽）");
+  if (seven5.stats.companyEnd !== 18) fail("C26", "7(5) companyEnd 应为 18，实际 " + seven5.stats.companyEnd);
   if (!built.stats || built.stats.redStart !== 86000) fail("C26", "buildEnding 没带数字");
   var cold = XB.core.defaults();
   cold.flags.fire = 10;
@@ -1227,7 +1230,7 @@ function checkCredits() {
   notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、字体/图像/音频授权、./CREDITS.txt 链接");
 }
 
-// C39：人物命运四路线账本与结局快照
+// C39：v1.4 十一条结局账本与结局快照
 function checkEndingRoutes() {
   var XB = loadGame();
   function makeState(flags) {
@@ -1236,42 +1239,57 @@ function checkEndingRoutes() {
     XB.core.syncDerivedFlags(state);
     return state;
   }
-  function expectRoute(label, flags, route, title, companyEnd) {
+  function expectRoute(label, flags, route, title, companyEnd, namesLen, routeLabel, routeIndex) {
     var ending = XB.core.buildEnding(makeState(flags));
     if (ending.route !== route) fail("C39", label + " 路线应为 " + route + "，实际 " + ending.route);
     if (ending.routeTitle !== title) fail("C39", label + " 标题应为 " + title + "，实际 " + ending.routeTitle);
     if (!ending.routeLede) fail("C39", label + " 缺路线引语");
+    if (ending.routeLabel !== routeLabel) fail("C39", label + " 编号应为 " + routeLabel + "，实际 " + ending.routeLabel);
+    if (ending.routeIndex !== routeIndex) fail("C39", label + " routeIndex 应为 " + routeIndex);
     if (companyEnd !== undefined && ending.stats.companyEnd !== companyEnd) fail("C39", label + " companyEnd 应为 " + companyEnd);
+    if (namesLen !== undefined && ending.names.length !== namesLen) fail("C39", label + " 点名应为 " + namesLen + " 名");
     return ending;
   }
-  expectRoute("四道划痕", { "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true, "had.door": true }, "sidao", "四道划痕", 19);
-  expectRoute("门板", { "fate.feimao.dead": true, "fate.zaowang.dead": true, "item.door": true }, "menban", "门板", 19);
-  expectRoute("桥板", { "fate.feimao.dead": true, "had.door": true }, "qiaoban", "桥板", 19);
-  expectRoute("石墙", { "fate.feimao.dead": true }, "qiaoban", "石墙", 19);
-  var kongye = expectRoute("空页", { strain: 3 }, "kongye", "空页", 18);
-  if (kongye.names.length !== 8) fail("C39", "空页应八名");
-  if (kongye.fate.dongsheng !== "alive" || kongye.strain !== 3) fail("C39", "空页 fate/strain 快照不对");
-  var sacrifice = kongye.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
-  if (!sacrifice || sacrifice.lit !== true) fail("C39", "空页牺牲卡应亮");
-  if (sacrifice.line !== XB.story.ending.kongyeSacrificeLine) fail("C39", "空页牺牲卡没用 kongyeSacrificeLine");
+  expectRoute("7(1) 门板·一直优秀", { "had.door": true, "item.door": true, rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "7(1)", 1);
+  expectRoute("7(2) 门板留草地·救1", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "7(2)", 2);
+  expectRoute("7(2) 门板留桥上·救1", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "7(2)", 2);
+  expectRoute("7(3) 门板到吴起·救2", { "had.door": true, "item.door": true, rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "7(3)", 3);
+  expectRoute("7(4) 门板留草地·救2", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "7(4)", 4);
+  expectRoute("7(4) 门板留桥上·救2", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "7(4)", 4);
+  var seven5 = expectRoute("7(5) 空页", { "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "7(5)", 5);
+  if (seven5.fate.player !== "dead" || seven5.fate.dongsheng !== "dead") fail("C39", "7(5) fate 快照不对");
+  var sacrifice = seven5.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
+  if (!sacrifice || sacrifice.lit !== true) fail("C39", "7(5) 牺牲卡应亮");
+  if (sacrifice.line !== XB.story.ending.kongyeSacrificeLine) fail("C39", "7(5) 牺牲卡没用 kongyeSacrificeLine");
+  expectRoute("8(1) 空手·救0", { rescues: 0, condition: 3 }, "no_door_zero", "空手", 19, 7, "8(1)", 6);
+  expectRoute("8(2) 空手·救1", { rescues: 1, condition: 2 }, "no_door_one", "空手", 19, 7, "8(2)", 7);
+  expectRoute("8(3) 空手·救2", { rescues: 2, condition: 2 }, "no_door_two", "空手", 19, 7, "8(3)", 8);
+  expectRoute("8(4) 空手·救3", { rescues: 3, condition: 3 }, "no_door_three", "空手", 19, 7, "8(4)", 9);
+  expectRoute("8(5) 空手·救3且优秀", { rescues: 3, condition: 4 }, "no_door_three_excellent", "空手", 19, 7, "8(5)", 10);
+  var bad = expectRoute("坏结局", { rescues: 1, condition: 0 }, "bad_end", "没有走出草地", 18, 0, "坏结局", 11);
+  if (bad.fate.player !== "dead" || bad.names.length !== 0) fail("C39", "坏结局应为无点名且我死");
 
-  var state = makeState({ strain: 3 });
+  var state = makeState({ "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true });
   state.scene = "ending";
   state.chapterId = "coda";
   state.nodeId = null;
   state.ending = XB.core.buildEnding(state);
   var result = XB.core.normalize(JSON.parse(JSON.stringify(XB.core.serialize(state))));
   if (result.issue !== null || !result.state.ending) {
-    fail("C39", "空页 ending 存档 normalize 失败：" + result.issue);
+    fail("C39", "7(5) ending 存档 normalize 失败：" + result.issue);
     return;
   }
   var snap = result.state.ending;
-  if (snap.route !== "kongye" || snap.strain !== 3) fail("C39", "ending 快照丢了 route/strain");
-  if (!snap.fate || snap.fate.feimao !== "alive" || snap.fate.lin !== "alive") fail("C39", "ending 快照 fate 不符（空页三个危机都活着）");
-  notes.push("C39 OK 四路线账本 sidao/menban/qiaoban(桥板/石墙)/kongye；空页 18 人八名；快照保留 route/fate/strain");
+  if (snap.route !== "door_others" || snap.routeLabel !== "7(5)" || snap.condition !== 0 || snap.rescues !== 3) {
+    fail("C39", "ending 快照丢了 7(5) 的 route/condition/rescues");
+  }
+  if (!snap.fate || snap.fate.player !== "dead" || snap.fate.feimao !== "dead" || snap.fate.lin !== "dead") {
+    fail("C39", "7(5) ending 快照 fate 不符");
+  }
+  notes.push("C39 OK 11 结局账本 7(1)–7(5)/8(1)–8(5)/坏结局；桥板/石墙按 doorOutcome；7(5) 18 人八名、坏结局零点名；快照保留 routeLabel/condition/rescues/fate");
 }
 
-// C40：requires/maxWhen、旧档 fate 迁移、名册回廊
+// C40：requires/容量/物资/状态/迁移/名册
 function checkFateMechanics() {
   var XB = loadGame();
   var state = XB.core.defaults();
@@ -1294,46 +1312,91 @@ function checkFateMechanics() {
   if (fallback !== "B") fail("C40", "默认项不可见时应回退到首个可见项，实际 " + fallback);
 
   var p024 = XB.core.locate("prologue", "p024").node;
-  if (XB.core.effectiveMultiMax(XB.core.defaults(), p024) !== 3) fail("C40", "无板行囊上限应为 3");
-  var withDoor = XB.core.defaults();
-  withDoor.flags["item.door"] = true;
-  if (XB.core.effectiveMultiMax(withDoor, p024) !== 1) fail("C40", "带板行囊上限应为 1");
+  if (p024.min !== 0 || p024.max !== 5) fail("C40", "p024 应 0–5 件");
+  if (XB.core.effectiveMultiMax(XB.core.defaults(), p024) !== 5) fail("C40", "无 maxWhen 时应回退 node.max=5");
+  var optionById = {};
+  p024.options.forEach(function (option) { optionById[option.id] = option; });
+  var pack = XB.core.defaults();
+  if (!XB.core.canAddMultiOption(pack, optionById.homepot, [])) fail("C40", "空行囊应能放铁锅");
+  var four = [optionById.medicine, optionById.barley, optionById.shoes, optionById.homepot];
+  if (XB.core.packUsage(pack) !== 0) fail("C40", "空行囊应为 0 半格");
+  four.forEach(function (option) { if (!XB.core.canAddMultiOption(pack, option, four.filter(function (item) { return item !== option; }))) fail("C40", "四件仍应能放下：" + option.id); });
+  if (XB.core.canAddMultiOption(pack, optionById.raincloth, four)) fail("C40", "四件后雨布应超 8 半格");
+  pack.flags["item.door"] = true;
+  if (!XB.core.canAddMultiOption(pack, optionById.shoes, [optionById.medicine, optionById.barley])) fail("C40", "带板 4+2+2=8 应还能放鞋");
+  if (XB.core.canAddMultiOption(pack, optionById.homepot, [optionById.medicine, optionById.barley])) fail("C40", "带板加铁锅应超 8 半格");
+
+  var use = XB.core.defaults();
+  use.chapterId = "grass";
+  use.inventory.items = ["roster", "pencil", "medicine", "barley"];
+  use.flags["item.medicine"] = true;
+  use.flags["item.barley"] = true;
+  use.flags.load = XB.core.packUsage(use);
+  var used = XB.core.usePackItems(use, ["medicine", "barley"]);
+  if (!used.ok || use.flags.condition !== 4) fail("C40", "药+青稞应把良好升到优秀");
+  if (use.inventory.items.indexOf("medicine") !== -1 || use.inventory.items.indexOf("barley") !== -1) fail("C40", "用过的物资没扣掉");
+  if (XB.core.usePackItems(use, ["medicine", "barley"]).ok) fail("C40", "优秀后仍允许用物资");
+
+  var settle = XB.core.defaults();
+  settle.flags.condition = 2;
+  settle.flags.rescues = 3;
+  var settled = XB.core.settleGrass(settle);
+  if (settled.condition !== 2 || settle.flags["help.used"] !== true || settle.flags["memory.help"] !== true) fail("C40", "救满三人应在差状态触发一次帮助");
+  if (XB.core.settleGrass(settle).condition !== 2) fail("C40", "草地结算应幂等");
+
+  var door = XB.core.defaults();
+  door.flags["had.door"] = true;
+  door.flags["item.door"] = true;
+  door.flags.condition = 4;
+  if (XB.core.settleDoor(door) !== "carried") fail("C40", "优秀且活着应把门板带到吴起");
+  var grassDoor = XB.core.defaults();
+  grassDoor.flags["had.door"] = true;
+  grassDoor.flags.rescues = 1;
+  grassDoor.flags.condition = 2;
+  if (XB.core.settleDoor(grassDoor) !== "grass") fail("C40", "救 1 人且状态不够应把门板留草地");
 
   function oldSave(chapterId, nodeId, flags) {
     var save = XB.core.serialize(XB.core.defaults());
+    save.version = 1;
     save.scene = "vn";
     save.chapterId = chapterId;
     save.nodeId = nodeId;
     save.flags = flags || {};
     return XB.core.normalize(save);
   }
-  var wuqi = oldSave("wuqi", "w022", { "choice.prologue.door": true });
+  var wuqi = oldSave("wuqi", "w022", { "choice.prologue.door": true, "item.door": true, strain: 1 });
   if (wuqi.issue) fail("C40", "吴起旧档被判坏档");
   else {
     if (wuqi.state.flags["fate.feimao.dead"] !== true || wuqi.state.flags["fate.zaowang.dead"] !== true) fail("C40", "吴起旧档没补飞毛腿/灶王");
     if (wuqi.state.flags["fate.dongsheng.dead"] !== false) fail("C40", "吴起旧档冬生应活");
-    if (wuqi.state.flags.strain !== 1) fail("C40", "吴起旧档 strain 应为 1");
-    if (wuqi.state.flags["had.door"] !== true) fail("C40", "旧档没补 had.door");
+    if (wuqi.state.flags.rescues !== 1 || wuqi.state.flags.condition !== 2) fail("C40", "吴起旧档 rescues/condition 迁移不对（过草地要 -1）");
+    if (wuqi.state.flags["had.door"] !== true || wuqi.state.flags.doorOutcome !== "carried") fail("C40", "吴起旧档门板迁移不对");
     if (wuqi.migrated !== "fate") fail("C40", "吴起旧档迁移标记应为 fate");
   }
-  var luding = oldSave("luding", "l022", {});
+  var luding = oldSave("luding", "l022", { strain: 0, "choice.prologue.door": false });
   if (luding.issue) fail("C40", "泸定旧档被判坏档");
-  else if (luding.state.flags["fate.feimao.dead"] !== true || luding.state.flags.strain !== 0) fail("C40", "泸定 l022 旧档没补飞毛腿");
-  var grass = oldSave("grass", "g019", {});
+  else if (luding.state.flags["fate.feimao.dead"] !== true || luding.state.flags.rescues !== 0 || luding.state.flags.condition !== 3) fail("C40", "泸定 l022 旧档迁飞毛腿不对");
+  var grass = oldSave("grass", "g028", { strain: 0, "choice.prologue.door": false });
   if (grass.issue) fail("C40", "草地旧档被判坏档");
-  else if (grass.state.flags["fate.zaowang.dead"] !== true) fail("C40", "草地 g019 旧档没补灶王");
+  else if (grass.state.flags["fate.zaowang.dead"] !== true || grass.state.flags.condition !== 2) fail("C40", "草地 g028 旧档迁灶王/草地 -1 不对");
+  var coda = oldSave("coda", "c011", { strain: 3, "had.door": true, "item.door": false });
+  if (coda.issue) fail("C40", "空页旧档被判坏档");
+  else {
+    if (coda.state.flags["fate.player.dead"] !== true || coda.state.flags.condition !== 0) fail("C40", "空页旧档没判我死");
+    if (coda.state.flags.doorOutcome !== "others") fail("C40", "空页旧档门板应由别人带出，实际 " + coda.state.flags.doorOutcome);
+  }
 
   var engine = stripComments(readProject("engine.js"));
   ["xiangbei.roster.v1", "ROSTER_MAX_PAGES", "pages.slice(-ROSTER_MAX_PAGES)", "ending.recorded", "本机无法保存名册，本局仍可继续"].forEach(function (needle) {
     if (engine.indexOf(needle) === -1) fail("C40", "名册回廊缺 " + needle);
   });
   var html = readProject("index.html");
-  ["roster-gallery", "roster-gallery-pages"].forEach(function (id) {
+  ["roster-gallery", "roster-gallery-pages", "pack-panel", "vn-pack-button", "vn-condition"].forEach(function (id) {
     if (html.indexOf('id="' + id + '"') === -1) fail("C40", "index.html 缺 #" + id);
   });
   if (html.indexOf('data-action="roster-gallery"') === -1) fail("C40", "标题页缺名册入口");
   if (readProject("style.css").indexOf(".xb-roster-pages") === -1) fail("C40", "style.css 缺名册回廊样式");
-  notes.push("C40 OK requires 可见性/默认回退/maxWhen；旧档三处 fate 迁移；名册回廊 .v1 入口与样式");
+  notes.push("C40 OK requires 可见性/默认回退/8 半格容量/物资组合/草地结算/四类旧档迁移；名册与物资面板入口就位");
 }
 
 // C38：发布运行时无外部请求/模块（步骤八冻结）
