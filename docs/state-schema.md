@@ -5,6 +5,7 @@
 > 2026-11-05 v1.2.0-dev：删除四个小游戏，新增行囊五件 `item.*`、湘江六样 `choice.xiangjiang.take.*`、金沙江先渡谁三个镜像布尔；顶层 `PERSIST_KEYS` 仍是 11 键，`SAVE_VERSION` 仍为 1，不升键名。
 > `lights_lost` 与 `choice.jinsha.trips` 只为读旧档保留：继续参与默认值/夹取/白名单，但 v1.2.0-dev 的剧情不再写、结算页不再显示。
 > **v1.5 已实现（v1.3.0-dev，2026-11-06）**：新增 `had.door` / `fate.*` / `strain` 共 9 个旗标（含派生 `fate.all.dead`，25 → 34）、ending 路线字段与 `xiangbei.roster.v1`；见 §9。顶层仍 11 键，`SAVE_VERSION` 仍为 1。
+> **v1.4.0-dev 口径（2026-11-07，设计定稿；代码尚未迁移）**：行囊改为 4 格（8 个半格单位：药/青稞 0.5、布鞋 1、铁锅/雨布/门板 2），新增状态 0–4（优秀/良好/勉强/差/死）、救人数 `rescues`、队内状态 `condition`、门板带出 `doorOutcome`、冬生赠青稞 `inventory.giftBarley`；结局改为带板 5 + 无板 5 + 坏结局共 11 条。存档新键 `xiangbei.save.v2`（`SAVE_VERSION=2`），保留 v1 迁移。设计见 `docs/ending-routes.md`，执行卡见 `step/step-11-状态物资与门板.md`；在 T11.1/T11.11 完成前，本文件 §1–§9 仍描述 v1.3 的现行实现。
 
 ## 1. 存档 JSON（示例）
 

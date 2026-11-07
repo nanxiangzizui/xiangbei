@@ -15,6 +15,8 @@
 > **v1.2.0-dev 口径（2026-11-06，已实现，未打包/未部署）**：移除四关小游戏（门板/弃物/渡船/攀索），改为 4 段选择——序章行囊多选、湘江弃物多选、金沙江先渡谁、泸定门板/记名；核心剧情、史实、7 张图鉴、五张精神卡、点名结局不变。当前线上 v1.1.1 仍为四关，`dist/` 未重打包；执行与实测见 `step/step-09-移除小游戏与选择回写.md`、`docs/evidence/step-09/`。
 >
 > **v1.3.0-dev 口径（2026-11-06，已实现，未打包/未部署）**：历史终点与七章不变；加三次救人危机（泸定飞毛腿、草地灶王、草地尽头冬生），按“救人数 / 门板 / 你是否倒下”收束为四路线：四道划痕（救 0、死 4）、门板（救 1、死 3、板到吴起）、桥板·石墙（救 1–2、死 3、无板；救 2 时林先生死）、空页（救 3、你死在草地、冬生背名册到吴起、满崽由冬生答）。没有全活；救越多自己越近死亡。设计、账本、节点、测试见 `docs/ending-routes.md`；执行卡见 `step/step-10-人物命运四路线.md`；证据见 `docs/evidence/step-10/`。
+>
+> **v1.4.0-dev 口径（2026-11-07，设计定稿，代码未迁移）**：在 `v1.4-dev` 分支隔离开发，`main` 保留 v1.3。行囊 4 格（8 个半格：药/青稞 0.5、鞋 1、锅/雨布/门板 2）；新增状态 0–4（优秀/良好/勉强/差/死）、救人数 `rescues`、队内状态 `condition`、门板带出 `doorOutcome`；结局改为带板 5 + 无板 5 + 坏结局共 11 条，林先生只在我死时死；存档新键 `xiangbei.save.v2` 并保留 v1 迁移。设计见 `docs/ending-routes.md`，执行卡见 `step/step-11-状态物资与门板.md`。未打包、未部署。
 
 ## 技术栈（按步骤）
 
@@ -49,7 +51,7 @@
 | 八·八 Netlify 主站 | ✅ 完成（2026-11-05，v1.1.1；已上线） | 用户反馈（GitHub 慢） | `dist/site` 静态直传 Netlify；用户认领 `xiangbei`；无密码；GitHub Pages 保留备用 | `https://xiangbei.netlify.app/` 标题/序章通过，0 error / 0 404；site 73 / 31,356,254 B；未重跑公网完整流程 |
 | 九 移除小游戏与选择回写 | ✅ 完成（2026-11-06，tag `step-9-done`；v1.2.0-dev 未打包/未部署） | 用户反馈 | 删除四关与 `minigames.js`、`?minigame=`；新增 `multichoice` 组件；行囊/弃物多选；金沙江先渡谁、泸定门板/记名保留；即时 + 后续回写；旧存档旗标回填与节点迁移 | 4 段选择可玩（键鼠/触摸/刷新）；无小游戏文件/入口/画布；check-build 37/37、smoke 46/46、check-script OK；target 34/34、segments 19/19、migration 19/19；http flow 14/14 71s/432 line（flow.lines 对话推进计数）、file flow 14/14 72s、844×390 flow 17/17 78s；0 console error；旧档可继续；执行卡 `step/step-09-移除小游戏与选择回写.md` |
 | 十 人物命运多结局 | ✅ 完成（2026-11-06，tag `step-10-done`；v1.3.0-dev 未打包/未部署） | 用户反馈 | 三次救人危机；`strain` 0–3；四路线；隐藏 `coda`；名册回廊；34 旗标 | 四路线可玩（routes 44/44）、点名与账本一致（coda 19/19）、危机 68/68、迁移 17/17、超时 14/14、移动 12/12、flow 12/12（http/file://）；文本源 5285/285，单周目 3254–3931 字；真人四路线计时未做（P1） |
-| 十一 状态、物资与门板 | 🚧 进行中（2026-11-07，分支 `v1.4-dev`；v1.4.0-dev 未打包/未部署） | 用户反馈 | 4 格/半格物资、状态 0–4、门板三条件、带板 5 + 无板 5 + 坏结局；分支隔离 | 执行卡 `step/step-11-状态物资与门板.md` 已写（T11.0–T11.12、G0–G5、D1–D15、11 结局矩阵）；代码/剧情/存档未动 |
+| 十一 状态、物资与门板 | 🚧 进行中（2026-11-07，分支 `v1.4-dev`；v1.4.0-dev 未打包/未部署） | 用户反馈 | 4 格/半格物资、状态 0–4、门板三条件、带板 5 + 无板 5 + 坏结局；分支隔离 | 执行卡 + `docs/ending-routes.md` v1.4 设计定稿已落库（T11.0–T11.12、G0–G5、D1–D15、11 结局矩阵）；state-schema/story-bible/计划书/cursor 已同步 v1.4 口径；代码/剧情/存档待迁 |
 
 ## 项目结构
 
@@ -117,8 +119,8 @@
 - 八·八 Netlify 主站：✅ 完成（2026-11-05，v1.1.1）。用户反馈 GitHub Pages 慢后，把 `dist/site` 73 文件静态直传 Netlify；匿名部署生成可认领站点，用户用 GitHub 登录认领并命名 `xiangbei`，无密码公开。公网 https://xiangbei.netlify.app/ 标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；Netlify 在 `index.html` 注入约 326 B 注释（14,326 B vs 本地 14,000 B），其他关键文件同包。GitHub Pages https://nanxiangzizui.github.io/xiangbei/ 保留备用。未在 Netlify 重跑完整流程/四关/移动/96 用例，不能写成“公网完整流程通过”。
 - 九 移除小游戏与选择回写：✅ 完成（2026-11-06，tag `step-9-done`，v1.2.0-dev 本地完成，未打包/未部署）。四关与小游戏层全部删除（`project/minigames.js`、`?minigame=`、画布/HUD/暂停入口、solo 运行态、`XB.minigames` 引用）；新增 `multichoice` 类型与 `#vn-multichoice` 组件（整卡 `role=checkbox`、数字键 1–9、Enter 确认、Esc 暂停、确认后 300ms 锁定）。序章行囊（5 件选 3，门板占 2 格）、湘江弃物（6 件带 3，`choice.xiangjiang.abandoned` 记留在岸上）、金沙江先渡谁（j024 + 镜像布尔回写）、泸定门板/记名保留；五件行囊与六件弃物均有即时 + 后续回写，结局五卡与点名未破坏。旧档 `j010/j011→j012`、`l013/l014→l015` 迁移并 toast，`inventory.items` 反推 `item.*`、`abandoned` 反推 `take.*`；键名仍 `xiangbei.save.v1`，顶层 11 键。实测：check-build 37/37、smoke 46/46、check-script OK；target 34/34、segments 19/19、migration 19/19；http 完整流程 14/14（71s/432 line（flow.lines 对话推进计数））、file:// 14/14（72s）、844×390 移动 17/17（78s）；2 个多选 + 11 个单选、5 卡/7 名、0 console error/pageerror/请求失败。移动多选确认按钮 51.99 CSS px、选项 44.42 CSS px。证据 `docs/evidence/step-09/`；未重打包 `dist/`，线上 Netlify/GitHub Pages 仍为 v1.1.1 四关版。tag `pre-minigame-removal` 实际指向 `8beb09a`（文档曾记 `359b320`，代码同为 v1.1.1，不影响回滚）。
 - 十 人物命运多结局：✅ 完成（2026-11-06，tag `step-10-done`，v1.3.0-dev 本地完成，未打包/未部署）。引擎加 34 旗标与 strain 派生、选项 requires/maxWhen、结局路线 buildEnding、点名 resolveRollCall（7/8 名）、hidden coda、旧档迁移、名册回廊 `xiangbei.roster.v1`；剧情加三次危机（l019/l019x、g018x、g026x）、草地倒下段、吴起守卫与 coda c001–c012；剧本源 5285 字/285 beat，单周目 3254–3931 字（B 13:59–16:54）。实测 http routes 44/44、coda 19/19、crises 68/68、migration 17/17、maxwhen 15/15、timeout 14/14、mobile 12/12、flow 12/12（66s）；file:// flow 12/12、routes 44/44、crises 68/68、coda 19/19；0 console error/pageerror/失败请求。check-build 39/39、smoke 46/46、check-script OK。证据 `docs/evidence/step-10/`。线上 Netlify/GitHub Pages 仍为 v1.1.1 四关版；dist 未重打包。真人四路线计时与隐私模式重跑为 P1。
-- 十一 状态、物资与门板：🚧 进行中（2026-11-07，分支 `v1.4-dev`）。已从 `main` 的 `8fd0d9f` / tag `step-10-done` 切出 `v1.4-dev`；执行卡 `step/step-11-状态物资与门板.md` 已写（约 38KB，14 节，T11.0–T11.12、G0–G5、D1–D15、11 结局矩阵）。代码/剧情/存档/`dist/` 未动；`main` 仍保留 v1.3。
-- 建议下一步：按 `step/step-11-状态物资与门板.md` 执行 T11.0→T11.12；先落 `docs/ending-routes.md` v1.4，再改引擎。v1.4 不合并 `main`、不打包、不部署；线上 Netlify/GitHub Pages 仍为 v1.1.1。
+- 十一 状态、物资与门板：🚧 进行中（2026-11-07，分支 `v1.4-dev`）。已从 `main` 的 `8fd0d9f` / tag `step-10-done` 切出 `v1.4-dev`；执行卡 `step/step-11-状态物资与门板.md` 已写（约 38KB，14 节，T11.0–T11.12、G0–G5、D1–D15、11 结局矩阵）；`docs/ending-routes.md` 已重写为 v1.4 设计定稿（11 结局、状态 0–4、4 格半格物资、配方、门板 A/B/C、save v2 迁移、剧情/UI/测试），state-schema/story-bible/计划书/cursor 已加 v1.4 口径。代码/剧情/存档仍未迁移；`main` 仍保留 v1.3。
+- 建议下一步：T11.0 设计口径已完成；按 `step/step-11-状态物资与门板.md` 执行 T11.1（引擎数据/存档 v2）→T11.2 物资→T11.3 状态→T11.4 结局→T11.5 UI→T11.6–10 剧情→T11.11 迁移/名册→T11.12 测试/文档/tag。v1.4 不合并 `main`、不打包、不部署；线上 Netlify/GitHub Pages 仍为 v1.1.1。
 
 ## 关键约束与红线
 
