@@ -260,7 +260,7 @@
 - `route` 只允许 `sidao/menban/qiaoban/kongye/legacy`；`legacy` 只给 v1.2 旧 ending 快照补写，不重算。
 - `fate` 固定 4 键：`feimao/zaowang/dongsheng/lin`，值为 `dead/alive`；与 `strain` 一起复制快照，供图鉴/调试读。
 - `strain` 0–3；`recorded` 表示本局是否已写入 `xiangbei.roster.v1`，防重复。
-- `routeTitle`/`routeLede` 是结算页路线行；qiaoban 且 `had.door=false` 时用“石墙”/“字写在石墙上。你到了吴起。”。
+- `routeTitle`/`routeLede` 是结算页路线行；渲染时前缀 `结局N（路线名）`（1 四道划痕、2 门板、3 桥板/石墙、4 空页）；qiaoban 且 `had.door=false` 时用“石墙”/“字写在石墙上。你到了吴起。”。
 - `cards` 固定 5 项，id 固定 `ideal/sacrifice/truth/overall/people`；每项只有 `{id, lit, line}`，不存额外文案。
 - 快照由 `buildEnding(state)` 在 wuqi w900 或 coda c012 一次写入；`normalize` 对多键、缺键、未知 status/route 直接判 `issue:"ending"`；不写 `card.*`。
 - 结算前 `finishChapter` 先清空 `state.choices`，再 buildEnding/save：选择日志会把整档推过 4096B，而结局快照已含全部决定。
@@ -336,7 +336,7 @@
 - `route`：`sidao/menban/qiaoban/kongye`，旧快照补 `legacy`；`fate` 四键值为 `dead/alive`。
 - `names` 普通 7 项、空页 8 项；满崽 `absent + answeredBy:"dongsheng"`。
 - `sacrifice` 卡条件 `route==="kongye" || choice.xiangjiang.hold`；kongye 亮句“你把自己，留在了草地尽头。”。
-- 结算页路线行：`routeTitle + " · " + routeLede`；qiaoban 且 `had.door=false` 用“石墙”。
+- 结算页路线行：`"结局N（" + routeTitle + "） · " + routeLede`；qiaoban 且 `had.door=false` 用“石墙”；桥板/石墙共用编号 3。
 
 ### 9.3 名册回廊（独立键）
 

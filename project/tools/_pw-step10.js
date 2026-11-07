@@ -428,7 +428,7 @@ function stamp() {
     const cards = await page.locator("#ending-cards .xb-ending__card").count();
     const text = (await page.locator("#ending-panel").innerText()).replace(/\s+/g, " ");
     const save = await readSave();
-    check(label + " 路线行", title.indexOf(expect.title) === 0, title);
+    check(label + " 路线行", title.indexOf("结局" + expect.number + "（" + expect.title + "）") === 0, title);
     check(label + " 名册人数", names === expect.names, names);
     check(label + " 五卡", cards === 5, cards);
     check(label + " 全连到吴起", text.indexOf("到吴起 " + expect.companyEnd + " 人") !== -1, text.slice(0, 260));
@@ -441,10 +441,10 @@ function stamp() {
 
   async function caseRoutes() {
     await clearRoster();
-    await routeCase("sidao", { "item.door": true, "had.door": true, strain: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, { title: "四道划痕", route: "sidao", names: 7, companyEnd: 19, strain: 0, lin: "alive" });
-    await routeCase("menban", { "item.door": true, "had.door": true, strain: 1, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": false }, { title: "门板", route: "menban", names: 7, companyEnd: 19, strain: 1, lin: "alive" });
-    await routeCase("qiaoban-bridge", { "item.door": false, "had.door": true, strain: 2, "fate.feimao.dead": true, "fate.zaowang.dead": false, "fate.dongsheng.dead": false }, { title: "桥板", route: "qiaoban", names: 7, companyEnd: 19, strain: 2, lin: "dead" });
-    await routeCase("qiaoban-wall", { "item.door": false, "had.door": false, strain: 1, "fate.feimao.dead": false, "fate.zaowang.dead": false, "fate.dongsheng.dead": false }, { title: "石墙", route: "qiaoban", names: 7, companyEnd: 19, strain: 1, lin: "alive" });
+    await routeCase("sidao", { "item.door": true, "had.door": true, strain: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, { number: 1, title: "四道划痕", route: "sidao", names: 7, companyEnd: 19, strain: 0, lin: "alive" });
+    await routeCase("menban", { "item.door": true, "had.door": true, strain: 1, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": false }, { number: 2, title: "门板", route: "menban", names: 7, companyEnd: 19, strain: 1, lin: "alive" });
+    await routeCase("qiaoban-bridge", { "item.door": false, "had.door": true, strain: 2, "fate.feimao.dead": true, "fate.zaowang.dead": false, "fate.dongsheng.dead": false }, { number: 3, title: "桥板", route: "qiaoban", names: 7, companyEnd: 19, strain: 2, lin: "dead" });
+    await routeCase("qiaoban-wall", { "item.door": false, "had.door": false, strain: 1, "fate.feimao.dead": false, "fate.zaowang.dead": false, "fate.dongsheng.dead": false }, { number: 3, title: "石墙", route: "qiaoban", names: 7, companyEnd: 19, strain: 1, lin: "alive" });
 
     const roster = await readRoster();
     check("名册回廊累计四页", roster && roster.version === 1 && roster.pages.length === 4, roster && roster.pages.length);
@@ -484,7 +484,7 @@ function stamp() {
     const names = await page.locator("#ending-names .xb-ending__name").count();
     const text = (await page.locator("#ending-panel").innerText()).replace(/\s+/g, " ");
     const save = await readSave();
-    check("空页路线行", title.indexOf("空页") === 0, title);
+    check("空页路线行", title.indexOf("结局4（空页）") === 0, title);
     check("空页八名", names === 8, names);
     check("空页满崽由冬生代答", /满崽[\s\S]*冬生 代答/.test(text), text.slice(0, 500));
     check("空页全连十八人", text.indexOf("到吴起 18 人") !== -1, text.slice(0, 260));

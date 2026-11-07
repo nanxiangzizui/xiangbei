@@ -3467,6 +3467,8 @@
     player: "替他答到",
     missed: "未应"
   };
+  // 结局编号只用于展示：四条人物命运路线；桥板/石墙共用结局 3。
+  var ENDING_ROUTE_NUMBERS = { sidao: 1, menban: 2, qiaoban: 3, kongye: 4 };
 
   function renderEnding() {
     var storyEnding = (XB.story && XB.story.ending) || {};
@@ -3485,10 +3487,15 @@
     els.endingTitle.textContent = storyEnding.title || "向北";
     els.endingDate.textContent = (storyEnding.date || "") + " · 吴起镇";
     els.endingLede.textContent = storyEnding.lede || "";
-    els.endingRoute.textContent = state.ending.routeTitle
-      ? state.ending.routeTitle + (state.ending.routeLede ? " · " + state.ending.routeLede : "")
+    var routeNumber = ENDING_ROUTE_NUMBERS[state.ending.route];
+    var routeName = state.ending.routeTitle || "";
+    var routeLabel = routeName
+      ? (routeNumber ? "结局" + routeNumber + "（" + routeName + "）" : routeName)
       : "";
-    els.endingRoute.hidden = !state.ending.routeTitle;
+    els.endingRoute.textContent = routeLabel
+      ? routeLabel + (state.ending.routeLede ? " · " + state.ending.routeLede : "")
+      : "";
+    els.endingRoute.hidden = !routeLabel;
 
     els.endingNames.textContent = "";
     state.ending.names.forEach(function (entry) {

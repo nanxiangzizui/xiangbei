@@ -16,6 +16,8 @@
 | `qiaoban` | 桥板 / 石墙 | 1–2 | 3（2 救：老周 + 一个危机 + 林先生；1 救：老周 + 两个危机，林活） | 无 | 活着 | 门板留在桥上。你到了吴起。 |
 | `kongye` | 空页 | 3 | 2（老周 + 你） | 无 | **死在草地尽头** | 名册上多了一个名字，又划掉了。 |
 
+结算页路线行统一显示 **“结局N（路线名）”**：`结局1（四道划痕）`、`结局2（门板）`、`结局3（桥板/石墙）`、`结局4（空页）`。桥板与石墙共用编号 3，因为它们是同一条 `qiaoban` 路线的两个题名，不另算第五条路线。
+
 四条判定规则：
 
 1. **每次救人记 1 点消耗**（`strain`）；物资只是门槛，扶、背、分口粮本身都算。
@@ -227,7 +229,7 @@ var route = flags["strain.dying"] ? "kongye"
 2. 选项可见性：`option.requires` 复用 `evalWhen`；`visibleOptions` 过滤，`defaultOptionKey` 在默认项不可见时取第一个可见项（超时仍必须能结算）；`applyChoice` 对不可见项返回 `null` 并 `console.error`，不静默吞掉契约错误。`effectiveMultiMax` 合并 `node.max` 与 `maxWhen`，UI 与 `applyMultiChoice` 共用。
 3. 点名解析：`resolveRollCall(state,coda)` 生成 7 个固定人物（何 remote、细妹 self、林按 `fate.lin.dead`、老周 absent、灶王/飞毛腿/冬生按 `fate.*.dead`）；`coda` 时追加满崽 absent + `answeredBy:"dongsheng"`。`w026` 与 `c006` 都不再存静态名字。
 4. 地图 / 解锁：`MAP_STATIONS` 仍 7 站；`finishChapter` 对 `chapter.hidden` 跳过 `unlockedChapters.push` 与解锁 toast；coda 只能由 `g899` 进入。
-5. ending 场景：`#ending-route` 显示“路线名 · lede”；名字有 `answeredBy` 时显示“冬生 代答”/“你 代答”；快照 `recorded` 继承上一份，`recordEndingPage` 用它防重复写名册。
+5. ending 场景：`#ending-route` 显示“结局N（路线名） · lede”；编号 1 四道划痕、2 门板、3 桥板/石墙、4 空页；名字有 `answeredBy` 时显示“冬生 代答”/“你 代答”；快照 `recorded` 继承上一份，`recordEndingPage` 用它防重复写名册。
 6. 名册回廊：`xiangbei.roster.v1`（`{version:1,pages:[{route,title,at,companyEnd,names,note}]}`，最多 8 页、丢最旧）；标题页“名册”入口；只读；存储失败 `try/catch` 提示“本机无法保存名册，本局仍可继续”。
 7. 结局落档：`finishChapter` 的 ending 分支先 `state.choices = []` 再 `buildEnding/saveNow`，因为完整选择日志会让存档超过 `MAX_SAVE_BYTES=4096`；结局快照已包含所有决定。
 8. 旧档迁移见 4.4；`SAVE_KEY` 仍 `xiangbei.save.v1`（不升版本，只补默认键）。
@@ -280,7 +282,7 @@ var route = flags["strain.dying"] ? "kongye"
 - 空页不走吴起章（跳过 w001–w041），改走 118 字/8 line 的 coda；文本更短，但第三次危机与“你倒下”的段落更长。
 - 终章文本源 1004 字（含 w006b/c 等互斥分支），单周目 626–709 字；未再扩写吴起。
 
-## 8. 测试矩阵与结果（2026-11-06）
+## 8. 测试矩阵与结果（2026-11-06–07）
 
 | 用例 | 覆盖 | 结果 | 证据 |
 |---|---|---|---|
@@ -298,6 +300,7 @@ var route = flags["strain.dying"] ? "kongye"
 | T10-12 移动 | 844×390 触摸、选项 ≥44px | **PASS** | mobile 12/12 |
 | T10-13 时长 | 四路线 | **文本估算 13:59–16:54；真人计时未做** | 见第 7 节 |
 | T10-14 回归 | 行囊/弃物/先渡谁/门板/记名/7 图鉴/五卡 | **PASS** | flow 12/12 66s |
+| T10-15 结局编号 | 结算页路线行前缀“结局N（路线名）” | **PASS** | routes 44/44、coda 19/19；1/2/3/4 对应四道划痕/门板/桥板·石墙/空页；截图 `menban.png`、`qiaoban-bridge.png`、`kongye-ending.png` |
 
 - 自动化命令：`node project/tools/_pw-step10.js --url=http --case=all`（或 `--case=routes|coda|crises|migration|maxwhen|timeout|mobile|flow`）。
 - http：routes 44/44、coda 19/19、crises 68/68、migration 17/17、maxwhen 15/15、timeout 14/14、mobile 12/12、flow 12/12（66s）。
