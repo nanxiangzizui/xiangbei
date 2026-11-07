@@ -540,12 +540,21 @@ function stamp() {
     await shot("p024-door-max1");
     await hit(page.locator("#vn-multi-confirm"));
     check("p024 带板结算", await waitVisible("#vn-result"));
-    check("p024 带板行囊 3/6 格", /行囊 3\/6 格/.test(await page.locator("#vn-result").innerText()));
+    check("p024 带板行囊 3/3 格", /行囊 3\/3 格/.test(await page.locator("#vn-result").innerText()));
 
     await seed({ scene: "vn", chapterId: "prologue", nodeId: "p024", flags: { "item.door": false }, inventory: { door: false, items: ["roster", "pencil"] } });
     await gotoTitle("?debug=1");
     await waitVisible("#vn-multichoice");
     check("p024 无板上限 3", /最多 3 样/.test(await page.locator("#vn-multi-status").innerText()));
+    await hit(page.locator("#vn-multi-options .xb-multi-option").nth(0));
+    await hit(page.locator("#vn-multi-options .xb-multi-option").nth(1));
+    await hit(page.locator("#vn-multi-options .xb-multi-option").nth(2));
+    await sleep(120);
+    check("p024 无板选三件", (await page.locator("#vn-multi-options .xb-multi-option.is-checked").count()) === 3);
+    await hit(page.locator("#vn-multi-confirm"));
+    check("p024 无板结算", await waitVisible("#vn-result"));
+    check("p024 无板行囊 3/3 格", /行囊 3\/3 格/.test(await page.locator("#vn-result").innerText()));
+    await shot("p024-no-door-three");
   }
 
   async function caseTimeoutRefresh() {

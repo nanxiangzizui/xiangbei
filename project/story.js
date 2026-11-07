@@ -74,7 +74,7 @@
           {
             id: "p024",
             type: "multichoice",
-            prompt: "娘把五样东西摆在桌上。行囊还能塞几件。",
+            prompt: "娘把五样东西摆在桌上。行囊三格；带门板，占两格。",
             min: 0,
             max: 3,
             maxWhen: [{ when: "item.door", max: 1 }],

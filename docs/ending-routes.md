@@ -88,13 +88,13 @@
 
 - 门板在湘江铺掉也归“无板”，泸定 `l019` 不出现；路线仍按“无板”判。
 - 门板路线要求“有板到吴起”：`item.door || memory.door`（`memory.door` 是 `w013` A 留在吴起）。
-- 空页必然无板：门板占 2 格，只装得下 1 件物资，最多救 1 人；救 3 人必须不带板、带 3 件物资。
+- 空页必然无板：行囊共 3 格，门板占 2 格，只装得下 1 件物资，最多救 1 人；救 3 人必须不带板、带 3 件物资。
 - 新增 `had.door`：序章 `p021` 选门板置 true、选不带置 false；`p024` 只加 `maxWhen: [{when:"item.door", max:1}]`（门板占 2 格）。无板路线的“石墙”文本与 `qiaoban` 子标题用它区分“板铺在桥上”与“从来没有板”。
 
 ### 2.4 为什么没有全活
 
 - 三次全救 = 3 点 = 倒下；你倒下，名册由冬生背到吴起，**你的名字空着**。
-- 带门板只装得下 1 件物资（门板 2 格 + 1 件），最多救 1 人；门板又占着手，不能背人。所以“带板全救”在行囊规则下不存在——这是 p024 就已经付掉的代价。
+- 带门板只装得下 1 件物资（行囊 3 格，门板 2 格 + 1 件），最多救 1 人；门板又占着手，不能背人。所以“带板全救”在行囊规则下不存在——这是 p024 就已经付掉的代价。
 - 不带门板、三件物资全救：3 点 = 倒下；每救一次都要扶/背/分口粮，物资不能抵消耗。
 - 无板但只救 1 人（如药救飞毛腿后不再救）：仍是 3 死（老周 + 两个危机），林活；归 `qiaoban` 的“石墙”子变体。原账本“桥板=救 2”未列此组合，但它由行囊规则必然可达，不能留空。
 - 所以“所有人都到”只可能是假象：**你替他们到了**。这是本作对 galgame“全收集”冲动的回答。
@@ -192,7 +192,7 @@ var route = flags["strain.dying"] ? "kongye"
 | 位置 | 实际改动 |
 |---|---|
 | 序章 `p021` | A 有板：`had.door=true`、`item.door=true`、`load+2`、`fire+10`，cost“行囊只剩一格，多背三十斤”；B 无板：`had.door=false`、`item.door=false`、`load+0` |
-| 序章 `p024` | 保留 5 选 3、门板占 2 格；加 `maxWhen: [{when:"item.door", max:1}]`，带板时最多再选 1 件 |
+| 序章 `p024` | 行囊共 3 格；保留 5 选 3、门板占 2 格；加 `maxWhen: [{when:"item.door", max:1}]`，带板时最多再选 1 件 |
 | 泸定 `l019` | 有板 3 选（12s，默认 C）：A 铺桥（`item.door=false`、`trust+1`、`strain+1`、`fate.feimao.dead=false`、`memory.fly_bridge`）；B 喂药（`requires:item.medicine`，消耗药、`strain+1`、救、`memory.fly_medicine`）；C 抱板走（`fate.feimao.dead=true`、`memory.fly_leave`） |
 | 泸定 `l019x` | 无板 2 选（12s，默认 B，`when:"!item.door && !choice.luding.door"`）：A 喂药（同 B）；B 继续走（死）。加 `!choice.luding.door` 是因为 A 铺桥会把 `item.door` 置 false，只看板会让 l019x 在同一回合再次出现 |
 | 泸定 `l019a/b/c/d` | `l019a` 看 `choice.luding.door`；`l019b` 看 `item.door`；`l019c` 看 `memory.fly_medicine`（已移到 `l020` 后、`l021` 前，先写敷药再过桥）；`l019d` 看 `fate.feimao.dead`（过桥后回头） |

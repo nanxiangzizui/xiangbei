@@ -120,6 +120,8 @@
   // 唯一允许的 list flag：弃物留下清单。顺序也是存档与结果页的排序。
   var ABANDON_ORDER = ["xray", "press", "files", "medkit", "radio", "silver", "door"];
   var INVENTORY_IDS = ["roster", "pencil", "medicine", "barley", "pot", "raincloth", "shoes"];
+  // v1.3 行囊共三格：门板占两格，带板时只剩一件。旧档不裁剪，显示时以已装数为下限，避免出现 5/3。
+  var PACK_SLOTS = 3;
   // 行囊五件：p024 多选直接写这五个布尔。item.pot 仍是草地“灶王的小锅”，别混用。
   var ITEM_FLAGS = ["item.medicine", "item.barley", "item.homepot", "item.raincloth", "item.shoes"];
   var ITEM_FLAG_BY_INVENTORY = {
@@ -3381,7 +3383,8 @@
       var packed = collectItemLabels(PACK_ITEMS, true);
       var leftAtHome = collectItemLabels(PACK_ITEMS, false);
       var used = (hasDoor ? 2 : 0) + packed.length;
-      view.stats = "行囊 " + used + "/6 格" + (hasDoor ? " · 门板占 2 格" : "");
+      var capacity = Math.max(PACK_SLOTS, used);
+      view.stats = "行囊 " + used + "/" + capacity + " 格" + (hasDoor ? " · 门板占 2 格" : "");
       view.note = (node.note || "") + " 花名册和铅笔一直贴身带着。";
       view.lists = [
         {

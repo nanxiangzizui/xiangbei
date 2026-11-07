@@ -218,7 +218,7 @@ function stamp() {
     await openChapter("prologue", "p024");
     check("p024 打开多选", await waitVisible("#vn-multichoice"));
     check("p024 五个选项", await page.locator("#vn-multi-options .xb-multi-option").count() === 5);
-    check("p024 提示句", /行囊还能塞三件/.test(await page.locator("#vn-multi-prompt").innerText()));
+    check("p024 提示句", /行囊三格/.test(await page.locator("#vn-multi-prompt").innerText()));
     check("p024 0 件可确认", !(await page.locator("#vn-multi-confirm").isDisabled()));
     await clickOption(0); await clickOption(1); await clickOption(2);
     check("p024 已选 3 件", (await page.locator("#vn-multi-options .xb-multi-option.is-checked").count()) === 3);
@@ -230,7 +230,7 @@ function stamp() {
     await confirmMulti();
     check("p024 进入结算", await waitVisible("#vn-result"));
     const text = await page.locator("#vn-result").innerText();
-    check("行囊统计 3/6 格", /行囊 3\/6 格/.test(text), text.replace(/\s+/g, " ").slice(0, 160));
+    check("行囊统计 3/3 格", /行囊 3\/3 格/.test(text), text.replace(/\s+/g, " ").slice(0, 160));
     check("行囊带走三件", /带走[\s\S]*药[\s\S]*青稞[\s\S]*铁锅/.test(text));
     check("行囊留下雨布布鞋", /留下[\s\S]*雨布[\s\S]*布鞋/.test(text));
     const beforeReload = text.replace(/\s+/g, " ").trim();
@@ -246,7 +246,7 @@ function stamp() {
     await page.keyboard.press("Digit2");
     await page.keyboard.press("Enter");
     check("键盘多选确认进结算", await waitVisible("#vn-result"));
-    check("键盘行囊 2/6 格", /行囊 2\/6 格/.test(await page.locator("#vn-result").innerText()));
+    check("键盘行囊 2/3 格", /行囊 2\/3 格/.test(await page.locator("#vn-result").innerText()));
 
     await openChapter("xiangjiang", "x015");
     check("x015 打开多选", await waitVisible("#vn-multichoice"));
