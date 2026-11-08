@@ -53,6 +53,36 @@
   --ink-a30: rgba(26, 23, 20, 0.3);
   --ink-a45: rgba(26, 23, 20, 0.45);
   --paper-a72: rgba(232, 225, 208, 0.72);
+  /* 歧路图专用夜色：全部在此定义，组件只引用令牌（check-build C10）。 */
+  --branch-sky-top: #0d1620;
+  --branch-sky: #0b1119;
+  --branch-sky-deep: #080d13;
+  --branch-star-hi: rgba(241, 235, 221, 0.72);
+  --branch-star-mid: rgba(241, 235, 221, 0.62);
+  --branch-star-low: rgba(241, 235, 221, 0.48);
+  --branch-star-faint: rgba(241, 235, 221, 0.55);
+  --branch-glow: rgba(58, 82, 105, 0.42);
+  --branch-warm: rgba(168, 50, 45, 0.12);
+  --branch-sky-shadow: rgba(0, 0, 0, 0.7);
+  --branch-seal-shadow: rgba(0, 0, 0, 0.35);
+  --branch-card: #18222d;
+  --branch-edge: rgba(232, 225, 208, 0.5);
+  --branch-edge-soft: rgba(232, 225, 208, 0.28);
+  --branch-edge-faint: rgba(232, 225, 208, 0.26);
+  --branch-scrim-top: rgba(8, 13, 19, 0.06);
+  --branch-scrim-bottom: rgba(8, 13, 19, 0.88);
+  --branch-title-shadow: rgba(0, 0, 0, 0.9);
+  --branch-ring: rgba(168, 50, 45, 0.45);
+  --branch-ring-soft: rgba(168, 50, 45, 0.25);
+  --branch-current-ink: #f0b3aa;
+  --branch-group-meta: rgba(232, 225, 208, 0.45);
+  --branch-card-bg: rgba(232, 225, 208, 0.055);
+  --branch-card-unlocked: rgba(232, 225, 208, 0.12);
+  --branch-card-locked: rgba(232, 225, 208, 0.025);
+  --branch-hint-ink: rgba(232, 225, 208, 0.46);
+  --branch-detail-scrim: rgba(4, 8, 12, 0.74);
+  --branch-panel-shadow: rgba(0, 0, 0, 0.34);
+  --branch-node-hover: rgba(26, 23, 20, 0.035);
   --focus-color: #A8322D;
   --focus-gap: #F1EBDD;
 
@@ -113,6 +143,8 @@
   --z-pause: 80;
   --z-gallery: 82;
   --z-codex: 84;
+  --z-branch: 86;
+  --z-branch-detail: 88;
   --z-toast: 90;
   --z-debug: 95;
   --z-orientation: 100;
@@ -175,6 +207,15 @@ body {
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   overflow: hidden;
+}
+
+/* 双击推进剧情时不要选中文字；游戏内只有滑杆，没有需要选中的文本。 */
+#stage,
+#stage * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 [hidden] {
@@ -279,6 +320,11 @@ body {
   75% { transform: translateX(var(--fx-shake-distance)) scale(var(--scale)); }
 }
 
+html {
+  /* 手机点按由朱砂焦点环和自绘状态表示；去掉 Edge/Chrome 默认的蓝色 tap highlight。 */
+  -webkit-tap-highlight-color: transparent;
+}
+
 button {
   font-family: inherit;
   font-size: var(--fs-choice);
@@ -352,17 +398,29 @@ a:focus-visible,
 .title-menu {
   position: absolute;
   left: 120px;
-  top: 360px;
-  width: 220px;
-  display: flex;
-  flex-direction: column;
+  top: 300px;
+  width: 450px;
+  display: grid;
+  grid-template-columns: repeat(2, 220px);
   gap: 10px;
+}
+
+/* 开始、继续、剧情分支各占整行；图鉴与名册并排，五个入口落在 844×390 的 44 CSS px 热区之上。 */
+.title-menu .menu-button[data-action="start"],
+.title-menu .menu-button[data-action="continue"],
+.title-menu .menu-button--wide {
+  grid-column: 1 / -1;
+  width: 450px;
+}
+
+.title-menu .menu-button {
+  min-height: 82px;
 }
 
 .title-version {
   position: absolute;
   left: 32px;
-  top: 680px;
+  top: 690px;
   margin: 0;
   font-size: var(--fs-small);
   letter-spacing: 1px;
@@ -1025,6 +1083,30 @@ a:focus-visible,
   border-color: var(--ink-a20);
 }
 
+/* 缺物资的条件选项仍占位，但整张卡明确灰掉：
+   底色退回 --paper，序号/代价/底部进度条都退出朱砂，和可选项一眼可分。 */
+.xb-choice.is-unavailable {
+  color: var(--ink-muted);
+  background: var(--paper);
+  border-color: var(--ink-a12);
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.xb-choice.is-unavailable .xb-choice__index {
+  color: var(--ink-muted);
+  background: transparent;
+  border-color: var(--ink-a12);
+}
+
+.xb-choice.is-unavailable .xb-choice__cost {
+  color: var(--ink-a30);
+}
+
+.xb-choice.is-unavailable .xb-choice__timer > i {
+  background: var(--ink-a30);
+}
+
 /* 4. 章节标题卡 */
 .xb-title-card {
   position: absolute;
@@ -1146,6 +1228,15 @@ a:focus-visible,
   margin: calc(-1 * var(--space-2)) 0 0;
   font-size: 14px;
   letter-spacing: 3px;
+  color: var(--paper-a72);
+  text-shadow: var(--title-sub-shadow);
+}
+
+/* 章首卡不自动关，给一个明确的继续提示；不闪烁，减少动效下也成立。 */
+.xb-title-card__hint {
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+  letter-spacing: 4px;
   color: var(--paper-a72);
   text-shadow: var(--title-sub-shadow);
 }
@@ -1447,6 +1538,8 @@ a:focus-visible,
   max-height: 168px;
   margin-top: var(--space-1);
   overflow-y: auto;
+  /* 面板是固定高 flex 列；成就区加进来后，五卡不能和它一起被压成 0 高。 */
+  flex-shrink: 0;
 }
 
 .xb-ending__card {
@@ -1485,6 +1578,65 @@ a:focus-visible,
 
 .xb-ending__card.is-lit p {
   color: var(--ink);
+}
+
+/* 本局成就：五张精神卡上方的一行词条；点开复用成就详情 */
+.xb-ending__achievements {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: var(--border) dotted var(--ink-a20);
+  flex-shrink: 0;
+}
+
+.xb-ending__achievements-title {
+  margin: 0 0 var(--space-1);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: var(--cinnabar);
+}
+
+.xb-ending__achievement-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* 本局成就全部铺开；面板本身可滚，不把词条藏在第二个滚动区里。 */
+  max-height: none;
+  overflow: visible;
+}
+
+.xb-ending__achievement {
+  min-height: 24px;
+  box-sizing: border-box;
+  padding: 2px 9px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  text-align: left;
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a30);
+  border-left: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+}
+
+.xb-ending__achievement:hover,
+.xb-ending__achievement:focus-visible {
+  border-color: var(--ink);
+  border-left-color: var(--cinnabar);
+}
+
+.xb-ending__achievements-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.xb-ending__achievements-count {
+  margin: 4px 0 0;
+  font-family: var(--font-num);
+  font-size: 11px;
+  color: var(--ink-muted);
 }
 
 .xb-ending__disclaimer {
@@ -2646,6 +2798,57 @@ a:focus-visible,
   color: var(--ember);
 }
 
+/* 状态变化：顶部居中，不挡点击；标题卡/物资/警告打开时由 JS 排队。 */
+.xb-status-notice {
+  position: absolute;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 860px;
+  box-sizing: border-box;
+  padding: 10px 18px 12px;
+  color: var(--paper-hi);
+  background: var(--ink);
+  border-left: 4px solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--shadow);
+  z-index: 35;
+  pointer-events: none;
+  animation: xb-status-notice-in 180ms var(--ease-out) both;
+}
+
+.xb-status-notice__kicker {
+  margin: 0 0 4px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--paper-a72);
+}
+
+.xb-status-notice__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.xb-status-notice__list li {
+  margin: 0;
+  font-size: var(--fs-note);
+  line-height: 1.5;
+  color: var(--paper-hi);
+}
+
+@keyframes xb-status-notice-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xb-status-notice { animation: none; }
+}
+
 .vn-pack-button {
   position: absolute;
   left: 756px;
@@ -2670,6 +2873,238 @@ a:focus-visible,
 .vn-pack-button:disabled {
   color: var(--paper-a72);
   border-style: dashed;
+}
+
+/* 解锁成就：标题 / 暂停 / 结局共用；锁定卡只露词条和“未解锁” */
+.xb-achievements {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-codex);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+}
+
+.xb-achievements__panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 1040px;
+  height: 620px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 8px 8px 0 var(--shadow);
+}
+
+.xb-achievements__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-right: 56px;
+}
+
+.xb-achievements__kicker {
+  margin: 0 0 2px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--ink-muted);
+}
+
+.xb-achievements__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: var(--ls-chapter);
+}
+
+.xb-achievements__count {
+  margin: 0 0 0 auto;
+  font-family: var(--font-num);
+  font-size: 13px;
+  color: var(--cinnabar);
+}
+
+.xb-achievements__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--space-2) 0 var(--space-2);
+}
+
+.xb-achievements__tab {
+  min-height: 30px;
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a20);
+  border-radius: var(--radius);
+}
+
+.xb-achievements__tab.is-active {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.xb-achievements__grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 88px;
+  gap: 10px;
+  align-content: start;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.xb-achievement-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 14px;
+  overflow: hidden;
+  font-family: var(--font-body);
+  text-align: left;
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a30);
+  border-radius: var(--radius);
+}
+
+.xb-achievement-card__title {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: 1px;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xb-achievement-card__meta {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xb-achievement-card__state {
+  margin-top: auto;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--ink-muted);
+}
+
+.xb-achievement-card.is-unlocked {
+  background: var(--paper-hi);
+  border-left: var(--border-accent) solid var(--cinnabar);
+}
+
+.xb-achievement-card.is-unlocked .xb-achievement-card__state {
+  color: var(--cinnabar);
+}
+
+.xb-achievement-card.is-locked {
+  color: var(--ink-muted);
+  background: var(--paper-lo);
+  border-style: dashed;
+}
+
+.xb-achievement-card.is-locked .xb-achievement-card__title {
+  color: var(--ink-muted);
+}
+
+.xb-achievement-card:hover,
+.xb-achievement-card:focus-visible {
+  border-color: var(--ink);
+}
+
+.xb-achievements__hint {
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+/* 成就详情：面板内的第二层；锁定态不显示决策组、选项和原因 */
+.xb-achievement-detail {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-codex);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+}
+
+.xb-achievement-detail__panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 640px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.xb-achievement-detail__kicker {
+  margin: 0 0 var(--space-1);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--cinnabar);
+}
+
+.xb-achievement-detail__title {
+  margin: 0 0 var(--space-3);
+  padding-right: 48px;
+  font-family: var(--font-title);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
+
+.xb-achievement-detail__body {
+  outline: none;
+}
+
+.xb-achievement-detail__lead {
+  margin: 0 0 var(--space-2);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.xb-achievement-detail__text {
+  margin: 0 0 var(--space-2);
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--ink-muted);
+}
+
+.xb-achievement-detail__time {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--ink-muted);
 }
 
 .xb-pack-overlay,
@@ -2810,6 +3245,15 @@ a:focus-visible,
   line-height: var(--lh-body);
 }
 
+.xb-danger__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.xb-danger__actions .xb-btn {
+  min-width: 160px;
+}
+
 /* 设置里的「减少动效」：与系统偏好同一条规则，两种入口都关掉动效 */
 html.reduce-motion * {
   transition: none !important;
@@ -2846,6 +3290,584 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
    手机横屏（844×390 一类）：舞台整体缩到 54%，逻辑字号必须放大，
    否则 17px 正文只剩 9 CSS px。暂停热区按 96 逻辑 ≈ 52 CSS px。
    ===================================================================== */
+/* ---------- 剧情分支：只读歧路图（v1.5） ---------- */
+.xb-branch {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-branch);
+  overflow: hidden;
+  color: var(--paper-hi);
+  background: var(--night-deep);
+}
+
+.xb-branch__sky {
+  position: absolute;
+  inset: 0;
+  background-color: var(--branch-sky);
+  background-image:
+    radial-gradient(1.5px 1.5px at 18% 28%, var(--branch-star-hi) 0 38%, transparent 48%),
+    radial-gradient(1px 1px at 72% 16%, var(--branch-star-mid) 0 36%, transparent 48%),
+    radial-gradient(1.2px 1.2px at 44% 72%, var(--branch-star-low) 0 36%, transparent 48%),
+    radial-gradient(1px 1px at 88% 58%, var(--branch-star-faint) 0 34%, transparent 46%),
+    radial-gradient(70% 55% at 52% 4%, var(--branch-glow), transparent 72%),
+    radial-gradient(48% 40% at 86% 88%, var(--branch-warm), transparent 74%),
+    linear-gradient(180deg, var(--branch-sky-top) 0%, var(--branch-sky) 46%, var(--branch-sky-deep) 100%);
+  background-size: 260px 210px, 190px 160px, 310px 250px, 230px 190px, 100% 100%, 100% 100%, 100% 100%;
+  background-position: 0 0, 40px 26px, 90px 12px, 18px 70px, 0 0, 0 0, 0 0;
+  box-shadow: inset 0 0 190px 72px var(--branch-sky-shadow);
+}
+
+.xb-branch__head {
+  position: absolute;
+  left: 44px;
+  right: 44px;
+  top: 22px;
+  height: 86px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.xb-branch__brand {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.xb-branch__kicker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 5px;
+  color: var(--paper-a72);
+}
+
+.xb-branch__title {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 3px;
+  color: var(--paper-hi);
+}
+
+.xb-branch__seal {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  background: var(--cinnabar);
+  color: var(--paper-hi);
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  transform: rotate(-4deg);
+  box-shadow: 2px 2px 0 var(--branch-seal-shadow);
+}
+
+.xb-branch__count {
+  margin: 34px 74px 0 auto;
+  padding: 6px 12px;
+  font-family: var(--font-num);
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--paper-a72);
+  border: var(--border) solid var(--paper-a72);
+}
+
+.xb-branch__close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 52px;
+  height: 52px;
+  color: var(--paper-hi);
+  background: transparent;
+  border-color: var(--paper-a72);
+}
+
+.xb-branch__body {
+  position: absolute;
+  left: 44px;
+  right: 44px;
+  top: 112px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+}
+
+.xb-branch__chapters {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.xb-branch-chapter {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  color: var(--paper-hi);
+  background: var(--branch-card);
+  border: var(--border) solid var(--branch-edge);
+  border-radius: var(--radius);
+}
+
+.xb-branch-chapter img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.72) sepia(0.2) contrast(1.06) brightness(0.78);
+  opacity: 0.72;
+}
+
+.xb-branch-chapter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--branch-scrim-top) 20%, var(--branch-scrim-bottom) 100%);
+}
+
+.xb-branch-chapter__index {
+  position: absolute;
+  left: 9px;
+  top: 8px;
+  z-index: 1;
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--paper-a72);
+}
+
+.xb-branch-chapter__title {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
+  z-index: 1;
+  font-family: var(--font-title);
+  font-size: 19px;
+  line-height: 1.15;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px var(--branch-title-shadow);
+}
+
+.xb-branch-chapter__state {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  z-index: 1;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--paper-a72);
+}
+
+.xb-branch-chapter.is-this-run {
+  border-left: var(--border-accent) solid var(--cinnabar);
+}
+
+.xb-branch-chapter.is-current {
+  border: var(--border-strong) solid var(--cinnabar);
+  box-shadow: 0 0 0 2px var(--branch-ring-soft);
+}
+
+.xb-branch-chapter.is-current .xb-branch-chapter__state {
+  color: var(--branch-current-ink);
+}
+
+.xb-branch-chapter.is-locked {
+  border-style: dashed;
+  border-color: var(--branch-edge-faint);
+}
+
+.xb-branch-chapter.is-locked img {
+  filter: grayscale(1) brightness(0.34);
+  opacity: 0.3;
+}
+
+.xb-branch-chapter.is-locked .xb-branch-chapter__title {
+  color: var(--paper-a72);
+}
+
+.xb-branch-chapter.is-locked::before {
+  content: "未";
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--paper-a72);
+  border: 1px solid var(--paper-a72);
+  opacity: 0.7;
+  transform: rotate(-3deg);
+}
+
+.xb-branch__live {
+  min-height: 34px;
+  margin: 14px 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  color: var(--paper-a72);
+}
+
+.xb-branch__live b {
+  color: var(--paper-hi);
+  font-weight: normal;
+}
+
+.xb-branch__live .is-current {
+  color: var(--branch-current-ink);
+}
+
+.xb-branch__ends {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-rows: auto auto;
+  gap: 12px 20px;
+  align-items: start;
+}
+
+.xb-branch__group {
+  min-width: 0;
+}
+
+.xb-branch__group--door { grid-column: 1; grid-row: 1; }
+.xb-branch__group--nodoor { grid-column: 1; grid-row: 2; }
+.xb-branch__group--bad { grid-column: 2; grid-row: 1 / span 2; }
+
+.xb-branch__group-title {
+  margin: 0 0 7px;
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: var(--paper-a72);
+}
+
+.xb-branch__group-title span {
+  margin-left: 6px;
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--branch-group-meta);
+}
+
+.xb-branch__endings {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.xb-branch-ending {
+  position: relative;
+  min-height: 92px;
+  padding: 8px 10px;
+  overflow: hidden;
+  text-align: left;
+  color: var(--paper-hi);
+  background: var(--branch-card-bg);
+  border: var(--border) solid var(--branch-edge-soft);
+  border-radius: var(--radius);
+}
+
+.xb-branch-ending__num {
+  display: block;
+  font-family: var(--font-num);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--paper-a72);
+}
+
+.xb-branch-ending__title {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-title);
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: 1px;
+}
+
+.xb-branch-ending__lede {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--paper-a72);
+}
+
+.xb-branch-ending.is-unlocked {
+  background: var(--branch-card-unlocked);
+  border-left: var(--border-accent) solid var(--branch-edge);
+}
+
+.xb-branch-ending.is-current {
+  border-color: var(--cinnabar);
+  border-left-color: var(--cinnabar);
+  box-shadow: inset 0 0 0 1px var(--branch-ring);
+}
+
+.xb-branch-ending.is-locked {
+  border-style: dashed;
+  background: var(--branch-card-locked);
+}
+
+.xb-branch-ending.is-locked .xb-branch-ending__title {
+  color: var(--paper-a72);
+}
+
+.xb-branch-ending.is-locked::after {
+  content: "未";
+  position: absolute;
+  right: 8px;
+  top: 30px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--paper-a72);
+  border: 1px solid var(--paper-a72);
+  opacity: 0.6;
+  transform: rotate(-4deg);
+}
+
+.xb-branch__group--bad .xb-branch__endings {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.xb-branch__group--bad .xb-branch-ending {
+  min-height: 200px;
+  padding: 12px 14px;
+}
+
+.xb-branch__group--bad .xb-branch-ending__title {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.xb-branch__group--bad .xb-branch-ending__lede {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.xb-branch__hint {
+  margin: auto 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  color: var(--branch-hint-ink);
+}
+
+/* 章节详情：盖在歧路图上，纸纹底，节点可逐条展开 */
+.xb-branch-detail {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-branch-detail);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--branch-detail-scrim);
+}
+
+.xb-branch-detail__panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 840px;
+  max-height: 570px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 30px;
+  color: var(--ink);
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 8px 8px 0 var(--branch-panel-shadow);
+}
+
+.xb-branch-detail__kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--cinnabar);
+}
+
+.xb-branch-detail__title {
+  margin: 6px 0 4px;
+  padding-right: 54px;
+  font-family: var(--font-title);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
+
+.xb-branch-detail__sub {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.xb-branch-detail__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.xb-branch-node {
+  border-top: 1px dashed var(--ink-a30);
+}
+
+.xb-branch-node:first-child {
+  border-top: 0;
+}
+
+.xb-branch-node__toggle {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 4px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+}
+
+.xb-branch-node__toggle:hover {
+  background: var(--branch-node-hover);
+}
+
+.xb-branch-node__index {
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.xb-branch-node__title {
+  font-family: var(--font-title);
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: 1px;
+}
+
+.xb-branch-node__status {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.xb-branch-node.is-done .xb-branch-node__status {
+  color: var(--cinnabar);
+}
+
+.xb-branch-node.is-locked {
+  opacity: 0.56;
+}
+
+.xb-branch-node__body {
+  padding: 0 8px 18px 48px;
+  font-size: 17px;
+  line-height: 1.85;
+}
+
+.xb-branch-node__quote {
+  margin: 0;
+}
+
+.xb-branch-node__list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.xb-branch-node__list li {
+  margin: 2px 0;
+}
+
+.xb-branch-node__context {
+  margin: 0 0 8px;
+  color: var(--ink-muted);
+}
+
+.xb-branch-node__empty {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+/* 结局详情：纸纹卡，只读；未解锁时只给模糊提示 */
+.xb-branch-route__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.xb-branch-route__chip {
+  padding: 4px 9px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a30);
+}
+
+.xb-branch-route__section {
+  margin-top: 12px;
+}
+
+.xb-branch-route__section h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: var(--cinnabar);
+}
+
+.xb-branch-route__list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.xb-branch-route__list li {
+  margin: 3px 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.xb-branch-route__hint {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+  border-left: 3px solid var(--ink-a30);
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
   .vn-pause {
     left: 1172px;
@@ -2881,8 +3903,10 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-ending__card p { font-size: 26px; line-height: 1.35; }
   .xb-ending__disclaimer { font-size: 18px; }
   .xb-ending__actions .xb-btn { min-height: 64px; padding: 0 24px; font-size: 24px; }
-  .xb-pause { width: 520px; padding: var(--space-6); }
-  .xb-pause .pause-button { min-height: 72px; font-size: 26px; }
+  .pause-panel,
+  .xb-pause { width: 520px; max-height: 688px; overflow-y: auto; padding: var(--space-6); }
+  .pause-panel .pause-button,
+  .xb-pause .pause-button { min-height: 82px; font-size: 26px; }
 
   /* 844×390 舞台缩放约 0.54；96/82 逻辑像素落在 44 CSS 像素以上 */
   .xb-choice { min-height: 82px; }
@@ -2911,9 +3935,80 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-pack__subhead { font-size: 20px; }
   .xb-pack__recipe { min-height: 64px; font-size: 20px; }
   .xb-pack__empty, .xb-pack__note { font-size: 20px; }
-  .xb-pack__actions .xb-btn { min-height: 64px; font-size: 22px; }
+  /* 64 逻辑在 844×390 只有 34.7 CSS px；物资的关闭/继续是手机上的主要出口，抬到 82。 */
+  .xb-pack__actions .xb-btn { min-height: 82px; font-size: 22px; }
   .xb-door { width: 760px; padding: 24px 32px; }
   .xb-door__title { font-size: 38px; }
   .xb-door__body { font-size: 26px; }
   .xb-door .xb-btn { min-height: 64px; font-size: 22px; }
+
+  /* 歧路图在 844×390 下：章节卡仍一排七张，但字号放大到约 11–13 CSS px；
+     详情是一屏内可滚的纸卡，节点行 96 逻辑 ≈ 52 CSS px。 */
+  .xb-branch__head { left: 24px; right: 24px; top: 12px; height: 74px; }
+  .xb-branch__kicker { font-size: 14px; letter-spacing: 3px; }
+  .xb-branch__title { margin-top: 14px; font-size: 42px; }
+  .xb-branch__seal { width: 34px; height: 34px; font-size: 20px; }
+  .xb-branch__count { margin: 24px 68px 0 auto; padding: 4px 8px; font-size: 16px; }
+  .xb-branch__close, #branch-detail-close { width: 82px; height: 82px; font-size: 30px; }
+  .xb-branch__body { left: 24px; right: 24px; top: 88px; bottom: 12px; }
+  .xb-branch__chapters { gap: 6px; padding-top: 4px; }
+  .xb-branch-chapter { height: 92px; }
+  .xb-branch-chapter__index { left: 7px; top: 6px; font-size: 12px; }
+  .xb-branch-chapter__title { left: 7px; right: 7px; bottom: 7px; font-size: 22px; }
+  .xb-branch-chapter__state { right: 6px; top: 5px; font-size: 12px; }
+  .xb-branch-chapter.is-locked::before { right: 6px; bottom: 5px; width: 24px; height: 24px; font-size: 14px; }
+  .xb-branch__live { min-height: 26px; margin: 8px 0 6px; font-size: 16px; line-height: 1.4; }
+  .xb-branch__ends { grid-template-columns: minmax(0, 1fr) 250px; gap: 8px 12px; }
+  .xb-branch__group-title { margin-bottom: 4px; font-size: 16px; }
+  .xb-branch__group-title span { font-size: 12px; }
+  .xb-branch__endings { gap: 6px; }
+  .xb-branch-ending { min-height: 86px; padding: 6px 8px; }
+  .xb-branch-ending__num { font-size: 12px; }
+  .xb-branch-ending__title { font-size: 19px; }
+  .xb-branch-ending__lede { margin-top: 3px; font-size: 12px; line-height: 1.35; }
+  .xb-branch__group--bad .xb-branch-ending { min-height: 190px; padding: 10px 12px; }
+  .xb-branch__group--bad .xb-branch-ending__title { font-size: 26px; }
+  .xb-branch__group--bad .xb-branch-ending__lede { font-size: 14px; }
+  .xb-branch__hint { font-size: 11px; }
+  .xb-branch-detail__panel { width: 1180px; max-height: 660px; padding: 18px 22px; }
+  .xb-branch-detail__kicker { font-size: 14px; }
+  .xb-branch-detail__title { font-size: 36px; }
+  .xb-branch-detail__sub { font-size: 15px; }
+  .xb-branch-node__toggle { min-height: 96px; grid-template-columns: 42px minmax(0, 1fr) auto; }
+  .xb-branch-node__index { font-size: 14px; }
+  .xb-branch-node__title { font-size: 24px; }
+  .xb-branch-node__status { font-size: 14px; }
+  .xb-branch-node__body { padding-left: 52px; font-size: 19px; }
+  .xb-branch-route__chip { font-size: 14px; }
+  .xb-branch-route__section h4 { font-size: 18px; }
+  .xb-branch-route__list li { font-size: 18px; }
+  .xb-branch-route__hint { font-size: 17px; }
+
+  /* 成就面板：844×390 舞台缩到约 54%，逻辑字号需放大到可读 */
+  .xb-achievements__panel { width: 1240px; height: 688px; padding: 18px 26px; }
+  .xb-achievements__head { gap: var(--space-3); }
+  .xb-achievements__kicker { font-size: 14px; letter-spacing: 3px; }
+  .xb-achievements__title { font-size: 42px; }
+  .xb-achievements__count { font-size: 20px; }
+  .xb-achievements__tabs { gap: 4px; margin: 6px 0 8px; }
+  .xb-achievements__tab { min-height: 82px; padding: 4px 8px; font-size: 17px; }
+  .xb-achievements__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 112px; gap: 8px; }
+  .xb-achievement-card { padding: 8px 12px; gap: 2px; }
+  .xb-achievement-card__title { font-size: 27px; }
+  .xb-achievement-card__meta { font-size: 15px; }
+  .xb-achievement-card__state { font-size: 15px; letter-spacing: 1px; }
+  .xb-achievements__hint { margin-top: 8px; font-size: 17px; }
+  .xb-achievement-detail__panel { width: 1040px; max-height: 660px; padding: 18px 26px; }
+  .xb-achievement-detail__kicker { font-size: 15px; }
+  .xb-achievement-detail__title { font-size: 38px; }
+  .xb-achievement-detail__lead { font-size: 25px; }
+  .xb-achievement-detail__text { font-size: 22px; }
+  .xb-achievement-detail__time { font-size: 17px; }
+  #achievement-close, #achievement-detail-close { width: 82px; height: 82px; font-size: 30px; }
+
+  .xb-ending__achievements-title { font-size: 20px; letter-spacing: 1px; }
+  .xb-ending__achievement-chips { max-height: 104px; gap: 6px; }
+  .xb-ending__achievement { min-height: 82px; padding: 2px 10px; font-size: 21px; }
+  .xb-ending__achievements-empty { font-size: 19px; }
+  .xb-ending__achievements-count { font-size: 16px; }
 }

@@ -84,14 +84,17 @@
     rescues: 0,
     "help.used": false,
     "memory.help": false,
+    "memory.help_door": false,
+    // v1.5.1 金沙江记名：pick/skip 都写，配合 memory.zhang 区分两条成就。
+    "memory.namepick_done": false,
     "fate.player.dead": false,
     // 由引擎派生：7(5) 与坏结局是互斥出口，剧本条件语法没有 OR。
     "fate.seven5": false,
     "fate.badend": false,
     "grass.settled": false,
-    "quality.feimao": 0,
-    "quality.zaowang": 0,
-    "quality.dongsheng": 0,
+    "quality.feimao": 3,
+    "quality.zaowang": 3,
+    "quality.dongsheng": 3,
     doorOutcome: "none",
     "inventory.giftBarley": false,
     // v1.3 兼容：strain 只由引擎按 3-rescues 反推，剧本不再写。
@@ -170,6 +173,14 @@
     raincloth: "item.raincloth",
     shoes: "item.shoes"
   };
+  // 反向表：剧本只写 item.*，物资栏读 inventory.items，靠 setFlag 把两边钉在一起。
+  var INVENTORY_BY_ITEM_FLAG = {
+    "item.medicine": "medicine",
+    "item.barley": "barley",
+    "item.homepot": "pot",
+    "item.raincloth": "raincloth",
+    "item.shoes": "shoes"
+  };
   // 湘江六样：旧档只存“留在岸上”的数组，take 布尔由它反推。
   var ABANDON_TAKE_FLAGS = {
     xray: "choice.xiangjiang.take.xray",
@@ -193,9 +204,12 @@
     "fate.player.dead",
     "grass.settled",
     "help.used",
-    "inventory.giftBarley"
+    "inventory.giftBarley",
+    "memory.namepick_done"
   ].concat(DERIVED_FLAGS);
   var CHOICE_LOG_LIMIT = 64;
+  var STATUS_EVENT_LIMIT = 32;
+  var statusEvents = [];
   var TEXT_SCALES = [1, 1.15, 1.3];
 
   function isPlainObject(value) {
@@ -267,9 +281,19 @@
   }
 
   var CONDITION_LABELS = ["0", "差", "勉强", "良好", "优秀"];
+  var COMPANION_NAMES = { feimao: "飞毛腿", zaowang: "灶王", dongsheng: "冬生" };
   function conditionLabel(value) {
     var at = Math.round(clamp(isFiniteNumber(value) ? value : 3, 0, 4));
     return CONDITION_LABELS[at];
+  }
+  // 状态弹窗的 0 不用 HUD 的占位“0”：同伴是牺牲，我则是倒下。
+  function companionStatusLabel(value) {
+    var at = Math.round(clamp(isFiniteNumber(value) ? value : 0, 0, 3));
+    return at === 0 ? "牺牲" : conditionLabel(at);
+  }
+  function playerStatusLabel(value) {
+    var at = Math.round(clamp(isFiniteNumber(value) ? value : 3, 0, 4));
+    return at === 0 ? "倒下" : conditionLabel(at);
   }
 
   // 救第 n 人的累计惩罚：无板 0/1/1，有板 0/1/2。用差值写回 condition，避免剧本重复写公式。
@@ -321,6 +345,33 @@
     if (flag) state.flags[flag] = false;
   }
 
+  // 剧本用 item.* 表示“用掉了/拿到了”，物资栏与 packUsage 读 inventory.items。
+  // 旗标是权威，清单只是镜像：写旗标时同步，免得药喂给飞毛腿后面板里还挂着一包。
+  function mirrorPackItem(state, flag, value) {
+    var id = INVENTORY_BY_ITEM_FLAG[flag];
+    if (!id || !state.inventory || !Array.isArray(state.inventory.items)) return;
+    var at = state.inventory.items.indexOf(id);
+    if (value === true) {
+      if (at === -1) state.inventory.items.push(id);
+      return;
+    }
+    if (at !== -1) {
+      state.inventory.items = state.inventory.items.filter(function (item) {
+        return item !== id;
+      });
+    }
+  }
+
+  // 旧档修复：v1.4 早期的危机只写了 item.* = false，清单里那件东西还留着。
+  // 只认存档里明确写过的 false，没写过的键不动，免得误伤 v1.3 迁移上来的行囊。
+  function repairPackMirror(state, savedFlags) {
+    if (!isPlainObject(savedFlags) || !Array.isArray(state.inventory.items)) return;
+    state.inventory.items = state.inventory.items.filter(function (id) {
+      var flag = ITEM_FLAG_BY_INVENTORY[id];
+      return !(flag && hasOwn(savedFlags, flag) && savedFlags[flag] === false);
+    });
+  }
+
   // 物资使用：组合合法才扣；优秀时不给用，避免把“状态足够”误写成消耗。
   function usePackItems(state, ids) {
     var asked = Array.isArray(ids) ? ids.filter(function (id, index, list) {
@@ -328,12 +379,12 @@
     }) : [];
     var recipe = null;
     var key = asked.slice().sort().join("+");
-    if (key === "shoes") recipe = { delta: 1, items: ["shoes"] };
-    else if (key === "pot") recipe = { delta: 2, items: ["pot"] };
-    else if (key === "raincloth") recipe = { delta: 1, items: ["raincloth"] };
-    else if (key === "barley+medicine") recipe = { delta: 1, items: ["barley", "medicine"] };
-    else if (key === "barley+giftBarley") recipe = { delta: 2, items: ["barley", "giftBarley"] };
-    else if (key === "giftBarley+medicine") recipe = { delta: 1, items: ["giftBarley", "medicine"] };
+    if (key === "shoes") recipe = { delta: 1, items: ["shoes"], label: "布鞋" };
+    else if (key === "pot") recipe = { delta: 2, items: ["pot"], label: "铁锅" };
+    else if (key === "raincloth") recipe = { delta: 1, items: ["raincloth"], label: "雨布" };
+    else if (key === "barley+medicine") recipe = { delta: 1, items: ["barley", "medicine"], label: "青稞和药" };
+    else if (key === "barley+giftBarley") recipe = { delta: 2, items: ["barley", "giftBarley"], label: "青稞" };
+    else if (key === "giftBarley+medicine") recipe = { delta: 1, items: ["giftBarley", "medicine"], label: "冬生的青稞和药" };
     if (!recipe) return { ok: false, reason: "不认识这组物资。" };
     if (recipe.items.indexOf("raincloth") !== -1 && state.chapterId !== "grass") {
       return { ok: false, reason: "雨布只能在草地使用。" };
@@ -345,7 +396,7 @@
     recipe.items.forEach(function (id) {
       consumePackItem(state, id);
     });
-    state.flags.condition = Math.round(clamp(state.flags.condition + recipe.delta, 0, 4));
+    setFlag(state, "condition", "+" + recipe.delta, "你用了" + recipe.label);
     state.flags.load = packUsage(state);
     syncDerivedFlags(state);
     return { ok: true, delta: recipe.delta, used: recipe.items, condition: state.flags.condition };
@@ -363,9 +414,9 @@
       };
     }
     flags["grass.settled"] = true;
-    flags.condition = Math.round(clamp(flags.condition - 1, 0, 4));
+    setFlag(state, "condition", "-1", "草地走到第七天，队伍断了粮");
     if (flags.rescues === 3 && flags["help.used"] !== true && flags.condition === 1) {
-      flags.condition = 2;
+      setFlag(state, "condition", "+1", "三个人把你从地上架起来");
       flags["help.used"] = true;
       flags["memory.help"] = true;
     }
@@ -384,8 +435,11 @@
   }
 
   // 差状态关闭物资面板/选择“继续”时调用：仍 <=1 就死；7(5) 已是 others，不再重复判。
+  // 走 setFlag 是为了让顶部状态弹窗记录 1→0（“你牺牲了”）；直接改旗标不会产生事件。
   function resolveGrassWarning(state) {
-    if (state.flags.condition <= 1) state.flags["fate.player.dead"] = true;
+    if (state.flags.condition <= 1 && state.flags["fate.player.dead"] !== true) {
+      setFlag(state, "fate.player.dead", true, "没能补充物资");
+    }
     syncDerivedFlags(state);
   }
 
@@ -590,31 +644,31 @@
     "legacy"
   ];
   var ROUTE_DEFS = {
-    door_excellent: { index: 1, label: "7(1)", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_excellent: { index: 1, label: "1", title: "门板", lede: "门板到了吴起。你也是。" },
     door_grass_one: {
       index: 2,
-      label: "7(2)",
+      label: "2",
       title: "门板",
       lede: "门板留在了草地。你到了吴起。",
       bridgeTitle: "桥板",
       bridgeLede: "门板留在了桥上。你到了吴起。"
     },
-    door_carry_two: { index: 3, label: "7(3)", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_carry_two: { index: 3, label: "3", title: "门板", lede: "门板到了吴起。你也是。" },
     door_grass_many: {
       index: 4,
-      label: "7(4)",
+      label: "4",
       title: "门板",
       lede: "门板留在了草地。你到了吴起。",
       bridgeTitle: "桥板",
       bridgeLede: "门板留在了桥上。你到了吴起。"
     },
-    door_others: { index: 5, label: "7(5)", title: "空页", lede: "名册上多了一个名字，又划掉了。" },
-    no_door_zero: { index: 6, label: "8(1)", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_one: { index: 7, label: "8(2)", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_two: { index: 8, label: "8(3)", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_three: { index: 9, label: "8(4)", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_three_excellent: { index: 10, label: "8(5)", title: "空手", lede: "你空着手，走到了吴起。" },
-    bad_end: { index: 11, label: "坏结局", title: "没有走出草地", lede: "草地没有尽头。" },
+    door_others: { index: 5, label: "5", title: "空页", lede: "名册上多了一个名字，又划掉了。" },
+    no_door_zero: { index: 6, label: "6", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_one: { index: 7, label: "7", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_two: { index: 8, label: "8", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_three: { index: 9, label: "9", title: "空手", lede: "你空着手，走到了吴起。" },
+    no_door_three_excellent: { index: 10, label: "10", title: "空手", lede: "你空着手，走到了吴起。" },
+    bad_end: { index: 11, label: "11", title: "没有走出草地", lede: "草地没有尽头。" },
     legacy: { index: 0, label: "旧档", title: "旧档", lede: "" }
   };
   var LEGACY_ROUTES = ["sidao", "menban", "qiaoban", "kongye"];
@@ -684,7 +738,8 @@
     var allowed = [
       "stats", "names", "answered", "missed", "cards",
       "route", "routeIndex", "routeLabel", "routeTitle", "routeLede",
-      "fate", "condition", "rescues", "doorOutcome", "strain", "recorded"
+      "fate", "condition", "rescues", "doorOutcome", "strain", "recorded",
+      "achievements"
     ];
     var keys = Object.keys(value);
     if (keys.some(function (key) { return allowed.indexOf(key) === -1; })) return null;
@@ -781,6 +836,17 @@
     if (value.recorded !== undefined) {
       if (typeof value.recorded !== "boolean") return null;
       clean.recorded = value.recorded;
+    }
+    if (value.achievements !== undefined) {
+      if (!Array.isArray(value.achievements) || value.achievements.length > 48) return null;
+      var known = achievementIds();
+      var seen = [];
+      for (var i = 0; i < value.achievements.length; i += 1) {
+        var id = value.achievements[i];
+        if (typeof id !== "string" || known.indexOf(id) === -1 || seen.indexOf(id) !== -1) return null;
+        seen.push(id);
+      }
+      clean.achievements = seen;
     }
     return clean;
   }
@@ -880,8 +946,17 @@
     var answered = isBad ? 0 : (previous.answered !== undefined ? previous.answered : fallback.answered);
     var missed = isBad ? 0 : (previous.missed !== undefined ? previous.missed : fallback.missed);
 
+    // 本局成就必须在 finishChapter 清空 choices 之前采集；旧快照没有 choices 时沿用已有列表。
+    var runAchievements = collectRunAchievements(state);
+    // 重进已结算的结局时 choices 已清空，但 flags 里的记名仍会产出 1 条；不能因此丢掉快照里的其余成就。
+    if (!state.choices.length && previous.achievements) {
+      previous.achievements.forEach(function (id) {
+        if (runAchievements.indexOf(id) === -1) runAchievements.push(id);
+      });
+    }
+
     var conditions = {
-      ideal: isFiniteNumber(flags.fire) && flags.fire >= 20,
+      ideal: isFiniteNumber(flags.fire) && flags.fire >= 60,
       sacrifice: flags["fate.player.dead"] === true || flags["choice.xiangjiang.hold"] === true,
       truth: Number(flags["choice.zunyi.admit"] || 0) >= 2,
       overall: flags["choice.jinsha.priority"] === "main",
@@ -924,7 +999,8 @@
       rescues: isFiniteNumber(flags.rescues) ? flags.rescues : 0,
       doorOutcome: flags.doorOutcome || "none",
       strain: isFiniteNumber(flags.strain) ? flags.strain : 0,
-      recorded: previous.recorded === true
+      recorded: previous.recorded === true,
+      achievements: runAchievements
     };
   }
 
@@ -1012,6 +1088,8 @@
             list.indexOf(item) === index;
         }).slice(0, 32)
       : [];
+    // 修 v1.4 早期残档：危机扣了物资却只写旗标，清单里还挂着药/青稞/锅/雨布/鞋。
+    repairPackMirror(state, save.flags);
 
     state.choices = Array.isArray(save.choices)
       ? save.choices
@@ -1272,8 +1350,50 @@
     return false;
   }
 
+  // 状态变化弹窗只认“真的变了”：setFlag 前后各拍一张快照，normalize/读档不会误报。
+  function statusSnapshot(flags) {
+    return {
+      // “差且已判死”也要能记录 1→0，否则拒绝补给的死亡会被漏掉。
+      player: flags["fate.player.dead"] === true ? 0 : flags.condition,
+      feimao: flags["quality.feimao"],
+      zaowang: flags["quality.zaowang"],
+      dongsheng: flags["quality.dongsheng"]
+    };
+  }
+
+  function defaultStatusReason(kind, from, to) {
+    if (kind === "player") return to < from ? "连续行军和救人" : "你补充了物资";
+    if (to === 0) return "他没能再站起来";
+    return to < from ? "他撑不住了" : "你把他扶起来";
+  }
+
+  function recordStatusDiff(before, after, reason, sourcePath) {
+    Object.keys(before).forEach(function (kind) {
+      if (before[kind] === after[kind]) return;
+      var text = typeof reason === "string" ? reason.trim() : "";
+      statusEvents.push({
+        kind: kind,
+        from: before[kind],
+        to: after[kind],
+        reason: text || defaultStatusReason(kind, before[kind], after[kind]),
+        source: sourcePath || ""
+      });
+    });
+    if (statusEvents.length > STATUS_EVENT_LIMIT) {
+      statusEvents = statusEvents.slice(-STATUS_EVENT_LIMIT);
+    }
+  }
+
+  function takeStatusEvents() {
+    var events = statusEvents.slice();
+    statusEvents = [];
+    return events;
+  }
+
   // set 的三种写法：赋布尔、赋数值、"+N"/"-N" 增量；数值旗标一律夹在范围内。
-  function setFlag(state, path, value) {
+  // reason 只给状态弹窗用；不写进旗标，也不参与存档。
+  function setFlag(state, path, value, reason) {
+    var beforeStatus = statusSnapshot(state.flags);
     if (!isAllowedFlag(path)) {
       console.error("[XB] 禁止写入旗标：" + path);
       return false;
@@ -1332,6 +1452,14 @@
         var hasDoor = state.flags["had.door"] === true;
         var penalty = rescuePenalty(newRescues, hasDoor) - rescuePenalty(oldRescues, hasDoor);
         state.flags.condition = Math.round(clamp((isFiniteNumber(state.flags.condition) ? state.flags.condition : 3) - penalty, 0, 4));
+        // 救满第三人时如果已跌到“差”，三人当场把人架起来：先回一格，草地结算再掉下去时才是警告。
+        // 有门板走这条；无门板结算时才跌到差，由 settleGrass 补同一段帮助（memory.help）。
+        if (newRescues === 3 && state.flags.condition === 1 && state.flags["help.used"] !== true) {
+          state.flags.condition = 2;
+          state.flags["help.used"] = true;
+          state.flags["memory.help"] = true;
+          state.flags["memory.help_door"] = true;
+        }
       }
       next = newRescues;
     }
@@ -1339,14 +1467,16 @@
     state.flags[path] = next;
     if (path === "item.door") state.inventory.door = next;
     if (path === "inventory.giftBarley") state.inventory.giftBarley = next === true;
+    mirrorPackItem(state, path, next);
     syncDerivedFlags(state);
+    recordStatusDiff(beforeStatus, statusSnapshot(state.flags), reason, path);
     return true;
   }
 
-  function applySet(state, set, sourceId) {
+  function applySet(state, set, sourceId, reason) {
     if (!set) return;
     Object.keys(set).forEach(function (key) {
-      if (!setFlag(state, key, set[key])) {
+      if (!setFlag(state, key, set[key], reason)) {
         console.error("[XB] " + sourceId + " 写入旗标失败：" + key);
       }
     });
@@ -1368,7 +1498,16 @@
       console.error("[XB] " + (node && node.id) + " 选项不可见：" + optionKey);
       return null;
     }
-    applySet(state, option.set, node.id);
+    var statusReason = option.statusReason || option.text;
+    applySet(state, option.set, node.id, statusReason);
+    // 条件代价：先按选择前的状态判条件，再统一写入；避免前一条改了旗标、后一条被误触发。
+    if (Array.isArray(option.setIf)) {
+      option.setIf.filter(function (rule) {
+        return rule && evalWhen(state, rule.when);
+      }).forEach(function (rule) {
+        applySet(state, rule.set, node.id, statusReason);
+      });
+    }
     if (node.record) setFlag(state, node.record, option.value);
     state.choices.push({
       chapter: state.chapterId,
@@ -1489,6 +1628,8 @@
     normalize: normalize,
     buildEnding: buildEnding,
     isFullEnding: isFullEnding,
+    achievementIds: achievementIds,
+    collectRunAchievements: collectRunAchievements,
     chapterById: chapterById,
     codexById: codexById,
     locate: locate,
@@ -1508,6 +1649,9 @@
     canAddMultiOption: canAddMultiOption,
     usePackItems: usePackItems,
     conditionLabel: conditionLabel,
+    playerStatusLabel: playerStatusLabel,
+    companionStatusLabel: companionStatusLabel,
+    takeStatusEvents: takeStatusEvents,
     doorCanCarry: doorCanCarry,
     doorCarried: doorCarried,
     settleGrass: settleGrass,
@@ -2590,7 +2734,6 @@
   var TIMEOUT_SETTLE_MS = 300;
   var AUTO_DELAY_MS = 1200;
   var SKIP_DELAY_MS = 120;
-  var TITLE_CARD_MS = 1200;
 
   // 章首卡直接用照片做 CSS 背景，不再依赖画布；键是 story 里的 bg 场景名。
   var TITLE_CARD_BG = {
@@ -2622,6 +2765,9 @@
   };
 
   var TOAST_MS = 2500;
+  // 状态弹窗比普通 toast 多留一会儿；用户要求单条至少 6 秒，多行再按行数延长。
+  var STATUS_NOTICE_MS = 6000;
+  var STATUS_NOTICE_LINE_MS = 700;
   var STATION_WIDTH = 132;
   var STATION_HEIGHT = 64;
 
@@ -2651,9 +2797,14 @@
     "ending-names",
     "ending-stats",
     "ending-cards",
+    "ending-achievements",
+    "ending-achievements-title",
+    "ending-achievements-count",
+    "ending-achievement-chips",
     "ending-disclaimer",
     "ending-home",
     "ending-codex",
+    "ending-branch",
     "pause",
     "pause-menu",
     "toast",
@@ -2693,6 +2844,8 @@
     "vn-title-chapter",
     "vn-title-sub",
     "vn-title-place",
+    "status-notice",
+    "status-notice-list",
     "vn-measure",
     "vn-settings",
     "set-speed",
@@ -2728,6 +2881,32 @@
     "roster-gallery-close",
     "roster-gallery-count",
     "roster-gallery-pages",
+    "branch-map",
+    "branch-title",
+    "branch-count",
+    "branch-chapters",
+    "branch-live",
+    "branch-endings-door",
+    "branch-endings-nodoor",
+    "branch-endings-bad",
+    "branch-close",
+    "branch-detail",
+    "branch-detail-close",
+    "branch-detail-kicker",
+    "branch-detail-title",
+    "branch-detail-sub",
+    "branch-detail-body",
+    "achievement-panel",
+    "achievement-title",
+    "achievement-count",
+    "achievement-tabs",
+    "achievement-grid",
+    "achievement-close",
+    "achievement-detail",
+    "achievement-detail-close",
+    "achievement-detail-kicker",
+    "achievement-detail-title",
+    "achievement-detail-body",
     "pack-panel",
     "pack-warning",
     "pack-title",
@@ -2738,7 +2917,10 @@
     "pack-continue",
     "door-modal",
     "door-title",
-    "door-discard"
+    "door-discard",
+    "danger-modal",
+    "danger-accept",
+    "danger-refuse"
   ];
 
   var state = null;
@@ -2748,11 +2930,15 @@
   var debugEnabled = false;
   var debugExtra = "";
   var toastTimer = 0;
+  var statusNoticeTimer = 0;
+  var statusNoticeOpen = false;
+  var statusQueue = [];
   var stationsBuilt = false;
   var lastFocused = null;
   var artWarned = false;
   var packState = { open: false, mode: "browse", onClose: null, previousFocus: null };
   var doorState = { open: false, previousFocus: null };
+  var dangerState = { open: false, previousFocus: null };
   var artResizeFrame = 0;
   var artResizeScale = 1;
   var inputLockUntil = 0;
@@ -2796,6 +2982,25 @@
   var codexState = { open: false, id: null, unlock: false, onClose: null, previousFocus: null };
   var galleryState = { open: false, previousFocus: null };
   var rosterGalleryState = { open: false, previousFocus: null };
+  // 剧情分支只读收纳：与主档/名册分开；内存副本保证隐私模式也能看完当前一局。
+  var BRANCH_KEY = "xiangbei.branches.v1";
+  var BRANCH_MAX_RUNS = 20;
+  var branchState = {
+    open: false,
+    source: "title",
+    store: null,
+    run: null,
+    currentRoute: null,
+    detailKind: null,
+    detailId: null,
+    detailPreviousFocus: null,
+    previousFocus: null
+  };
+  var branchMemory = null;
+  var branchStorageOk = true;
+  var branchStorageWarned = false;
+  var branchLastRun = null;
+  var branchRecordedEnding = null;
 
   // 点名/记名交互：只活在本次页面；点名结果在结束时落进 ending 快照。
   var interactRun = {
@@ -3227,6 +3432,7 @@
       cancelTyping();
       cancelChoiceTimer();
       stopInteract();
+      clearStatusNotice();
       if (packState.open) closePackPanel(true);
       if (doorState.open) {
         doorState.open = false;
@@ -3315,6 +3521,36 @@
     els.vnToolbar.hidden = true;
   }
 
+  // 泸定开场统一把人打到“勉强”。只做一次；旧档若已经过了 l019，不回头改人物状态。
+  var LUDING_STATUS_REASON = "连续行军，没吃上一顿热饭";
+  function applyLudingEntryStatus() {
+    if (!state || state.chapterId !== "luding" || state.flags["memory.luding_status"] === true) return;
+    var here = XB.core.locate("luding", state.nodeId);
+    var firstCrisis = XB.core.locate("luding", "l019");
+    if (!here || !firstCrisis) return;
+    if (here.index >= firstCrisis.index) {
+      XB.core.setFlag(state, "memory.luding_status", true);
+      saveNow();
+      return;
+    }
+    ["feimao", "zaowang", "dongsheng"].forEach(function (id) {
+      if (state.flags["fate." + id + ".dead"] === true) return;
+      XB.core.setFlag(state, "quality." + id, 2, LUDING_STATUS_REASON);
+    });
+    XB.core.setFlag(state, "memory.luding_status", true);
+    saveNow();
+  }
+
+  // 节点级状态：choice 在选项出现前写，line 在本句显示前写。
+  // statusOnce 给“剧情事件只发生一次”的行用；刷新到同一节点不再重复加状态。
+  function applyNodeStatus(node) {
+    if (!node.status) return;
+    if (node.statusOnce && state.flags[node.statusOnce] === true) return;
+    XB.core.applySet(state, node.status, node.id + ":status", node.statusReason || "他撑不住了");
+    if (node.statusOnce) XB.core.setFlag(state, node.statusOnce, true);
+    saveNow();
+  }
+
   function renderVn(node) {
     var found = locate(state.chapterId, state.nodeId);
     if (!found) {
@@ -3327,6 +3563,8 @@
       // 理论上不会发生：advance/startChapter 只落在可见节点上。
       console.error("[XB] 落到了不可见节点：" + found.node.id);
     }
+    applyLudingEntryStatus();
+    applyNodeStatus(found.node);
     els.vnChapter.textContent = found.chapter.title;
     var bg = backgroundAt(found.chapter, found.index);
     if (bg) {
@@ -3378,6 +3616,8 @@
     }
     updateHud();
     updateDebug();
+    drainStatusEvents();
+    flushStatusNotice();
   }
 
   /* ---------------- 打字机与分页 ---------------- */
@@ -3519,6 +3759,7 @@
   function advanceInput() {
     if (!state || state.scene !== "vn" || state.paused) return;
     if (titleCardState.open || codexState.open) return;
+    if (dangerState.open || packState.open || doorState.open) return;
     if (performance.now() < inputLockUntil) return;
     var node = currentNode(state);
     if (!node || node.type !== "line") return;
@@ -3556,12 +3797,19 @@
     els.vnChoices.textContent = "";
     els.vnChoices.style.setProperty("--choice-progress", "1");
 
-    XB.core.visibleOptions(state, node).forEach(function (option) {
+    // 缺物资的条件选项也留在原位，置灰禁用；玩家能看到“本来可以怎么做”。
+    (node.options || []).forEach(function (option) {
+      var available = XB.core.optionVisible(state, option);
       var button = document.createElement("button");
       button.type = "button";
       button.className = "xb-choice";
       button.dataset.action = "choose";
       button.dataset.key = option.key;
+      if (!available) {
+        button.disabled = true;
+        button.classList.add("is-unavailable");
+        button.setAttribute("aria-disabled", "true");
+      }
 
       var index = document.createElement("span");
       index.className = "xb-choice__index";
@@ -3569,15 +3817,19 @@
       var label = document.createElement("span");
       label.className = "xb-choice__label";
       label.textContent = option.text;
-      var cost = document.createElement("span");
-      cost.className = "xb-choice__cost";
-      cost.textContent = "代价 · " + option.cost;
       var timer = document.createElement("span");
       timer.className = "xb-choice__timer";
       var fill = document.createElement("i");
       timer.append(fill);
 
-      button.append(index, label, cost, timer);
+      if (option.cost && !node.hideCost) {
+        var cost = document.createElement("span");
+        cost.className = "xb-choice__cost";
+        cost.textContent = "代价 · " + option.cost;
+        button.append(index, label, cost, timer);
+      } else {
+        button.append(index, label, timer);
+      }
       els.vnChoices.append(button);
     });
 
@@ -3636,10 +3888,15 @@
       toast("选项数据异常，已按默认项继续");
       return;
     }
+    recordChoiceAchievement(node, key, timedOut);
     XB.audio.cue(timedOut ? "choice-timeout" : "choice-select");
     markChoice(node, key, timedOut);
     saveNow();
-    if (timedOut) toast("超时：已按默认选项结算 —— " + option.text + "（" + option.cost + "）");
+    if (timedOut) {
+      var timeoutText = "超时：已按默认选项结算 —— " + option.text;
+      if (option.cost && !node.hideCost) timeoutText += "（" + option.cost + "）";
+      toast(timeoutText);
+    }
     debugExtra = "choice=" + key + (timedOut ? " 超时" : "");
     updateDebug();
 
@@ -3812,6 +4069,7 @@
     }
     multiRun.locked = true;
     updateMultiChoice();
+    recordMultiAchievements(node, result.selected);
     XB.audio.cue("choice-select");
     saveNow();
     debugExtra = "multi=" + result.selected.join(",");
@@ -4039,14 +4297,14 @@
     var numberLabel = state.ending.routeLabel || "";
     var routeName = state.ending.routeTitle || "";
     var routeHeading = "";
-    if (numberLabel === "坏结局" || numberLabel === "旧档") {
+    if (numberLabel === "旧档") {
       routeHeading = routeName && routeName !== numberLabel ? numberLabel + " · " + routeName : numberLabel;
     } else if (numberLabel) {
-      routeHeading = "结局" + numberLabel + (routeName ? "（" + routeName + "）" : "");
+      routeHeading = "结局" + numberLabel + "/11" + (routeName ? "（" + routeName + "）" : "");
     } else {
       routeHeading = routeName;
     }
-    var showRouteLede = numberLabel !== "坏结局" && numberLabel !== "旧档";
+    var showRouteLede = numberLabel !== "旧档";
     els.endingRoute.textContent = routeHeading
       ? routeHeading + (showRouteLede && state.ending.routeLede ? " · " + state.ending.routeLede : "")
       : "";
@@ -4077,6 +4335,8 @@
     els.endingStats.textContent =
       "全连：出发 " + statsData.companyStart + " 人，到吴起 " + statsData.companyEnd + " 人（虚构连队，非史料统计）\n" +
       "中央红军：出发 " + statsData.redStart.toLocaleString("en-US") + " 余人，到陕北 " + statsData.redEnd.toLocaleString("en-US") + " 余人（史实）";
+
+    renderEndingAchievements();
 
     var byId = {};
     state.ending.cards.forEach(function (card) {
@@ -4280,16 +4540,20 @@
     });
     if (!entry) return;
     interactRun.finished = true;
+    setFlag(state, "memory.namepick_done", true);
     if (nameId === "zhang") setFlag(state, "memory.zhang", true);
+    recordAchievement("j018-done", false);
     lastInteractResult = { count: 1, name: entry.name, id: entry.id };
     announceInteract("记下 " + entry.name);
     stopInteract();
     advanceVn();
   }
 
-  function skipNamepick() {
+  function skipNamepick(timedOut) {
     if (!interactRun.active || interactRun.mode !== "namepick" || interactRun.finished) return;
     interactRun.finished = true;
+    setFlag(state, "memory.namepick_done", true);
+    recordAchievement("j018-skip", timedOut === true);
     lastInteractResult = { count: 0, name: "", id: "" };
     announceInteract("一个没抄");
     stopInteract();
@@ -4340,7 +4604,7 @@
         els.interactStatus.textContent = "还有 " + Math.max(0, left) + " 秒";
       }
       if (interactRun.remaining <= 0) {
-        skipNamepick();
+        skipNamepick(true);
         return;
       }
     }
@@ -4359,9 +4623,13 @@
     var nextId = node.next || null;
 
     if (nextId === "ending") {
+      state.ending = buildEnding(state);
+      // 结算兜底：即时解锁写失败或旧档缺记录时，按本局 choices/记名补写。
+      recordRunAchievements(state.ending);
+      // 分支收纳需要这一局的选择日志；必须在主档清空 choices 之前抄一份。
+      recordBranchRun(state.ending);
       // 结局只读快照已含全部决定；选择日志不再参与任何界面，清空以免整档超过 4096B。
       state.choices = [];
-      state.ending = buildEnding(state);
       state.scene = "ending";
       state.nodeId = null;
       saveExists = true;
@@ -4433,8 +4701,7 @@
     cancelAuto();
     cancelTyping();
     vnRun.typing = false;
-    clearTimeout(titleCardState.timer);
-    titleCardState.timer = window.setTimeout(closeTitleCard, TITLE_CARD_MS);
+    titleCardState.timer = 0; // 不自动关：章首卡等玩家点一下 / 按回车再走
   }
 
   function closeTitleCard() {
@@ -4452,6 +4719,8 @@
     var callback = titleCardState.onClose;
     titleCardState.onClose = null;
     if (callback) callback();
+    drainStatusEvents();
+    flushStatusNotice();
   }
 
   function badgeClassFor(text) {
@@ -4680,6 +4949,1349 @@
     if (previous && previous.focus && previous !== document.body) previous.focus();
   }
 
+  /* ---------------- 剧情分支收纳（只读，v1.5） ---------------- */
+
+  var BRANCH_ROUTE_GROUPS = {
+    door: ["door_excellent", "door_grass_one", "door_carry_two", "door_grass_many", "door_others"],
+    nodoor: ["no_door_zero", "no_door_one", "no_door_two", "no_door_three", "no_door_three_excellent"],
+    bad: ["bad_end"]
+  };
+
+  function branchMapData() {
+    return (XB.story && XB.story.branchMap) || null;
+  }
+
+  function branchChapterIds() {
+    var map = branchMapData();
+    var authored = map && map.chapters ? map.chapters : {};
+    return ((XB.story && XB.story.chapters) || []).map(function (chapter) {
+      return chapter.id;
+    }).filter(function (id) {
+      return !!authored[id];
+    });
+  }
+
+  function emptyBranchStore() {
+    return { version: 1, updatedAt: 0, runs: [], endings: {}, chapters: {}, options: {} };
+  }
+
+  function branchMeta(meta, withCount) {
+    if (!isPlainObject(meta)) return null;
+    var clean = {
+      at: isFiniteNumber(meta.at) ? Math.round(meta.at) : 0,
+      runId: typeof meta.runId === "string" ? meta.runId : ""
+    };
+    if (withCount) clean.count = isFiniteNumber(meta.count) ? Math.max(1, Math.round(meta.count)) : 1;
+    return clean;
+  }
+
+  function branchChoiceRecord(choice) {
+    if (!isPlainObject(choice)) return null;
+    if (typeof choice.nodeId !== "string" || !choice.nodeId) return null;
+    var clean = {
+      chapter: typeof choice.chapter === "string" ? choice.chapter : "",
+      nodeId: choice.nodeId,
+      option: typeof choice.option === "string" ? choice.option : "",
+      text: typeof choice.text === "string" ? choice.text : "",
+      timedOut: choice.timedOut === true
+    };
+    return clean;
+  }
+
+  function branchSummary(raw) {
+    var value = isPlainObject(raw) ? raw : {};
+    return {
+      hadDoor: value.hadDoor === true,
+      doorOutcome: DOOR_OUTCOMES.indexOf(value.doorOutcome) !== -1 ? value.doorOutcome : "none",
+      rescues: isFiniteNumber(value.rescues) ? Math.max(0, Math.min(3, Math.round(value.rescues))) : 0,
+      condition: isFiniteNumber(value.condition) ? Math.max(0, Math.min(4, Math.round(value.condition))) : 3,
+      playerDead: value.playerDead === true,
+      linDead: value.linDead === true,
+      answered: isFiniteNumber(value.answered) ? Math.max(0, Math.round(value.answered)) : 0,
+      missed: isFiniteNumber(value.missed) ? Math.max(0, Math.round(value.missed)) : 0,
+      names: isFiniteNumber(value.names) ? Math.max(0, Math.round(value.names)) : 0,
+      companyEnd: isFiniteNumber(value.companyEnd) ? Math.max(0, Math.round(value.companyEnd)) : 19
+    };
+  }
+
+  function normalizeBranchRun(raw) {
+    if (!isPlainObject(raw)) return null;
+    if (typeof raw.route !== "string" || ROUTE_IDS.indexOf(raw.route) === -1 || raw.route === "legacy") return null;
+    var def = ROUTE_DEFS[raw.route] || {};
+    var chapters = Array.isArray(raw.chapters) ? raw.chapters.filter(function (id) {
+      return branchChapterIds().indexOf(id) !== -1;
+    }) : [];
+    var choices = Array.isArray(raw.choices) ? raw.choices.map(branchChoiceRecord).filter(Boolean).slice(-64) : [];
+    var events = isPlainObject(raw.events) ? raw.events : {};
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : "r-" + (isFiniteNumber(raw.at) ? raw.at : 0),
+      at: isFiniteNumber(raw.at) ? Math.round(raw.at) : 0,
+      route: raw.route,
+      routeIndex: isFiniteNumber(raw.routeIndex) ? Math.round(raw.routeIndex) : (def.index || 0),
+      routeTitle: typeof raw.routeTitle === "string" ? raw.routeTitle : (def.title || ""),
+      routeLede: typeof raw.routeLede === "string" ? raw.routeLede : (def.lede || ""),
+      chapters: chapters,
+      choices: choices,
+      summary: branchSummary(raw.summary),
+      events: { zhang: events.zhang === true, rollcall: events.rollcall === true }
+    };
+  }
+
+  function normalizeBranchStore(raw) {
+    if (!isPlainObject(raw) || raw.version !== 1) return null;
+    var store = emptyBranchStore();
+    store.updatedAt = isFiniteNumber(raw.updatedAt) ? Math.round(raw.updatedAt) : 0;
+    if (Array.isArray(raw.runs)) {
+      store.runs = raw.runs.map(normalizeBranchRun).filter(Boolean).slice(-BRANCH_MAX_RUNS);
+    }
+    if (isPlainObject(raw.endings)) {
+      Object.keys(raw.endings).forEach(function (route) {
+        if (ROUTE_IDS.indexOf(route) === -1 || route === "legacy") return;
+        var meta = branchMeta(raw.endings[route], true);
+        if (meta) store.endings[route] = meta;
+      });
+    }
+    if (isPlainObject(raw.chapters)) {
+      Object.keys(raw.chapters).forEach(function (chapterId) {
+        if (branchChapterIds().indexOf(chapterId) === -1) return;
+        var meta = branchMeta(raw.chapters[chapterId], false);
+        if (meta) store.chapters[chapterId] = meta;
+      });
+    }
+    if (isPlainObject(raw.options)) {
+      Object.keys(raw.options).forEach(function (nodeId) {
+        if (nodeId === "__proto__" || nodeId === "constructor" || nodeId === "prototype") return;
+        if (branchDecisionForNode(nodeId) === null) return;
+        var bag = raw.options[nodeId];
+        if (!isPlainObject(bag)) return;
+        var cleanBag = {};
+        Object.keys(bag).forEach(function (key) {
+          if (key === "__proto__" || key === "constructor" || key === "prototype") return;
+          var meta = branchMeta(bag[key], false);
+          if (meta) cleanBag[key] = meta;
+        });
+        if (Object.keys(cleanBag).length) store.options[nodeId] = cleanBag;
+      });
+    }
+    return store;
+  }
+
+  function backupBranchStore(raw) {
+    try {
+      window.localStorage.setItem(BRANCH_KEY + ".bad", raw);
+      window.localStorage.removeItem(BRANCH_KEY);
+    } catch (err) {
+      console.error("[XB] 备份剧情分支失败：" + err.message);
+    }
+  }
+
+  function readBranchStore() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(BRANCH_KEY);
+    } catch (err) {
+      console.error("[XB] 读取剧情分支失败：" + err.message);
+      branchStorageOk = false;
+      return { data: branchMemory || emptyBranchStore(), ok: false };
+    }
+    if (raw === null) return { data: branchMemory || emptyBranchStore(), ok: true };
+    var parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.warn("[XB] 剧情分支不是合法 JSON：" + err.message);
+      backupBranchStore(raw);
+      return { data: emptyBranchStore(), ok: false };
+    }
+    var store = normalizeBranchStore(parsed);
+    if (!store) {
+      console.warn("[XB] 剧情分支版本或结构不符");
+      backupBranchStore(raw);
+      return { data: emptyBranchStore(), ok: false };
+    }
+    branchMemory = store;
+    return { data: store, ok: true };
+  }
+
+  function writeBranchStore(store) {
+    store.updatedAt = Date.now();
+    branchMemory = store;
+    try {
+      window.localStorage.setItem(BRANCH_KEY, JSON.stringify(store));
+      branchStorageOk = true;
+      return true;
+    } catch (err) {
+      console.warn("[XB] 写入剧情分支失败：" + err.message);
+      branchStorageOk = false;
+      if (!branchStorageWarned) {
+        branchStorageWarned = true;
+        toast("本机无法保存剧情分支，本次回看只在本次有效");
+      }
+      return false;
+    }
+  }
+
+  function branchStatementNode(nodeId) {
+    var chapters = (XB.story && XB.story.chapters) || [];
+    for (var i = 0; i < chapters.length; i += 1) {
+      var nodes = chapters[i].nodes || [];
+      for (var j = 0; j < nodes.length; j += 1) {
+        if (nodes[j].id === nodeId) return { chapter: chapters[i], node: nodes[j] };
+      }
+    }
+    return null;
+  }
+
+  function branchDecisionForNode(nodeId) {
+    var map = branchMapData();
+    if (!map) return null;
+    var ids = Object.keys(map.decisions || {});
+    for (var i = 0; i < ids.length; i += 1) {
+      var decision = map.decisions[ids[i]];
+      if (decision.nodes && decision.nodes.indexOf(nodeId) !== -1) return ids[i];
+    }
+    return null;
+  }
+
+  function branchDecisionChapter(decisionId) {
+    var map = branchMapData();
+    if (!map) return null;
+    var ids = Object.keys(map.chapters || {});
+    for (var i = 0; i < ids.length; i += 1) {
+      var chapter = map.chapters[ids[i]];
+      if (chapter.decisions && chapter.decisions.indexOf(decisionId) !== -1) return ids[i];
+    }
+    return null;
+  }
+
+  function branchDecisionPassed(decision, run, chapterId) {
+    if (!run || !decision || run.chapters.indexOf(chapterId) === -1) return false;
+    if (!run.live) return true;
+    var current = chapterById(state.chapterId);
+    var target = chapterById(chapterId);
+    if (!current || !target || !state.nodeId) return false;
+    if (current.order !== target.order) return current.order > target.order;
+    var here = XB.core.locate(chapterId, state.nodeId);
+    if (!here) return false;
+    var targetIndex = null;
+    decision.nodes.forEach(function (nodeId) {
+      var found = XB.core.locate(chapterId, nodeId);
+      if (found && (targetIndex === null || found.index < targetIndex)) targetIndex = found.index;
+    });
+    return targetIndex !== null && here.index > targetIndex;
+  }
+
+  function branchDecisionCurrent(decision, run, chapterId) {
+    if (!run || !run.live || !decision || !state.nodeId || state.chapterId !== chapterId) return false;
+    var here = XB.core.locate(chapterId, state.nodeId);
+    if (!here) return false;
+    var targetIndex = null;
+    decision.nodes.forEach(function (nodeId) {
+      var found = XB.core.locate(chapterId, nodeId);
+      if (found && (targetIndex === null || found.index < targetIndex)) targetIndex = found.index;
+    });
+    return targetIndex !== null && here.index === targetIndex;
+  }
+
+  function branchChoiceFor(run, decision) {
+    if (!run || !decision || !Array.isArray(run.choices)) return null;
+    for (var i = run.choices.length - 1; i >= 0; i -= 1) {
+      if (decision.nodes.indexOf(run.choices[i].nodeId) !== -1) return run.choices[i];
+    }
+    return null;
+  }
+
+  function branchEventDone(decisionId, run) {
+    if (!run || !run.events) return false;
+    if (decisionId === "j018") return run.events.zhang === true;
+    if (decisionId === "w026") return run.events.rollcall === true;
+    return false;
+  }
+
+  function branchRunForChapter(chapterId) {
+    if (!branchState.run) {
+      if (branchState.source === "title") {
+        var store = branchState.store || emptyBranchStore();
+        for (var i = store.runs.length - 1; i >= 0; i -= 1) {
+          if (store.runs[i].chapters.indexOf(chapterId) !== -1) return store.runs[i];
+        }
+      }
+      return null;
+    }
+    if (branchState.run.chapters.indexOf(chapterId) !== -1) return branchState.run;
+    return null;
+  }
+
+  function branchChapterUnlocked(chapterId) {
+    if (branchState.source !== "title") {
+      return !!(branchState.run && branchState.run.chapters.indexOf(chapterId) !== -1);
+    }
+    var store = branchState.store || emptyBranchStore();
+    return !!store.chapters[chapterId];
+  }
+
+  function branchLatestRunForRoute(store, route) {
+    var meta = store.endings[route];
+    if (meta && meta.runId) {
+      for (var i = store.runs.length - 1; i >= 0; i -= 1) {
+        if (store.runs[i].id === meta.runId) return store.runs[i];
+      }
+    }
+    for (var j = store.runs.length - 1; j >= 0; j -= 1) {
+      if (store.runs[j].route === route) return store.runs[j];
+    }
+    return null;
+  }
+
+  function branchDoorLabel(summary) {
+    var s = branchSummary(summary);
+    if (!s.hadDoor) return "空手";
+    if (s.doorOutcome === "wuqi") return "门板留在吴起";
+    if (s.doorOutcome === "bridge") return "门板留在桥上";
+    if (s.doorOutcome === "grass") return "门板留在草地";
+    if (s.doorOutcome === "carried") return "门板带回于都";
+    if (s.doorOutcome === "others") return "门板由别人带出";
+    return "门板没带到终点";
+  }
+
+  function branchRunSummaryFromState() {
+    var flags = (state && state.flags) || {};
+    var ending = (state && state.ending) || null;
+    return {
+      hadDoor: flags["had.door"] === true,
+      doorOutcome: flags.doorOutcome || "none",
+      rescues: isFiniteNumber(flags.rescues) ? flags.rescues : 0,
+      condition: isFiniteNumber(flags.condition) ? flags.condition : 3,
+      playerDead: flags["fate.player.dead"] === true,
+      linDead: flags["fate.lin.dead"] === true,
+      answered: ending ? ending.answered : 0,
+      missed: ending ? ending.missed : 0,
+      names: ending && Array.isArray(ending.names) ? ending.names.length : 0,
+      companyEnd: ending && ending.stats ? ending.stats.companyEnd : 19
+    };
+  }
+
+  function buildLiveBranchRun() {
+    if (!state || !state.chapterId) return null;
+    var chapters = (state.unlockedChapters || []).filter(function (id) {
+      return branchChapterIds().indexOf(id) !== -1;
+    });
+    if (chapters.indexOf(state.chapterId) === -1 && branchChapterIds().indexOf(state.chapterId) !== -1) {
+      chapters.push(state.chapterId);
+    }
+    var route = routeOf(state.flags);
+    var def = ROUTE_DEFS[route] || {};
+    return {
+      id: "live",
+      live: true,
+      at: Date.now(),
+      route: route,
+      routeIndex: def.index || 0,
+      routeTitle: def.title || "",
+      routeLede: def.lede || "",
+      chapters: chapters,
+      choices: (state.choices || []).map(function (choice) {
+        return branchChoiceRecord(choice);
+      }).filter(Boolean),
+      summary: branchRunSummaryFromState(),
+      events: {
+        zhang: state.flags["memory.zhang"] === true,
+        rollcall: !!(state.ending && state.ending.names && state.ending.names.length)
+      }
+    };
+  }
+
+  function branchFallbackRunFromEnding(ending) {
+    if (!ending) return null;
+    var def = ROUTE_DEFS[ending.route] || {};
+    return {
+      id: "ending-fallback",
+      live: false,
+      at: Date.now(),
+      route: ending.route,
+      routeIndex: ending.routeIndex || def.index || 0,
+      routeTitle: ending.routeTitle || def.title || "",
+      routeLede: ending.routeLede || def.lede || "",
+      chapters: (state.unlockedChapters || []).filter(function (id) {
+        return branchChapterIds().indexOf(id) !== -1;
+      }),
+      choices: [],
+      summary: branchRunSummaryFromState(),
+      events: {
+        zhang: state.flags["memory.zhang"] === true,
+        rollcall: !!(ending.names && ending.names.length)
+      }
+    };
+  }
+
+  function branchCurrentRun(store) {
+    if (branchState.source === "pause") return buildLiveBranchRun();
+    if (branchState.source !== "ending") return null;
+    if (branchLastRun && (!state.ending || branchLastRun.route === state.ending.route)) return branchLastRun;
+    if (state.ending) {
+      var found = branchLatestRunForRoute(store, state.ending.route);
+      if (found) return found;
+      return branchFallbackRunFromEnding(state.ending);
+    }
+    return null;
+  }
+
+  function branchMultiKeys(choice, decision, chapterId) {
+    var found = branchStatementNode(choice.nodeId) || XB.core.locate(chapterId, choice.nodeId);
+    var node = found && found.node ? found.node : null;
+    var labels = String(choice.text || "").split("、");
+    var keys = [];
+    if (!node) return keys;
+    (node.options || []).forEach(function (option) {
+      var id = option.id || option.key;
+      if (id && labels.indexOf(option.text) !== -1) keys.push(id);
+    });
+    return keys;
+  }
+
+  function branchSemanticKey(decision, nodeId, key) {
+    var map = decision.optionKeys && decision.optionKeys[nodeId];
+    if (map && map[key]) return map[key];
+    return key;
+  }
+
+  function branchChoiceView(decision, choice, chapterId) {
+    var found = branchStatementNode(choice.nodeId);
+    var node = found ? found.node : null;
+    var label = choice.text || "";
+    if (node && choice.option !== "MULTI") {
+      (node.options || []).forEach(function (option) {
+        if ((option.key || option.id) === choice.option) label = option.text;
+      });
+    }
+    var lines = [];
+    if (choice.option === "MULTI") {
+      var keys = branchMultiKeys(choice, decision, chapterId);
+      keys.forEach(function (key) {
+        if (decision.options && decision.options[key]) lines.push(decision.options[key]);
+      });
+      if (!lines.length && choice.text) lines.push("你带走了" + choice.text + "。");
+    } else {
+      var semantic = branchSemanticKey(decision, choice.nodeId, choice.option);
+      if (decision.options && decision.options[semantic]) lines.push(decision.options[semantic]);
+    }
+    return { label: label, lines: lines, multi: choice.option === "MULTI" };
+  }
+
+  function branchFormatChoice(decision, choice, chapterId) {
+    var view = branchChoiceView(decision, choice, chapterId);
+    var prefix = choice.timedOut
+      ? "时间到了，默认项「" + view.label + "」替你做了决定，因此——"
+      : "在这个「" + decision.title + "」的选择中，你选择了「" + view.label + "」，因此——";
+    return { prefix: prefix, lines: view.lines, multi: view.multi };
+  }
+
+  function recordBranchRun(ending) {
+    if (!ending || ROUTE_IDS.indexOf(ending.route) === -1 || ending.route === "legacy") return null;
+    if (branchRecordedEnding === ending) return branchLastRun;
+    var store = readBranchStore().data;
+    var now = Date.now();
+    var chapters = (state.unlockedChapters || []).filter(function (id) {
+      return branchChapterIds().indexOf(id) !== -1;
+    });
+    if (state.chapterId && branchChapterIds().indexOf(state.chapterId) !== -1 && chapters.indexOf(state.chapterId) === -1) {
+      chapters.push(state.chapterId);
+    }
+    var run = {
+      id: "r-" + now.toString(36) + "-" + Math.floor(Math.random() * 1296).toString(36),
+      at: now,
+      route: ending.route,
+      routeIndex: ending.routeIndex,
+      routeTitle: ending.routeTitle,
+      routeLede: ending.routeLede,
+      chapters: chapters,
+      choices: (state.choices || []).map(branchChoiceRecord).filter(Boolean),
+      summary: branchRunSummaryFromState(),
+      events: {
+        zhang: state.flags["memory.zhang"] === true,
+        rollcall: !!(ending.names && ending.names.length)
+      }
+    };
+    store.runs.push(run);
+    if (store.runs.length > BRANCH_MAX_RUNS) store.runs = store.runs.slice(-BRANCH_MAX_RUNS);
+    var meta = store.endings[ending.route] || { at: now, runId: run.id, count: 0 };
+    meta.at = now;
+    meta.runId = run.id;
+    meta.count = (meta.count || 0) + 1;
+    store.endings[ending.route] = meta;
+    chapters.forEach(function (chapterId) {
+      if (!store.chapters[chapterId]) store.chapters[chapterId] = { at: now, runId: run.id };
+    });
+    run.choices.forEach(function (choice) {
+      var decisionId = branchDecisionForNode(choice.nodeId);
+      if (!decisionId) return;
+      var keys = [];
+      if (choice.option === "MULTI") keys = branchMultiKeys(choice, branchMapData().decisions[decisionId], choice.chapter);
+      else keys = [choice.option];
+      if (!store.options[choice.nodeId]) store.options[choice.nodeId] = {};
+      keys.forEach(function (key) {
+        if (!key) return;
+        store.options[choice.nodeId][key] = { at: now, runId: run.id };
+      });
+    });
+    writeBranchStore(store);
+    branchLastRun = run;
+    branchRecordedEnding = ending;
+    return run;
+  }
+
+  function branchElement(tag, className, text) {
+    var element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  }
+
+  function branchChapterStatus(chapterId) {
+    var currentChapter = branchState.source === "pause" && state ? state.chapterId : "";
+    var inRun = !!(branchState.run && branchState.run.chapters.indexOf(chapterId) !== -1);
+    var current = currentChapter === chapterId;
+    if (branchState.source === "title") {
+      var store = branchState.store || emptyBranchStore();
+      return { unlocked: !!store.chapters[chapterId], current: false, thisRun: false };
+    }
+    return { unlocked: inRun, current: current, thisRun: inRun };
+  }
+
+  function renderBranchMap() {
+    var store = readBranchStore().data;
+    branchState.store = store;
+    branchState.run = branchCurrentRun(store);
+    branchState.currentRoute = branchState.source === "ending" && state.ending ? state.ending.route : null;
+
+    var unlockedEndings = Object.keys(store.endings).filter(function (route) {
+      return ROUTE_IDS.indexOf(route) !== -1 && route !== "legacy";
+    }).length;
+    els.branchCount.textContent = "已抵达 " + unlockedEndings + " / 11 个结局";
+
+    els.branchChapters.textContent = "";
+    branchChapterIds().forEach(function (chapterId, index) {
+      var chapter = chapterById(chapterId);
+      if (!chapter) return;
+      var map = branchMapData();
+      var meta = map && map.chapters ? map.chapters[chapter.id] : null;
+      var status = branchChapterStatus(chapter.id);
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "xb-branch-chapter" +
+        (status.unlocked ? "" : " is-locked") +
+        (status.current ? " is-current" : "") +
+        (status.thisRun && !status.current ? " is-this-run" : "");
+      card.dataset.action = "branch-chapter";
+      card.dataset.chapter = chapter.id;
+      card.setAttribute("aria-label", chapter.title + (status.current ? "，本次所在" : status.unlocked ? "，已走过" : "，尚未走到") + "，点开看本章抉择");
+      if (meta && meta.image) {
+        var image = document.createElement("img");
+        image.src = meta.image;
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        card.append(image);
+      }
+      card.append(branchElement("span", "xb-branch-chapter__index", ("0" + (index + 1)).slice(-2)));
+      card.append(branchElement("span", "xb-branch-chapter__title", chapter.short || chapter.title));
+      card.append(branchElement("span", "xb-branch-chapter__state",
+        status.current ? "本次" : status.unlocked ? "走过" : "未"));
+      els.branchChapters.append(card);
+    });
+
+    renderBranchLive(unlockedEndings);
+    renderBranchEndings(store);
+  }
+
+  function renderBranchLive(unlockedEndings) {
+    if (branchState.source === "title") {
+      var store = branchState.store || emptyBranchStore();
+      var chapters = Object.keys(store.chapters).filter(function (id) {
+        return branchChapterIds().indexOf(id) !== -1;
+      }).length;
+      els.branchLive.textContent = chapters
+        ? "已走过 " + chapters + " 段 · 已抵达 " + unlockedEndings + " / 11 个结局。清档不会清掉这里。"
+        : "还没有走过一段。开始向北，第一处分岔在序章。";
+      return;
+    }
+    var run = branchState.run;
+    if (!run) {
+      els.branchLive.textContent = "这一局还没有留下记录。";
+      return;
+    }
+    var currentChapter = branchState.source === "pause" && state ? chapterById(state.chapterId) : null;
+    var summary = run.summary;
+    var line = currentChapter ? "现在走到：" + currentChapter.title + "。" : "这一局走到了终点。";
+    line += " " + branchDoorLabel(summary);
+    line += " · 已救 " + summary.rescues + " 人";
+    line += " · 状态 " + XB.core.playerStatusLabel(summary.condition);
+    line += currentChapter ? "。后面的路仍在雾里。" : "。";
+    els.branchLive.textContent = line;
+  }
+
+  function renderBranchEndings(store) {
+    [["door", els.branchEndingsDoor], ["nodoor", els.branchEndingsNodoor], ["bad", els.branchEndingsBad]].forEach(function (pair) {
+      var container = pair[1];
+      container.textContent = "";
+      BRANCH_ROUTE_GROUPS[pair[0]].forEach(function (route) {
+        var def = ROUTE_DEFS[route] || {};
+        var unlocked = !!store.endings[route];
+        var run = unlocked ? branchLatestRunForRoute(store, route) : null;
+        var title = unlocked ? (run && run.routeTitle ? run.routeTitle : def.title) : "尚未抵达";
+        var lede = unlocked ? (run && run.routeLede ? run.routeLede : def.lede) : "未解锁";
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "xb-branch-ending " +
+          (unlocked ? "is-unlocked" : "is-locked") +
+          (branchState.currentRoute === route ? " is-current" : "");
+        button.dataset.action = "branch-route";
+        button.dataset.route = route;
+        button.setAttribute("aria-label", unlocked
+          ? "结局 " + def.index + "，已抵达，" + title + "，点开查看"
+          : "结局 " + def.index + "，未解锁，点开查看提示");
+        button.append(branchElement("span", "xb-branch-ending__num", def.index + " / 11"));
+        button.append(branchElement("span", "xb-branch-ending__title", title));
+        button.append(branchElement("span", "xb-branch-ending__lede", lede));
+        container.append(button);
+      });
+    });
+  }
+
+  function openBranch(source) {
+    if (branchState.open) return;
+    var store = readBranchStore().data;
+    branchState.store = store;
+    branchState.open = true;
+    branchState.source = source || "title";
+    branchState.previousFocus = document.activeElement;
+    branchState.detailKind = null;
+    branchState.detailId = null;
+    branchState.currentRoute = source === "ending" && state.ending ? state.ending.route : null;
+    branchState.run = branchCurrentRun(store);
+    renderBranchMap();
+    XB.audio.cue("codex");
+    refreshAudioDuck();
+    els.branchMap.hidden = false;
+    els.branchClose.focus();
+  }
+
+  function closeBranch() {
+    if (!branchState.open) return;
+    closeBranchDetail();
+    branchState.open = false;
+    branchState.detailKind = null;
+    branchState.detailId = null;
+    els.branchMap.hidden = true;
+    refreshAudioDuck();
+    var previous = branchState.previousFocus;
+    branchState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  function openBranchDetail(kind, id, trigger) {
+    if (!branchState.open) return;
+    branchState.detailKind = kind;
+    branchState.detailId = id;
+    branchState.detailPreviousFocus = trigger || document.activeElement;
+    branchState.run = branchState.run || branchCurrentRun(branchState.store || emptyBranchStore());
+    renderBranchDetail();
+    els.branchDetail.hidden = false;
+    els.branchDetailClose.focus();
+  }
+
+  function closeBranchDetail() {
+    if (!branchState.detailKind) return;
+    branchState.detailKind = null;
+    branchState.detailId = null;
+    els.branchDetail.hidden = true;
+    var previous = branchState.detailPreviousFocus;
+    branchState.detailPreviousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  function renderBranchDetail() {
+    var kind = branchState.detailKind;
+    var id = branchState.detailId;
+    els.branchDetailBody.textContent = "";
+    els.branchDetailBody.scrollTop = 0;
+    if (kind === "chapter") renderBranchChapterDetail(id);
+    else if (kind === "route") renderBranchRouteDetail(id);
+  }
+
+  function renderBranchChapterDetail(chapterId) {
+    var chapter = chapterById(chapterId);
+    var map = branchMapData();
+    var meta = map && map.chapters ? map.chapters[chapterId] : null;
+    if (!chapter || !meta) return;
+    var decisions = meta.decisions || [];
+    els.branchDetailKicker.textContent = "剧情分支 · 章节";
+    els.branchDetailTitle.textContent = chapter.title;
+    els.branchDetailSub.textContent = meta.intro + " 本章 " + decisions.length + " 个抉择。";
+    var run = branchRunForChapter(chapterId);
+    var unlocked = branchChapterUnlocked(chapterId);
+    if (!unlocked) {
+      var note = branchElement("p", "xb-branch-node__empty", "这一章还在雾里。下面的节点尚未走到。");
+      els.branchDetailBody.append(note);
+    }
+    decisions.forEach(function (decisionId, index) {
+      var decision = map.decisions[decisionId];
+      if (!decision) return;
+      var choice = branchChoiceFor(run, decision);
+      var passed = branchDecisionPassed(decision, run, chapterId);
+      var current = branchDecisionCurrent(decision, run, chapterId);
+      var eventDone = decision.kind === "event" ? branchEventDone(decisionId, run) : false;
+      var status = choice || eventDone ? "done" : current ? "current" : passed ? "skipped" : "future";
+      var row = document.createElement("section");
+      row.className = "xb-branch-node " + (status === "done" ? "is-done" : status === "future" ? "is-locked" : "");
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "xb-branch-node__toggle";
+      toggle.dataset.action = "branch-node";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-controls", "branch-node-body-" + chapterId + "-" + decisionId);
+      toggle.append(branchElement("span", "xb-branch-node__index", ("0" + (index + 1)).slice(-2)));
+      toggle.append(branchElement("span", "xb-branch-node__title", decision.title));
+      var statusText = status === "done" ? (choice ? "已选择" : "已发生") : status === "current" ? "正在这里" : status === "skipped" ? "未发生" : "尚未走到";
+      toggle.append(branchElement("span", "xb-branch-node__status", statusText));
+      var body = branchElement("div", "xb-branch-node__body");
+      body.id = "branch-node-body-" + chapterId + "-" + decisionId;
+      body.hidden = true;
+      renderBranchDecisionBody(body, decisionId, decision, status, choice, chapterId, run);
+      row.append(toggle, body);
+      els.branchDetailBody.append(row);
+    });
+  }
+
+  function renderBranchDecisionBody(container, decisionId, decision, status, choice, chapterId, run) {
+    if (status === "future") {
+      container.append(branchElement("p", "xb-branch-node__empty", "尚未走到。"));
+      return;
+    }
+    if (decision.context) container.append(branchElement("p", "xb-branch-node__context", decision.context));
+    if (status === "current") {
+      container.append(branchElement("p", "xb-branch-node__empty", "你还在这里，没有做出选择。"));
+      return;
+    }
+    if (status === "skipped") {
+      var skip = decision.kind === "event" ? decision.skipText : (decision.skipText || "这一步没有发生。");
+      container.append(branchElement("p", "xb-branch-node__empty", skip || "这一步没有发生。"));
+      return;
+    }
+    if (decision.kind === "event") {
+      var done = decision.doneText || "这一步发生了。";
+      if (decisionId === "w026" && run && run.summary) {
+        done += " 应到 " + run.summary.answered + " 人，未应 " + run.summary.missed + " 人。";
+      }
+      container.append(branchElement("p", "xb-branch-node__quote", done));
+      return;
+    }
+    if (!choice) {
+      container.append(branchElement("p", "xb-branch-node__empty", "这一处没有留下选择记录。"));
+      return;
+    }
+    var text = branchFormatChoice(decision, choice, chapterId);
+    container.append(branchElement("p", "xb-branch-node__quote", text.prefix));
+    if (text.lines.length) {
+      if (text.multi) {
+        var list = document.createElement("ul");
+        list.className = "xb-branch-node__list";
+        text.lines.forEach(function (line) {
+          list.append(branchElement("li", "", line));
+        });
+        container.append(list);
+      } else {
+        container.append(branchElement("p", "xb-branch-node__quote", text.lines.join("")));
+      }
+    }
+  }
+
+  function branchRouteDetailRun(store, route) {
+    return branchLatestRunForRoute(store, route);
+  }
+
+  function renderBranchRouteDetail(route) {
+    var store = branchState.store || emptyBranchStore();
+    var def = ROUTE_DEFS[route] || {};
+    var map = branchMapData();
+    var meta = store.endings[route];
+    var hint = map && map.endings && map.endings[route] ? map.endings[route].hint : "";
+    els.branchDetailKicker.textContent = "剧情分支 · 结局";
+    if (!meta) {
+      els.branchDetailTitle.textContent = "结局 " + def.index + " / 11 · 尚未抵达";
+      els.branchDetailSub.textContent = "这一条线还在雾里。";
+      els.branchDetailBody.append(branchElement("p", "xb-branch-route__hint", hint || "继续往北，走到分岔的尽头。"));
+      return;
+    }
+    var run = branchRouteDetailRun(store, route) || branchFallbackRunFromEnding(state.ending);
+    var title = run && run.routeTitle ? run.routeTitle : def.title;
+    var lede = run && run.routeLede ? run.routeLede : def.lede;
+    els.branchDetailTitle.textContent = "结局 " + (def.index || run.routeIndex) + " / 11 · " + title;
+    els.branchDetailSub.textContent = lede;
+    if (!run) {
+      els.branchDetailBody.append(branchElement("p", "xb-branch-node__empty", "这一条线的记录没有留下。"));
+      return;
+    }
+    var chips = document.createElement("div");
+    chips.className = "xb-branch-route__chips";
+    [
+      branchDoorLabel(run.summary),
+      "救下 " + run.summary.rescues + " 人",
+      "状态 " + XB.core.playerStatusLabel(run.summary.condition),
+      "林先生 " + (run.summary.linDead ? "未等到" : "在"),
+      run.summary.names ? "点名 " + run.summary.names + " 人" : "名册未翻开",
+      "到吴起 " + run.summary.companyEnd + " 人"
+    ].forEach(function (text) {
+      chips.append(branchElement("span", "xb-branch-route__chip", text));
+    });
+    els.branchDetailBody.append(chips);
+
+    var chapters = (run.chapters || []).map(function (id) {
+      return chapterById(id) ? chapterById(id).short : id;
+    }).filter(Boolean).join(" → ");
+    var chapterSection = document.createElement("section");
+    chapterSection.className = "xb-branch-route__section";
+    chapterSection.append(branchElement("h4", "", "走过的路"));
+    chapterSection.append(branchElement("p", "", chapters || "没有留下章节记录。"));
+    els.branchDetailBody.append(chapterSection);
+
+    var choiceSection = document.createElement("section");
+    choiceSection.className = "xb-branch-route__section";
+    choiceSection.append(branchElement("h4", "", "这一局的抉择"));
+    if (run.choices && run.choices.length) {
+      var list = document.createElement("ol");
+      list.className = "xb-branch-route__list";
+      run.choices.forEach(function (choice) {
+        var decisionId = branchDecisionForNode(choice.nodeId);
+        var decision = decisionId && map ? map.decisions[decisionId] : null;
+        var label = decision ? decision.title : choice.nodeId;
+        list.append(branchElement("li", "", label + "：" + choice.text));
+      });
+      choiceSection.append(list);
+    } else {
+      choiceSection.append(branchElement("p", "xb-branch-node__empty", "这一局的抉择没有留在记录里。"));
+    }
+    els.branchDetailBody.append(choiceSection);
+
+    if (run.events && (run.events.zhang || run.events.rollcall)) {
+      var eventSection = document.createElement("section");
+      eventSection.className = "xb-branch-route__section";
+      eventSection.append(branchElement("h4", "", "记下的事"));
+      var eventList = document.createElement("ul");
+      eventList.className = "xb-branch-route__list";
+      if (run.events.zhang) eventList.append(branchElement("li", "", "金沙江边，你抄下了张老幺的名字。"));
+      if (run.events.rollcall) eventList.append(branchElement("li", "", "吴起，名册翻开，点名发生。"));
+      eventSection.append(eventList);
+      els.branchDetailBody.append(eventSection);
+    }
+  }
+
+  function toggleBranchNode(button) {
+    if (!button) return;
+    var row = button.closest(".xb-branch-node");
+    if (!row) return;
+    var body = row.querySelector(".xb-branch-node__body");
+    if (!body) return;
+    var open = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", open ? "false" : "true");
+    body.hidden = open;
+  }
+
+  // 只读收纳不改变当前局；脏数据在读取时已备份并回空。
+  function branchSourceFromScene() {
+    if (state && state.scene === "ending") return "ending";
+    if (state && state.paused) return "pause";
+    return "title";
+  }
+
+  /* ---------------- 成就（v1.5.1） ---------------- */
+
+  var ACHIEVEMENT_KEY = "xiangbei.achievements.v1";
+  var ACHIEVEMENT_MAX = 48;
+  var achievementMemory = null;
+  var achievementStorageOk = true;
+  var achievementStorageWarned = false;
+  var achievementState = {
+    open: false,
+    source: "title",
+    chapter: "prologue",
+    store: null,
+    runIds: [],
+    detailId: null,
+    detailPreviousFocus: null,
+    previousFocus: null
+  };
+
+  function achievementList() {
+    return (XB.story && XB.story.achievements) || [];
+  }
+
+  function achievementIds() {
+    return achievementList().map(function (item) { return item.id; });
+  }
+
+  function achievementById(id) {
+    var list = achievementList();
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function achievementByDecisionKey(decisionId, key) {
+    var list = achievementList();
+    for (var i = 0; i < list.length; i += 1) {
+      var item = list[i];
+      if (item.kind !== "interact" && item.decision === decisionId && item.key === key) return item;
+    }
+    return null;
+  }
+
+  function emptyAchievementStore() {
+    return { version: 1, updatedAt: 0, unlocked: {} };
+  }
+
+  function normalizeAchievementStore(raw) {
+    if (!isPlainObject(raw) || raw.version !== 1 || !isPlainObject(raw.unlocked)) return null;
+    var known = achievementIds();
+    var unlocked = {};
+    Object.keys(raw.unlocked).forEach(function (id) {
+      if (id === "__proto__" || id === "constructor" || id === "prototype") return;
+      if (known.indexOf(id) === -1) return;
+      var meta = raw.unlocked[id];
+      if (!isPlainObject(meta) || !isFiniteNumber(meta.at)) return;
+      unlocked[id] = {
+        at: Math.max(0, Math.round(meta.at)),
+        timedOut: meta.timedOut === true
+      };
+    });
+    return {
+      version: 1,
+      updatedAt: isFiniteNumber(raw.updatedAt) ? Math.max(0, Math.round(raw.updatedAt)) : 0,
+      unlocked: unlocked
+    };
+  }
+
+  function backupAchievementStore(raw) {
+    try {
+      window.localStorage.setItem(ACHIEVEMENT_KEY + ".bad", raw);
+      window.localStorage.removeItem(ACHIEVEMENT_KEY);
+    } catch (err) {
+      console.error("[XB] 备份成就档失败：" + err.message);
+    }
+  }
+
+  function readAchievementStore() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(ACHIEVEMENT_KEY);
+    } catch (err) {
+      console.error("[XB] 读取成就档失败：" + err.message);
+      achievementStorageOk = false;
+      return { data: achievementMemory || emptyAchievementStore(), ok: false };
+    }
+    if (raw === null) return { data: achievementMemory || emptyAchievementStore(), ok: true };
+    var parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.warn("[XB] 成就档不是合法 JSON：" + err.message);
+      backupAchievementStore(raw);
+      return { data: emptyAchievementStore(), ok: false };
+    }
+    var store = normalizeAchievementStore(parsed);
+    if (!store) {
+      console.warn("[XB] 成就档版本或结构不符");
+      backupAchievementStore(raw);
+      return { data: emptyAchievementStore(), ok: false };
+    }
+    achievementMemory = store;
+    return { data: store, ok: true };
+  }
+
+  function writeAchievementStore(store) {
+    store.updatedAt = Date.now();
+    achievementMemory = store;
+    try {
+      window.localStorage.setItem(ACHIEVEMENT_KEY, JSON.stringify(store));
+      achievementStorageOk = true;
+      return true;
+    } catch (err) {
+      console.warn("[XB] 写入成就档失败：" + err.message);
+      achievementStorageOk = false;
+      if (!achievementStorageWarned) {
+        achievementStorageWarned = true;
+        toast("本机无法保存成就，本局仍可继续");
+      }
+      return false;
+    }
+  }
+
+  // 首次解锁才写；重复选择、超时重进都不覆盖第一次的时间和 timedOut。
+  function recordAchievement(id, timedOut) {
+    if (!achievementById(id)) {
+      console.error("[XB] 未知成就：" + id);
+      return false;
+    }
+    var store = readAchievementStore().data;
+    if (store.unlocked[id]) return false;
+    store.unlocked[id] = { at: Date.now(), timedOut: timedOut === true };
+    return writeAchievementStore(store);
+  }
+
+  function recordChoiceAchievement(node, key, timedOut) {
+    if (!node || !node.id) return;
+    var decisionId = branchDecisionForNode(node.id);
+    if (!decisionId) return;
+    var decision = branchMapData().decisions[decisionId];
+    if (!decision) return;
+    var semantic = branchSemanticKey(decision, node.id, key);
+    var item = achievementByDecisionKey(decisionId, semantic);
+    if (item) recordAchievement(item.id, timedOut);
+  }
+
+  function recordMultiAchievements(node, selectedIds) {
+    if (!node || !node.id) return;
+    var decisionId = branchDecisionForNode(node.id);
+    if (!decisionId) return;
+    (selectedIds || []).forEach(function (id) {
+      var item = achievementByDecisionKey(decisionId, id);
+      if (item) recordAchievement(item.id, false);
+    });
+  }
+
+  // 本局快照：choices 是权威；j018 不在 choices 里，用 namepick_done + memory.zhang 区分。
+  function collectRunAchievements(runState) {
+    var ids = [];
+    var add = function (id) {
+      if (id && ids.indexOf(id) === -1) ids.push(id);
+    };
+    ((runState && runState.choices) || []).forEach(function (choice) {
+      var decisionId = branchDecisionForNode(choice.nodeId);
+      if (!decisionId) return;
+      var decision = branchMapData().decisions[decisionId];
+      if (!decision) return;
+      if (choice.option === "MULTI") {
+        branchMultiKeys(choice, decision, choice.chapter || (runState && runState.chapterId)).forEach(function (key) {
+          var item = achievementByDecisionKey(decisionId, key);
+          if (item) add(item.id);
+        });
+      } else {
+        var semantic = branchSemanticKey(decision, choice.nodeId, choice.option);
+        var item = achievementByDecisionKey(decisionId, semantic);
+        if (item) add(item.id);
+      }
+    });
+    var flags = (runState && runState.flags) || {};
+    if (flags["memory.namepick_done"] === true) {
+      add(flags["memory.zhang"] === true ? "j018-done" : "j018-skip");
+    } else if (flags["memory.zhang"] === true) {
+      // 旧档只有 memory.zhang，没有 namepick_done；按 done 处理。
+      add("j018-done");
+    }
+    return ids;
+  }
+
+  function recordRunAchievements(ending) {
+    if (!ending || !Array.isArray(ending.achievements)) return;
+    ending.achievements.forEach(function (id) {
+      recordAchievement(id, false);
+    });
+  }
+
+  function achievementDecision(ach) {
+    var map = branchMapData();
+    return ach && map && map.decisions ? map.decisions[ach.decision] : null;
+  }
+
+  function achievementChapterTitle(ach) {
+    var chapter = chapterById(ach.chapter);
+    return chapter ? chapter.title : ach.chapter;
+  }
+
+  function achievementOptionText(ach) {
+    var decision = achievementDecision(ach);
+    if (!decision) return "";
+    var text = "";
+    (decision.nodes || []).forEach(function (nodeId) {
+      if (text) return;
+      var found = branchStatementNode(nodeId);
+      if (!found || !found.node) return;
+      (found.node.options || []).forEach(function (option) {
+        if (text) return;
+        var key = option.id || option.key;
+        var semantic = branchSemanticKey(decision, nodeId, option.key || option.id);
+        if (key === ach.key || semantic === ach.key) text = option.text || "";
+      });
+    });
+    return text || ach.key;
+  }
+
+  function achievementConsequence(ach) {
+    var decision = achievementDecision(ach);
+    if (!decision) return "";
+    if (ach.kind === "interact") {
+      return ach.outcome === "done" ? (decision.doneText || "") : (decision.skipText || "");
+    }
+    return (decision.options && decision.options[ach.key]) || "";
+  }
+
+  function achievementInteractName() {
+    var found = branchStatementNode("j018");
+    var names = found && found.node && found.node.names;
+    return names && names.length ? names[0].name : "张老幺";
+  }
+
+  // 解锁后才有原因；锁定只给一句话，不提前泄露选项、决策组和后果。
+  function achievementParagraphs(ach, meta) {
+    if (!meta) {
+      return ["这个成就还没有解锁。继续往前走，做完那个选择，就会记下来。"];
+    }
+    var chapterTitle = achievementChapterTitle(ach);
+    var decision = achievementDecision(ach);
+    var decisionTitle = decision ? decision.title : "";
+    var consequence = achievementConsequence(ach);
+    var intro = "";
+    var timedOut = meta.timedOut === true;
+    if (ach.kind === "interact") {
+      if (ach.outcome === "done") {
+        intro = "在「" + chapterTitle + "」的「" + decisionTitle + "」中，你蹲了半夜，把「" +
+          achievementInteractName() + "」的名字抄在名册的边角上。";
+      } else if (timedOut) {
+        intro = "时间到了，你一个字没写。";
+      } else {
+        intro = "在「" + chapterTitle + "」的「" + decisionTitle + "」中，你蹲了半夜，没有动笔。";
+      }
+    } else {
+      var optionText = achievementOptionText(ach);
+      intro = timedOut
+        ? "时间到了，默认项「" + optionText + "」替你做了决定。"
+        : "在「" + chapterTitle + "」的「" + decisionTitle + "」选择中，你选择了「" + optionText + "」。";
+    }
+    var lines = [intro];
+    if (consequence) lines.push(consequence);
+    lines.push("因此，你解锁了「" + ach.title + "」。");
+    return lines;
+  }
+
+  function achievementChapterEntries() {
+    return ((XB.story && XB.story.chapters) || []).filter(function (chapter) {
+      return achievementList().some(function (item) { return item.chapter === chapter.id; });
+    });
+  }
+
+  function achievementCounts(chapterId, store, runIds) {
+    var list = achievementList().filter(function (item) {
+      return !chapterId || item.chapter === chapterId;
+    });
+    var unlocked = list.filter(function (item) {
+      return achievementIsUnlocked(item.id, store, runIds);
+    }).length;
+    return { unlocked: unlocked, total: list.length };
+  }
+
+  function achievementIsUnlocked(id, store, runIds) {
+    return !!((store && store.unlocked && store.unlocked[id]) ||
+      (runIds && runIds.indexOf(id) !== -1));
+  }
+
+  function achievementMeta(id, store, runIds) {
+    if (store && store.unlocked && store.unlocked[id]) return store.unlocked[id];
+    if (runIds && runIds.indexOf(id) !== -1) return { at: 0, timedOut: false };
+    return null;
+  }
+
+  function achievementTabLabel(chapter) {
+    if (chapter.id === "prologue") return "序章";
+    return chapter.short || chapter.title;
+  }
+
+  function achievementTimeText(at) {
+    if (!at) return "";
+    try {
+      return new Date(at).toLocaleString("zh-CN", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hour12: false
+      });
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function renderAchievementPanel() {
+    var store = readAchievementStore().data;
+    achievementState.store = store;
+    var runIds = achievementState.runIds || [];
+    var total = achievementCounts(null, store, runIds);
+    els.achievementCount.textContent = "已解锁 " + total.unlocked + " / " + total.total;
+    els.achievementTabs.textContent = "";
+    var chapters = achievementChapterEntries();
+    if (!chapters.some(function (chapter) { return chapter.id === achievementState.chapter; })) {
+      achievementState.chapter = chapters.length ? chapters[0].id : "prologue";
+    }
+    chapters.forEach(function (chapter) {
+      var count = achievementCounts(chapter.id, store, runIds);
+      var tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "xb-achievements__tab" + (chapter.id === achievementState.chapter ? " is-active" : "");
+      tab.dataset.action = "achievement-tab";
+      tab.dataset.chapter = chapter.id;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", chapter.id === achievementState.chapter ? "true" : "false");
+      tab.textContent = achievementTabLabel(chapter) + " " + count.unlocked + "/" + count.total;
+      els.achievementTabs.append(tab);
+    });
+
+    els.achievementGrid.textContent = "";
+    var items = achievementList().filter(function (item) {
+      return item.chapter === achievementState.chapter;
+    });
+    items.forEach(function (ach) {
+      var unlocked = achievementIsUnlocked(ach.id, store, runIds);
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "xb-achievement-card " + (unlocked ? "is-unlocked" : "is-locked");
+      card.dataset.action = "achievement-card";
+      card.dataset.id = ach.id;
+      card.setAttribute("aria-label", ach.title + (unlocked ? "，已解锁，点开查看" : "，未解锁，点开查看"));
+      var title = document.createElement("span");
+      title.className = "xb-achievement-card__title";
+      title.textContent = ach.title;
+      card.append(title);
+      if (unlocked) {
+        var decision = achievementDecision(ach);
+        var meta = document.createElement("span");
+        meta.className = "xb-achievement-card__meta";
+        meta.textContent = decision ? decision.title : "";
+        var stateMark = document.createElement("span");
+        stateMark.className = "xb-achievement-card__state";
+        stateMark.textContent = "已解锁";
+        card.append(meta, stateMark);
+      } else {
+        var locked = document.createElement("span");
+        locked.className = "xb-achievement-card__state";
+        locked.textContent = "未解锁";
+        card.append(locked);
+      }
+      els.achievementGrid.append(card);
+    });
+  }
+
+  function renderAchievementDetail() {
+    var ach = achievementById(achievementState.detailId);
+    if (!ach) return;
+    var store = achievementState.store || readAchievementStore().data;
+    var meta = achievementMeta(ach.id, store, achievementState.runIds || []);
+    var unlocked = !!meta;
+    els.achievementDetailKicker.textContent = unlocked ? "成就 · 已解锁" : "成就 · 未解锁";
+    els.achievementDetailTitle.textContent = ach.title;
+    els.achievementDetailBody.textContent = "";
+    achievementParagraphs(ach, meta).forEach(function (line, index) {
+      var paragraph = document.createElement("p");
+      paragraph.className = index === 0 ? "xb-achievement-detail__lead" : "xb-achievement-detail__text";
+      paragraph.textContent = line;
+      els.achievementDetailBody.append(paragraph);
+    });
+    if (meta && meta.at) {
+      var time = document.createElement("p");
+      time.className = "xb-achievement-detail__time";
+      time.textContent = "首次解锁：" + achievementTimeText(meta.at);
+      els.achievementDetailBody.append(time);
+    }
+  }
+
+  function openAchievements(source, focusId) {
+    if (achievementState.open) {
+      if (focusId) openAchievementDetail(focusId, null);
+      return;
+    }
+    var ach = focusId ? achievementById(focusId) : null;
+    var from = source || branchSourceFromScene();
+    achievementState.open = true;
+    achievementState.source = from;
+    achievementState.previousFocus = document.activeElement;
+    achievementState.detailId = null;
+    achievementState.detailPreviousFocus = null;
+    achievementState.runIds = from === "ending" && state.ending && Array.isArray(state.ending.achievements)
+      ? state.ending.achievements.slice()
+      : [];
+    achievementState.chapter = ach ? ach.chapter
+      : (from === "pause" && state && state.chapterId ? state.chapterId : "prologue");
+    renderAchievementPanel();
+    els.achievementPanel.hidden = false;
+    XB.audio.cue("codex");
+    refreshAudioDuck();
+    els.achievementClose.focus();
+    if (ach) openAchievementDetail(ach.id, els.achievementClose);
+  }
+
+  function closeAchievementDetail() {
+    if (!achievementState.detailId) return;
+    achievementState.detailId = null;
+    els.achievementDetail.hidden = true;
+    var previous = achievementState.detailPreviousFocus;
+    achievementState.detailPreviousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  function closeAchievements() {
+    if (!achievementState.open) return;
+    closeAchievementDetail();
+    achievementState.open = false;
+    achievementState.detailId = null;
+    achievementState.runIds = [];
+    els.achievementPanel.hidden = true;
+    refreshAudioDuck();
+    var previous = achievementState.previousFocus;
+    achievementState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus();
+  }
+
+  function openAchievementDetail(id, trigger) {
+    if (!achievementState.open || !achievementById(id)) return;
+    achievementState.detailId = id;
+    achievementState.detailPreviousFocus = trigger || document.activeElement;
+    renderAchievementDetail();
+    els.achievementDetail.hidden = false;
+    els.achievementDetailClose.focus();
+  }
+
+  function renderEndingAchievements() {
+    if (!els.endingAchievements) return;
+    var store = readAchievementStore().data;
+    var hasField = !!(state.ending && Object.prototype.hasOwnProperty.call(state.ending, "achievements"));
+    var ids = hasField && Array.isArray(state.ending.achievements) ? state.ending.achievements : null;
+    var total = achievementCounts(null, store, ids || []);
+    els.endingAchievementChips.textContent = "";
+    if (ids === null) {
+      els.endingAchievementsCount.textContent = "累计 " + total.unlocked + " / " + total.total;
+      var oldNote = document.createElement("p");
+      oldNote.className = "xb-ending__achievements-empty";
+      oldNote.textContent = "旧档未记录本局成就。";
+      els.endingAchievementChips.append(oldNote);
+      return;
+    }
+    els.endingAchievementsCount.textContent = "本局 " + ids.length + " 条 · 累计 " + total.unlocked + " / " + total.total;
+    if (!ids.length) {
+      var empty = document.createElement("p");
+      empty.className = "xb-ending__achievements-empty";
+      empty.textContent = "这一局没有记下成就。";
+      els.endingAchievementChips.append(empty);
+      return;
+    }
+    ids.forEach(function (id) {
+      var ach = achievementById(id);
+      if (!ach) return;
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "xb-ending__achievement";
+      chip.dataset.action = "ending-achievement";
+      chip.dataset.id = id;
+      chip.textContent = ach.title;
+      els.endingAchievementChips.append(chip);
+    });
+  }
+
   /* ---------------- 状态与物资 ---------------- */
 
   function formatSlots(units) {
@@ -4712,7 +6324,7 @@
     if (state.inventory.items.indexOf("medicine") !== -1) add("medicine", "药", "两包草药，油纸裹着。半格。", 1);
     if (state.inventory.items.indexOf("barley") !== -1) add("barley", "青稞", "一小袋炒青稞。半格。", 1);
     if (state.inventory.items.indexOf("shoes") !== -1) add("shoes", "布鞋", "新纳的底，针脚密。一格。", 2);
-    if (state.inventory.items.indexOf("homepot") !== -1) add("homepot", "铁锅", "家里那口铁锅。两格。", 4);
+    if (state.inventory.items.indexOf("pot") !== -1) add("pot", "铁锅", "家里那口铁锅。两格。", 4);
     if (state.inventory.items.indexOf("raincloth") !== -1) add("raincloth", "雨布", "补过三次的油布。两格，只能在草地使用。", 4);
     if (state.inventory.giftBarley === true) add("giftBarley", "冬生的青稞", "他塞给我的，不占格。", 0);
     return rows;
@@ -4725,7 +6337,7 @@
     };
     var recipes = [];
     if (has("shoes")) recipes.push({ key: "shoes", label: "布鞋", delta: 1, disabled: false });
-    if (has("homepot")) recipes.push({ key: "homepot", label: "铁锅", delta: 2, disabled: false });
+    if (has("pot")) recipes.push({ key: "pot", label: "铁锅", delta: 2, disabled: false });
     if (has("raincloth")) recipes.push({
       key: "raincloth",
       label: "雨布",
@@ -4743,7 +6355,9 @@
     var warning = packState.mode === "warning";
     var intro = packState.mode === "start";
     els.packWarning.hidden = !warning;
-    els.packWarning.textContent = warning ? "你现在是“差”。不用物资，就走不出去。" : "";
+    els.packWarning.textContent = warning
+      ? "当前你的状态已不足以支撑继续行进，请立刻补充物资恢复体力。"
+      : "";
     els.packTitle.textContent = intro ? "出发前" : "物资";
     var used = XB.core.packUsage(state);
     var capacity = Math.max(8, used);
@@ -4799,13 +6413,16 @@
       els.packList.append(actions);
     }
     els.packNote.textContent = warning
-      ? "如果不使用，可能走不出草地。"
+      ? "用物资把状态提回“勉强”以上；不用就走不出去。"
       : intro
         ? "你当前的状态为良好。使用物资可以把状态提到优秀；不用也可以出发。"
         : "使用物资会消耗它；状态到优秀后不再需要。";
     els.packClose.textContent = intro ? "不用，出发" : "关闭";
     els.packClose.hidden = warning;
     els.packContinue.hidden = !warning;
+    els.packContinue.textContent = warning
+      ? (recipes.length ? "放弃补给，继续赶路" : "没有物资，继续赶路")
+      : "继续（不使用）";
   }
 
   function openPackPanel(mode, onClose) {
@@ -4828,6 +6445,8 @@
     packState.previousFocus = null;
     if (!keepFocus && previous && previous.focus && previous !== document.body) previous.focus();
     refreshAudioDuck();
+    drainStatusEvents();
+    flushStatusNotice();
   }
 
   function finishPackPanel() {
@@ -4850,6 +6469,7 @@
       return;
     }
     XB.audio.cue("choice-select");
+    drainStatusEvents();
     saveNow();
     updateHud();
     if (packState.mode === "warning" && state.flags.condition > 1) {
@@ -4870,7 +6490,7 @@
       return;
     }
     if (result.condition === 1) {
-      openPackPanel("warning", finishGrassSettlement);
+      openDangerModal();
       return;
     }
     finishGrassSettlement();
@@ -4907,11 +6527,46 @@
     advanceVn();
   }
 
+  // 差状态警告：同意去物资栏，拒绝直接按死亡收口；不提供“点空白关掉”，避免绕过取舍。
+  function openDangerModal() {
+    if (!state || state.scene !== "vn" || dangerState.open) return;
+    dangerState.open = true;
+    dangerState.previousFocus = document.activeElement;
+    els.dangerModal.hidden = false;
+    els.dangerAccept.focus();
+    refreshAudioDuck();
+  }
+
+  function closeDangerModal(keepFocus) {
+    if (!dangerState.open) return;
+    dangerState.open = false;
+    els.dangerModal.hidden = true;
+    var previous = dangerState.previousFocus;
+    dangerState.previousFocus = null;
+    if (!keepFocus && previous && previous.focus && previous !== document.body) previous.focus();
+    refreshAudioDuck();
+  }
+
+  function acceptDanger() {
+    if (!dangerState.open) return;
+    closeDangerModal(true);
+    openPackPanel("warning", finishGrassSettlement);
+  }
+
+  function refuseDanger() {
+    if (!dangerState.open) return;
+    closeDangerModal(true);
+    XB.core.resolveGrassWarning(state);
+    saveNow();
+    updateHud();
+    finishGrassSettlement();
+  }
+
   // 暂停、图鉴、史实注可能叠在一起，取最安静的一档，不叠乘。
   function refreshAudioDuck() {
     var duck = 1;
-    if (codexState.open || galleryState.open || rosterGalleryState.open) duck = Math.min(duck, 0.45);
-    if (packState.open || doorState.open) duck = Math.min(duck, 0.45);
+    if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open) duck = Math.min(duck, 0.45);
+    if (packState.open || doorState.open || dangerState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
     XB.audio.setDuck(duck);
   }
@@ -4944,7 +6599,12 @@
   function startNewGame() {
     if (saveExists && !window.confirm("开始新游戏会清空当前进度，确定吗？")) return;
     clearSave();
+    clearStatusNotice();
+    XB.core.takeStatusEvents();
     state = defaults();
+    branchLastRun = null;
+    branchRecordedEnding = null;
+    branchState.run = null;
     if (!startChapter(state, "prologue")) {
       toast("序章没能载入");
       return;
@@ -5285,6 +6945,15 @@
     els.rosterGallery.addEventListener("click", function (event) {
       if (event.target === els.rosterGallery) closeRosterGallery();
     });
+    els.branchDetail.addEventListener("click", function (event) {
+      if (event.target === els.branchDetail) closeBranchDetail();
+    });
+    els.achievementPanel.addEventListener("click", function (event) {
+      if (event.target === els.achievementPanel) closeAchievements();
+    });
+    els.achievementDetail.addEventListener("click", function (event) {
+      if (event.target === els.achievementDetail) closeAchievementDetail();
+    });
     // 标题卡不单独绑 pointerdown：document 上的 onPointerDown 已经负责关它并 return，
     // 两处都绑会让同一次点击关完卡片后继续把 p001 的第一页“补全”，第一句等于没打。
   }
@@ -5294,8 +6963,9 @@
     if (event.button !== undefined && event.button !== 0) return;
     var target = event.target;
     if (!target || !target.closest) return;
+    if (branchState.open || achievementState.open) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
-    if (packState.open || doorState.open) return;
+    if (packState.open || doorState.open || dangerState.open) return;
     if (titleCardState.open) {
       closeTitleCard();
       return;
@@ -5319,6 +6989,13 @@
 
   function onKeyDown(event) {
     XB.audio.unlock();
+    if (dangerState.open) {
+      if (event.key === "Tab") {
+        trapFocus(event, els.dangerModal);
+        event.preventDefault();
+      }
+      return;
+    }
     if (doorState.open) {
       if (event.key === "Escape" || event.key === "Enter") {
         closeDoorModal();
@@ -5331,6 +7008,34 @@
         if (packState.mode === "browse") closePackPanel(false);
         else finishPackPanel();
         event.preventDefault();
+      }
+      return;
+    }
+    if (branchState.open) {
+      if (event.key === "Escape") {
+        if (branchState.detailKind) closeBranchDetail();
+        else closeBranch();
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Tab") {
+        trapFocus(event, els.branchDetail.hidden ? els.branchMap : els.branchDetail);
+        event.preventDefault();
+        return;
+      }
+      return;
+    }
+    if (achievementState.open) {
+      if (event.key === "Escape") {
+        if (achievementState.detailId) closeAchievementDetail();
+        else closeAchievements();
+        event.preventDefault();
+        return;
+      }
+      if (event.key === "Tab") {
+        trapFocus(event, els.achievementDetail.hidden ? els.achievementPanel : els.achievementDetail);
+        event.preventDefault();
+        return;
       }
       return;
     }
@@ -5421,16 +7126,15 @@
       return;
     }
 
-    // 限时选项的数字快捷键：1/2 对应 A/B，方便单手键盘操作（B15）。
-    if ((event.key === "1" || event.key === "2") && state && state.scene === "vn" && !state.paused &&
+    // 限时选项的数字快捷键：1–9 对应显示顺序；置灰的条件选项不能被数字键越过。
+    if (/^[1-9]$/.test(event.key) && state && state.scene === "vn" && !state.paused &&
         choiceRun.active && !choiceRun.resolved) {
       var choiceNode = currentNode(state);
       if (choiceNode && choiceNode.type === "choice") {
         var picked = choiceNode.options[Number(event.key) - 1];
-        if (picked) {
-          event.preventDefault();
-          resolveChoice(picked.key, false);
-        }
+        if (!picked) return;
+        event.preventDefault();
+        if (XB.core.optionVisible(state, picked)) resolveChoice(picked.key, false);
       }
       return;
     }
@@ -5460,6 +7164,46 @@
       case "codex":
         openGallery();
         break;
+      case "branch":
+        openBranch(branchSourceFromScene());
+        break;
+      case "achievements":
+        openAchievements(branchSourceFromScene());
+        break;
+      case "ending-achievement":
+        openAchievements("ending", target.dataset.id);
+        break;
+      case "achievement-close":
+        closeAchievements();
+        break;
+      case "achievement-tab":
+        achievementState.chapter = target.dataset.chapter;
+        renderAchievementPanel();
+        break;
+      case "achievement-card":
+        openAchievementDetail(target.dataset.id, target);
+        break;
+      case "achievement-detail-close":
+        closeAchievementDetail();
+        break;
+      case "ending-branch":
+        openBranch("ending");
+        break;
+      case "branch-close":
+        closeBranch();
+        break;
+      case "branch-detail-close":
+        closeBranchDetail();
+        break;
+      case "branch-chapter":
+        openBranchDetail("chapter", target.dataset.chapter, target);
+        break;
+      case "branch-route":
+        openBranchDetail("route", target.dataset.route, target);
+        break;
+      case "branch-node":
+        toggleBranchNode(target);
+        break;
       case "gallery-close":
         closeGallery();
         break;
@@ -5488,9 +7232,15 @@
       case "door-discard":
         closeDoorModal();
         break;
+      case "danger-accept":
+        acceptDanger();
+        break;
+      case "danger-refuse":
+        refuseDanger();
+        break;
       case "interact-answer":
         if (interactRun.mode === "rollcall") answerRollcall();
-        else skipNamepick();
+        else skipNamepick(false);
         break;
       case "pick-name":
         pickName(target.dataset.nameId);
@@ -5560,6 +7310,76 @@
     toastTimer = window.setTimeout(function () {
       els.toast.classList.remove("is-visible");
     }, TOAST_MS);
+  }
+
+  /* ---------------- 状态变化弹窗 ---------------- */
+
+  var STATUS_NAMES = { feimao: "飞毛腿", zaowang: "灶王", dongsheng: "冬生" };
+
+  function cleanStatusReason(reason) {
+    return String(reason || "").replace(/[。！？!?；;]+$/g, "").trim() || "路上的情况变了";
+  }
+
+  function statusEventLine(event) {
+    var reason = cleanStatusReason(event.reason);
+    if (event.kind === "player") {
+      if (event.to === 0) return "由于" + reason + "，你牺牲了。";
+      return "由于" + reason + "，你的状态变为" + XB.core.playerStatusLabel(event.to) + "。";
+    }
+    var name = STATUS_NAMES[event.kind] || "他";
+    if (event.to === 0) return "由于" + reason + "，" + name + "牺牲了。";
+    return "由于" + reason + "，" + name + "的状态变为" + XB.core.companionStatusLabel(event.to) + "。";
+  }
+
+  function canShowStatusNotice() {
+    if (!state || state.scene !== "vn") return false;
+    if (titleCardState.open || packState.open || dangerState.open || doorState.open) return false;
+    if (codexState.open || achievementState.open) return false;
+    if (els.pause && !els.pause.hidden) return false;
+    return true;
+  }
+
+  function drainStatusEvents() {
+    if (!XB.core || typeof XB.core.takeStatusEvents !== "function") return;
+    var events = XB.core.takeStatusEvents();
+    if (!events.length) return;
+    statusQueue = statusQueue.concat(events).slice(-12);
+    flushStatusNotice();
+  }
+
+  function flushStatusNotice() {
+    if (statusNoticeOpen || !statusQueue.length || !canShowStatusNotice()) return;
+    var batch = statusQueue.splice(0, 3);
+    showStatusNotice(batch);
+  }
+
+  function showStatusNotice(events) {
+    if (!els.statusNotice || !events.length) return;
+    clearTimeout(statusNoticeTimer);
+    els.statusNoticeList.textContent = "";
+    events.forEach(function (event) {
+      var row = document.createElement("li");
+      row.textContent = statusEventLine(event);
+      els.statusNoticeList.append(row);
+    });
+    els.statusNotice.hidden = false;
+    statusNoticeOpen = true;
+    statusNoticeTimer = window.setTimeout(function () {
+      hideStatusNotice();
+      flushStatusNotice();
+    }, STATUS_NOTICE_MS + Math.max(0, events.length - 1) * STATUS_NOTICE_LINE_MS);
+  }
+
+  function hideStatusNotice() {
+    clearTimeout(statusNoticeTimer);
+    statusNoticeTimer = 0;
+    statusNoticeOpen = false;
+    if (els.statusNotice) els.statusNotice.hidden = true;
+  }
+
+  function clearStatusNotice() {
+    statusQueue = [];
+    hideStatusNotice();
   }
 
   XB.engine = {

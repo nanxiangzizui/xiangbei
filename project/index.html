@@ -25,6 +25,8 @@
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="roster-gallery">名册</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="branch">剧情分支</button>
+        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="achievements">解锁成就</button>
       </div>
       <p class="title-version">试玩版 · 人物虚构，非史料人物</p>
       <a class="title-credits" href="./CREDITS.txt" target="_blank" rel="noopener">制作名单</a>
@@ -89,12 +91,19 @@
 
       <div id="vn-result" class="vn-result" role="group" aria-label="结算" hidden></div>
 
-      <!-- 章节标题卡：全屏，1200ms 自动关 -->
+      <!-- 章节标题卡：全屏，等玩家点击/回车后再继续 -->
       <div id="vn-title-card" class="xb-title-card" role="presentation" hidden>
         <p id="vn-title-chapter" class="xb-title-card__chapter"></p>
         <div class="xb-title-card__rule"></div>
         <p id="vn-title-sub" class="xb-title-card__sub"></p>
         <p id="vn-title-place" class="xb-title-card__place" hidden></p>
+        <p class="xb-title-card__hint">点击继续</p>
+      </div>
+
+      <!-- 状态变化：顶部居中，只读，不挡点击；多行时一屏最多三条 -->
+      <div id="status-notice" class="xb-status-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <p class="xb-status-notice__kicker">状态变化</p>
+        <ul id="status-notice-list" class="xb-status-notice__list"></ul>
       </div>
 
       <!-- 分页量具：屏外，与正文同字号同宽，只用来量行数；不能 display:none -->
@@ -118,9 +127,15 @@
             <p id="ending-stats" class="xb-ending__stats"></p>
           </div>
         </div>
+        <section id="ending-achievements" class="xb-ending__achievements" aria-labelledby="ending-achievements-title">
+          <h3 id="ending-achievements-title" class="xb-ending__achievements-title">此周目解锁的成就有：</h3>
+          <div id="ending-achievement-chips" class="xb-ending__achievement-chips"></div>
+          <p id="ending-achievements-count" class="xb-ending__achievements-count"></p>
+        </section>
         <div id="ending-cards" class="xb-ending__cards" aria-label="五张精神卡"></div>
         <p id="ending-disclaimer" class="xb-ending__disclaimer"></p>
         <div class="xb-ending__actions">
+          <button type="button" id="ending-branch" class="xb-btn" data-action="ending-branch">查看剧情分支</button>
           <button type="button" id="ending-codex" class="xb-btn" data-action="ending-codex">史实图鉴</button>
           <button type="button" id="ending-home" class="xb-btn xb-btn--primary" data-action="ending-home">回到标题</button>
         </div>
@@ -140,6 +155,8 @@
         <button type="button" class="pause-button" data-action="resume">继续</button>
         <button type="button" class="pause-button" data-action="open-settings">设置</button>
         <button type="button" class="pause-button" data-action="codex">史实图鉴</button>
+        <button type="button" class="pause-button" data-action="branch">剧情分支</button>
+        <button type="button" class="pause-button" data-action="achievements">解锁成就</button>
         <button type="button" class="pause-button" data-action="open-roster">花名册</button>
         <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
         <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
@@ -220,6 +237,49 @@
       <p class="xb-codex__disclaimer">人物虚构，非史料人物。</p>
     </div>
 
+    <!-- 剧情分支：只读歧路图；标题 / 结局 / 暂停三入口共用。未走到的章节与结局灰 -->
+    <div id="branch-map" class="xb-branch" role="dialog" aria-modal="true" aria-labelledby="branch-title" hidden>
+      <div class="xb-branch__sky" aria-hidden="true"></div>
+      <header class="xb-branch__head">
+        <div class="xb-branch__brand">
+          <p class="xb-branch__kicker">命路歧图 · 只看你走过的</p>
+          <h2 id="branch-title" class="xb-branch__title">剧情分支</h2>
+          <span class="xb-branch__seal" aria-hidden="true">歧</span>
+        </div>
+        <p id="branch-count" class="xb-branch__count"></p>
+        <button type="button" id="branch-close" class="xb-modal__close xb-branch__close" data-action="branch-close" aria-label="关闭剧情分支">×</button>
+      </header>
+      <div class="xb-branch__body">
+        <div id="branch-chapters" class="xb-branch__chapters" aria-label="七段路线"></div>
+        <p id="branch-live" class="xb-branch__live"></p>
+        <div class="xb-branch__ends">
+          <section class="xb-branch__group xb-branch__group--door" aria-labelledby="branch-door-title">
+            <h3 id="branch-door-title" class="xb-branch__group-title">带板 <span>1–5</span></h3>
+            <div id="branch-endings-door" class="xb-branch__endings"></div>
+          </section>
+          <section class="xb-branch__group xb-branch__group--nodoor" aria-labelledby="branch-nodoor-title">
+            <h3 id="branch-nodoor-title" class="xb-branch__group-title">空手 <span>6–10</span></h3>
+            <div id="branch-endings-nodoor" class="xb-branch__endings"></div>
+          </section>
+          <section class="xb-branch__group xb-branch__group--bad" aria-labelledby="branch-bad-title">
+            <h3 id="branch-bad-title" class="xb-branch__group-title">坏结局 <span>11</span></h3>
+            <div id="branch-endings-bad" class="xb-branch__endings"></div>
+          </section>
+        </div>
+        <p class="xb-branch__hint">点章节看这一章的抉择；点结局看门板、救人与点名。未走到的仍留在雾里。</p>
+      </div>
+
+      <div id="branch-detail" class="xb-branch-detail" role="dialog" aria-modal="true" aria-labelledby="branch-detail-title" hidden>
+        <div class="xb-branch-detail__panel">
+          <button type="button" id="branch-detail-close" class="xb-modal__close" data-action="branch-detail-close" aria-label="关闭详情">×</button>
+          <p id="branch-detail-kicker" class="xb-branch-detail__kicker"></p>
+          <h3 id="branch-detail-title" class="xb-branch-detail__title"></h3>
+          <p id="branch-detail-sub" class="xb-branch-detail__sub"></p>
+          <div id="branch-detail-body" class="xb-branch-detail__body" tabindex="0"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 史实图鉴：7 张，3+3+1；锁卡点击只提示 -->
     <div id="codex-gallery" class="xb-gallery" role="dialog" aria-modal="true" aria-labelledby="gallery-title" hidden>
       <div class="xb-gallery__panel">
@@ -243,6 +303,30 @@
       </div>
     </div>
 
+    <!-- 解锁成就：标题 / 暂停 / 结局三入口共用；锁定卡只显示词条名与“未解锁” -->
+    <div id="achievement-panel" class="xb-achievements" role="dialog" aria-modal="true" aria-labelledby="achievement-title" hidden>
+      <div class="xb-achievements__panel">
+        <button type="button" id="achievement-close" class="xb-modal__close" data-action="achievement-close" aria-label="关闭成就">×</button>
+        <header class="xb-achievements__head">
+          <p class="xb-achievements__kicker">一路走来的选择</p>
+          <h2 id="achievement-title" class="xb-achievements__title">解锁成就</h2>
+          <p id="achievement-count" class="xb-achievements__count"></p>
+        </header>
+        <div id="achievement-tabs" class="xb-achievements__tabs" role="tablist" aria-label="按章节查看成就"></div>
+        <div id="achievement-grid" class="xb-achievements__grid" role="tabpanel"></div>
+        <p class="xb-achievements__hint">已解锁的成就可点开查看原因；灰色框还没有走到。</p>
+      </div>
+
+      <div id="achievement-detail" class="xb-achievement-detail" role="dialog" aria-modal="true" aria-labelledby="achievement-detail-title" hidden>
+        <div class="xb-achievement-detail__panel">
+          <button type="button" id="achievement-detail-close" class="xb-modal__close" data-action="achievement-detail-close" aria-label="关闭成就详情">×</button>
+          <p id="achievement-detail-kicker" class="xb-achievement-detail__kicker"></p>
+          <h3 id="achievement-detail-title" class="xb-achievement-detail__title"></h3>
+          <div id="achievement-detail-body" class="xb-achievement-detail__body" tabindex="0"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 物资：随时可开；限时选项期间禁用。差状态复用同一面板做警告。 -->
     <div id="pack-panel" class="xb-pack-overlay" role="dialog" aria-modal="true" aria-labelledby="pack-title" hidden>
       <div class="xb-pack">
@@ -254,6 +338,18 @@
         <div class="xb-pack__actions">
           <button type="button" id="pack-close" class="xb-btn" data-action="pack-close">关闭</button>
           <button type="button" id="pack-continue" class="xb-btn xb-btn--primary" data-action="pack-continue" hidden>继续（不使用）</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 状态“差”：先警告；同意开物资栏，拒绝按死亡路线收口 -->
+    <div id="danger-modal" class="xb-door-modal" role="dialog" aria-modal="true" aria-labelledby="danger-title" hidden>
+      <div class="xb-door">
+        <h2 id="danger-title" class="xb-door__title">状态：差</h2>
+        <p class="xb-door__body">当前你的状态已不足以支撑继续行进，请立刻补充物资恢复体力。</p>
+        <div class="xb-danger__actions">
+          <button type="button" id="danger-accept" class="xb-btn xb-btn--primary" data-action="danger-accept">同意</button>
+          <button type="button" id="danger-refuse" class="xb-btn" data-action="danger-refuse">拒绝</button>
         </div>
       </div>
     </div>

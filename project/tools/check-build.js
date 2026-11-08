@@ -16,6 +16,7 @@ const SCRIPT_ORDER = ["art.js", "story.js", "engine.js"];
 const REQUIRED_IDS = [
   "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending", "fx-layer",
   "ending-title", "ending-date", "ending-lede", "ending-names", "ending-stats", "ending-cards",
+  "ending-achievements", "ending-achievements-title", "ending-achievements-count", "ending-achievement-chips",
   "ending-disclaimer", "ending-home", "ending-codex",
   "pause", "pause-menu", "toast", "debug", "orientation",
   "title-menu", "map-stations", "map-route",
@@ -31,7 +32,14 @@ const REQUIRED_IDS = [
   "vn-roster", "roster-list", "roster-foot",
   "codex", "codex-title", "codex-badges", "codex-figure", "codex-body", "codex-note", "codex-source",
   "codex-image-note", "codex-close",
-  "codex-gallery", "gallery-close", "gallery-title", "gallery-count", "gallery-grid"
+  "codex-gallery", "gallery-close", "gallery-title", "gallery-count", "gallery-grid",
+  "branch-map", "branch-title", "branch-count", "branch-chapters", "branch-live",
+  "branch-endings-door", "branch-endings-nodoor", "branch-endings-bad", "branch-close",
+  "branch-detail", "branch-detail-close", "branch-detail-kicker", "branch-detail-title",
+  "branch-detail-sub", "branch-detail-body", "ending-branch",
+  "achievement-panel", "achievement-title", "achievement-count", "achievement-tabs",
+  "achievement-grid", "achievement-close", "achievement-detail", "achievement-detail-close",
+  "achievement-detail-kicker", "achievement-detail-title", "achievement-detail-body"
 ];
 
 const PREVIEW_UI = [
@@ -425,8 +433,8 @@ function checkPrologueGraph() {
   nodes.forEach(function (node) {
     counts[node.type] = (counts[node.type] || 0) + 1;
   });
-  var expected = { line: 43, choice: 2, multichoice: 1, result: 1, title: 1, codex: 1, end: 1 };
-  if (nodes.length !== 50) fail("C13", "序章节点应为 50，实际 " + nodes.length);
+  var expected = { line: 82, choice: 2, multichoice: 1, result: 1, title: 1, codex: 1, end: 1 };
+  if (nodes.length !== 89) fail("C13", "序章节点应为 89，实际 " + nodes.length);
   Object.keys(expected).forEach(function (type) {
     if ((counts[type] || 0) !== expected[type]) {
       fail("C13", type + " 节点应为 " + expected[type] + "，实际 " + (counts[type] || 0));
@@ -446,7 +454,7 @@ function checkPrologueGraph() {
   var last = nodes[nodes.length - 1];
   if (last.id !== "p900") fail("C13", "末节点应为 p900，实际 " + last.id);
   if (last.next !== "xiangjiang") fail("C13", "p900.next 应为 xiangjiang，实际 " + last.next);
-  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 43 / choice 2 / multichoice 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
+  notes.push("C13 OK 序章 " + nodes.length + " 节点（line 82 / choice 2 / multichoice 1 / result 1 / title 1 / codex 1 / end 1；p039a/b）");
 }
 
 var SET_KEY_EXACT = [
@@ -513,10 +521,25 @@ function checkChoiceRules() {
         Object.keys(option.set || {}).forEach(function (key) {
           if (!isAllowedSetKey(key)) fail("C14", node.id + option.key + " 写了未登记旗标 " + key);
         });
+        if (option.setIf !== undefined) {
+          if (!Array.isArray(option.setIf)) {
+            fail("C14", node.id + option.key + " setIf 应为数组");
+          } else {
+            option.setIf.forEach(function (rule) {
+              if (!rule || !isAllowedCondition(rule.when) || !rule.set) {
+                fail("C14", node.id + option.key + " setIf 条件或 set 非法");
+                return;
+              }
+              Object.keys(rule.set).forEach(function (key) {
+                if (!isAllowedSetKey(key)) fail("C14", node.id + option.key + " setIf 写了未登记旗标 " + key);
+              });
+            });
+          }
+        }
       });
     });
   });
-  if (total !== 16) fail("C14", "全章 choice 应为 16 个，实际 " + total);
+  if (total !== 17) fail("C14", "全章 choice 应为 17 个，实际 " + total);
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
       if (node.type === "multichoice" && node.maxWhen !== undefined) {
@@ -557,7 +580,10 @@ function checkConditionWhitelist() {
       "memory.zhang", "memory.door", "memory.luding_unknown", "memory.rollcall_missed_any",
       "memory.fly_bridge", "memory.fly_medicine", "memory.fly_leave",
       "memory.zaowang_barley", "memory.zaowang_pot", "memory.zaowang_body",
-      "memory.dongsheng_shoes", "memory.dongsheng_cloth", "memory.dongsheng_body"
+      "memory.dongsheng_shoes", "memory.dongsheng_cloth", "memory.dongsheng_body",
+      "memory.lin_north", "memory.lin_self",
+      "memory.grass_share",
+      "memory.xiangjiang.barley_lost", "memory.xiangjiang.binding_lost"
     ]);
   XB.story.chapters.forEach(function (chapter) {
     (chapter.nodes || []).forEach(function (node) {
@@ -800,15 +826,15 @@ function checkLegacySaveMigration() {
 function checkChapterTable() {
   var XB = loadGame();
   var expected = [
-    { id: "prologue", prefix: "p", count: 50, next: "xiangjiang", title: true },
-    { id: "xiangjiang", prefix: "x", count: 51, next: "zunyi", title: true },
-    { id: "zunyi", prefix: "z", count: 30, next: "jinsha", title: true },
-    { id: "jinsha", prefix: "j", count: 42, next: "luding", title: true },
-    { id: "luding", prefix: "l", count: 46, next: "grass", title: true },
-    { id: "grass", prefix: "g", count: 51, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
-    { id: "wuqi", prefix: "w", count: 56, next: "ending", title: false },
-    { id: "coda", prefix: "c", count: 13, next: "ending", title: true, hidden: true, last: "c012" },
-    { id: "badend", prefix: "b", count: 6, next: "ending", title: true, hidden: true, last: "b006", codex: false }
+    { id: "prologue", prefix: "p", count: 89, next: "xiangjiang", title: true },
+    { id: "xiangjiang", prefix: "x", count: 114, next: "zunyi", title: true },
+    { id: "zunyi", prefix: "z", count: 118, next: "jinsha", title: true },
+    { id: "jinsha", prefix: "j", count: 86, next: "luding", title: true },
+    { id: "luding", prefix: "l", count: 120, next: "grass", title: true, first: "l100" },
+    { id: "grass", prefix: "g", count: 135, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
+    { id: "wuqi", prefix: "w", count: 78, next: "ending", title: false },
+    { id: "coda", prefix: "c", count: 18, next: "ending", title: true, hidden: true, last: "c012" },
+    { id: "badend", prefix: "b", count: 8, next: "ending", title: true, hidden: true, last: "b006", codex: false }
   ];
   var doc = readRoot("docs/chapter-integration.md");
   var docCounts = {};
@@ -829,7 +855,8 @@ function checkChapterTable() {
     if (chapter.nodes.length !== item.count) fail("C24", item.id + " 节点应为 " + item.count + "，实际 " + chapter.nodes.length);
     if (docCounts[item.id] !== item.count) fail("C24", "chapter-integration 表 " + item.id + " 应为 " + item.count + "，实际 " + docCounts[item.id]);
     var nodes = chapter.nodes;
-    if (nodes[0].id !== item.prefix + "001") fail("C24", item.id + " 首节点应为 " + item.prefix + "001");
+    var firstId = item.first || item.prefix + "001";
+    if (nodes[0].id !== firstId) fail("C24", item.id + " 首节点应为 " + firstId);
     var lastId = item.last || item.prefix + "900";
     if (nodes[nodes.length - 1].id !== lastId) fail("C24", item.id + " 末节点应为 " + lastId + "，实际 " + nodes[nodes.length - 1].id);
     var codexCount = nodes.filter(function (node) { return node.type === "codex"; }).length;
@@ -849,7 +876,7 @@ function checkChapterTable() {
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 九章 50/51/30/42/46/51/56/13/6 共 345 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 九章 89/114/118/86/120/135/78/18/8 共 766 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -1250,23 +1277,23 @@ function checkEndingRoutes() {
     if (namesLen !== undefined && ending.names.length !== namesLen) fail("C39", label + " 点名应为 " + namesLen + " 名");
     return ending;
   }
-  expectRoute("7(1) 门板·一直优秀", { "had.door": true, "item.door": true, rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "7(1)", 1);
-  expectRoute("7(2) 门板留草地·救1", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "7(2)", 2);
-  expectRoute("7(2) 门板留桥上·救1", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "7(2)", 2);
-  expectRoute("7(3) 门板到吴起·救2", { "had.door": true, "item.door": true, rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "7(3)", 3);
-  expectRoute("7(4) 门板留草地·救2", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "7(4)", 4);
-  expectRoute("7(4) 门板留桥上·救2", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "7(4)", 4);
-  var seven5 = expectRoute("7(5) 空页", { "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "7(5)", 5);
+  expectRoute("7(1) 门板·一直优秀", { "had.door": true, "item.door": true, rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "1", 1);
+  expectRoute("7(2) 门板留草地·救1", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "2", 2);
+  expectRoute("7(2) 门板留桥上·救1", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "2", 2);
+  expectRoute("7(3) 门板到吴起·救2", { "had.door": true, "item.door": true, rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "3", 3);
+  expectRoute("7(4) 门板留草地·救2", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "4", 4);
+  expectRoute("7(4) 门板留桥上·救2", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "4", 4);
+  var seven5 = expectRoute("7(5) 空页", { "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "5", 5);
   if (seven5.fate.player !== "dead" || seven5.fate.dongsheng !== "dead") fail("C39", "7(5) fate 快照不对");
   var sacrifice = seven5.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
   if (!sacrifice || sacrifice.lit !== true) fail("C39", "7(5) 牺牲卡应亮");
   if (sacrifice.line !== XB.story.ending.kongyeSacrificeLine) fail("C39", "7(5) 牺牲卡没用 kongyeSacrificeLine");
-  expectRoute("8(1) 空手·救0", { rescues: 0, condition: 3 }, "no_door_zero", "空手", 19, 7, "8(1)", 6);
-  expectRoute("8(2) 空手·救1", { rescues: 1, condition: 2 }, "no_door_one", "空手", 19, 7, "8(2)", 7);
-  expectRoute("8(3) 空手·救2", { rescues: 2, condition: 2 }, "no_door_two", "空手", 19, 7, "8(3)", 8);
-  expectRoute("8(4) 空手·救3", { rescues: 3, condition: 3 }, "no_door_three", "空手", 19, 7, "8(4)", 9);
-  expectRoute("8(5) 空手·救3且优秀", { rescues: 3, condition: 4 }, "no_door_three_excellent", "空手", 19, 7, "8(5)", 10);
-  var bad = expectRoute("坏结局", { rescues: 1, condition: 0 }, "bad_end", "没有走出草地", 18, 0, "坏结局", 11);
+  expectRoute("8(1) 空手·救0", { rescues: 0, condition: 3 }, "no_door_zero", "空手", 19, 7, "6", 6);
+  expectRoute("8(2) 空手·救1", { rescues: 1, condition: 2 }, "no_door_one", "空手", 19, 7, "7", 7);
+  expectRoute("8(3) 空手·救2", { rescues: 2, condition: 2 }, "no_door_two", "空手", 19, 7, "8", 8);
+  expectRoute("8(4) 空手·救3", { rescues: 3, condition: 3 }, "no_door_three", "空手", 19, 7, "9", 9);
+  expectRoute("8(5) 空手·救3且优秀", { rescues: 3, condition: 4 }, "no_door_three_excellent", "空手", 19, 7, "10", 10);
+  var bad = expectRoute("坏结局", { rescues: 1, condition: 0 }, "bad_end", "没有走出草地", 18, 0, "11", 11);
   if (bad.fate.player !== "dead" || bad.names.length !== 0) fail("C39", "坏结局应为无点名且我死");
 
   var state = makeState({ "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true });
@@ -1280,7 +1307,7 @@ function checkEndingRoutes() {
     return;
   }
   var snap = result.state.ending;
-  if (snap.route !== "door_others" || snap.routeLabel !== "7(5)" || snap.condition !== 0 || snap.rescues !== 3) {
+  if (snap.route !== "door_others" || snap.routeLabel !== "5" || snap.condition !== 0 || snap.rescues !== 3) {
     fail("C39", "ending 快照丢了 7(5) 的 route/condition/rescues");
   }
   if (!snap.fate || snap.fate.player !== "dead" || snap.fate.feimao !== "dead" || snap.fate.lin !== "dead") {
@@ -1304,6 +1331,94 @@ function checkFateMechanics() {
   XB.core.setFlag(state, "item.medicine", true);
   if (XB.core.visibleOptions(state, node).length !== 2) fail("C40", "有药时 l019x 应显示 2 项");
   if (!XB.core.applyChoice(state, XB.core.currentNode(state), "A", false)) fail("C40", "有药却不能选喂药");
+  // 喂药要真的从行囊扣掉：旗标、清单、半格计数三处一致，别只写旗标。
+  if (state.inventory.items.indexOf("medicine") !== -1) fail("C40", "喂药后行囊里还留着药");
+  if (XB.core.packUsage(state) !== 0) fail("C40", "喂药后行囊半格没清零，实际 " + XB.core.packUsage(state));
+
+  // 拒绝/无法补给的死亡也要产生状态事件，顶部提示才能写“你牺牲了”，不能静默改 fate。
+  var doomed = XB.core.defaults();
+  doomed.flags.condition = 1;
+  XB.core.takeStatusEvents();
+  XB.core.resolveGrassWarning(doomed);
+  var deathEvents = XB.core.takeStatusEvents();
+  var playerDeath = deathEvents.filter(function (event) { return event.kind === "player"; })[0];
+  if (!playerDeath || playerDeath.to !== 0 || playerDeath.reason !== "没能补充物资") {
+    fail("C40", "拒绝补给没有记录玩家 1→0 的状态事件");
+  }
+
+  // 同伴 0 也从 setFlag 统一记录；文案层再把它写成“牺牲了”，不再写“状态变为牺牲”。
+  var loss = XB.core.defaults();
+  if (!XB.core.startChapter(loss, "grass", "g018x")) {
+    fail("C40", "定位不到 g018x");
+  } else {
+    XB.core.takeStatusEvents();
+    if (!XB.core.applyChoice(loss, XB.core.currentNode(loss), "C", false)) fail("C40", "灶王不救选项失败");
+    var lossEvents = XB.core.takeStatusEvents();
+    var zaowangDeath = lossEvents.filter(function (event) { return event.kind === "zaowang"; })[0];
+    if (!zaowangDeath || zaowangDeath.to !== 0) fail("C40", "灶王牺牲没有记录 quality 0 的状态事件");
+  }
+
+  // 湘江“回头接应老周”：带青稞才从清单扣，没带只落湿绑腿；代价不在选项上显示。
+  var xyBarley = XB.core.defaults();
+  xyBarley.flags["item.door"] = true;
+  xyBarley.flags["had.door"] = true;
+  xyBarley.flags["item.medicine"] = true;
+  xyBarley.flags["item.barley"] = true;
+  xyBarley.inventory.door = true;
+  xyBarley.inventory.items = ["roster", "pencil", "medicine", "barley"];
+  if (!XB.core.startChapter(xyBarley, "xiangjiang", "x025a")) {
+    fail("C40", "定位不到 x025a");
+  } else {
+    var xyNode = XB.core.currentNode(xyBarley);
+    if (!xyNode || xyNode.hideCost !== true) fail("C40", "x025a 应隐藏选项代价");
+    if (!XB.core.applyChoice(xyBarley, xyNode, "A", false)) fail("C40", "x025a 带青稞却不能回头接应");
+    if (xyBarley.inventory.items.indexOf("barley") !== -1) fail("C40", "回头接应后青稞没从清单扣掉");
+    if (xyBarley.inventory.items.indexOf("medicine") === -1) fail("C40", "回头接应误扣了药");
+    if (xyBarley.flags["memory.xiangjiang.barley_lost"] !== true) fail("C40", "带青稞没记 barley_lost");
+    if (XB.core.packUsage(xyBarley) !== 5) fail("C40", "青稞扣掉后应剩门板 4 + 药 1");
+  }
+
+  var xyEmpty = XB.core.defaults();
+  xyEmpty.flags["item.door"] = true;
+  xyEmpty.flags["had.door"] = true;
+  xyEmpty.flags["item.medicine"] = true;
+  xyEmpty.inventory.door = true;
+  xyEmpty.inventory.items = ["roster", "pencil", "medicine"];
+  if (!XB.core.startChapter(xyEmpty, "xiangjiang", "x025a")) {
+    fail("C40", "定位不到 x025a（无青稞）");
+  } else {
+    var xyEmptyNode = XB.core.currentNode(xyEmpty);
+    if (!XB.core.applyChoice(xyEmpty, xyEmptyNode, "A", false)) fail("C40", "x025a 无青稞却不能回头接应");
+    if (xyEmpty.inventory.items.length !== 3) fail("C40", "无青稞时回头接应不应动清单");
+    if (xyEmpty.flags["memory.xiangjiang.binding_lost"] !== true) fail("C40", "无青稞没记 binding_lost");
+    if (xyEmpty.flags["memory.xiangjiang.barley_lost"] === true) fail("C40", "无青稞却记了 barley_lost");
+  }
+
+  var xyNoDoor = XB.core.defaults();
+  xyNoDoor.flags["item.barley"] = true;
+  xyNoDoor.inventory.items = ["roster", "pencil", "barley"];
+  if (!XB.core.startChapter(xyNoDoor, "xiangjiang", "x025b")) {
+    fail("C40", "定位不到 x025b");
+  } else {
+    var xyNoDoorNode = XB.core.currentNode(xyNoDoor);
+    if (!xyNoDoorNode || xyNoDoorNode.hideCost !== true) fail("C40", "x025b 应隐藏选项代价");
+    if (!XB.core.applyChoice(xyNoDoor, xyNoDoorNode, "A", false)) fail("C40", "x025b 无门板却不能回头接应");
+    if (xyNoDoor.inventory.items.indexOf("barley") !== -1) fail("C40", "x025b 回头接应后青稞没扣");
+  }
+
+  var repaired = XB.core.normalize({
+    version: 2, scene: "vn", chapterId: "luding", nodeId: "l019x",
+    flags: { "had.door": true, "item.medicine": false },
+    inventory: { door: false, items: ["roster", "pencil", "medicine"] }
+  });
+  if (repaired.issue) fail("C40", "已吃药的旧残档被判坏档：" + repaired.issue);
+  else if (repaired.state.inventory.items.indexOf("medicine") !== -1) fail("C40", "读档没修掉已经吃掉的药");
+  var legacyPack = XB.core.normalize({
+    version: 2, scene: "vn", chapterId: "luding", nodeId: "l019x",
+    flags: { "had.door": true },
+    inventory: { door: false, items: ["roster", "pencil", "medicine", "barley"] }
+  });
+  if (legacyPack.issue || legacyPack.state.inventory.items.length !== 4) fail("C40", "没有 item.* 键的旧行囊被误删");
 
   var fallback = XB.core.defaultOptionKey(state, {
     defaultOption: "A",
@@ -1343,6 +1458,41 @@ function checkFateMechanics() {
   var settled = XB.core.settleGrass(settle);
   if (settled.condition !== 2 || settle.flags["help.used"] !== true || settle.flags["memory.help"] !== true) fail("C40", "救满三人应在差状态触发一次帮助");
   if (XB.core.settleGrass(settle).condition !== 2) fail("C40", "草地结算应幂等");
+
+  // 有门板：救满第三人时若已跌到差，三人当场把人架起来（差→勉强），草地再 -1 才轮到警告。
+  var doorAid = XB.core.defaults();
+  doorAid.flags["had.door"] = true;
+  doorAid.flags.condition = 2;
+  doorAid.flags.rescues = 2;
+  XB.core.setFlag(doorAid, "rescues", "+1");
+  if (doorAid.flags.rescues !== 3 || doorAid.flags.condition !== 2) fail("C40", "有门板救第三人应扣到差再由三人帮助回到勉强，实际 " + doorAid.flags.condition);
+  if (doorAid.flags["help.used"] !== true || doorAid.flags["memory.help_door"] !== true) fail("C40", "有门板救人帮助没写 help.used/memory.help_door");
+  var doorSettled = XB.core.settleGrass(doorAid);
+  if (doorSettled.condition !== 1 || doorSettled.needPack !== true) fail("C40", "有门板帮助后再结算应回到差并要补给");
+  if (XB.core.settleGrass(doorAid).condition !== 1) fail("C40", "有门板草地结算应幂等");
+
+  // 无门板：第三人不再扣状态，草地结算 -1 跌到差时补一次帮助，不写 help_door。
+  var noDoorAid = XB.core.defaults();
+  noDoorAid.flags.condition = 2;
+  noDoorAid.flags.rescues = 2;
+  XB.core.setFlag(noDoorAid, "rescues", "+1");
+  if (noDoorAid.flags.condition !== 2 || noDoorAid.flags["help.used"] === true) fail("C40", "无门板第三人不应提前触发帮助");
+  var noDoorSettled = XB.core.settleGrass(noDoorAid);
+  if (noDoorSettled.condition !== 2 || noDoorAid.flags["memory.help"] !== true || noDoorAid.flags["memory.help_door"] === true) fail("C40", "无门板草地差状态应触发一次帮助");
+
+  // 拒绝补给：状态停在差，由 settleDoor 收口到 7(5)（有门板救满）或坏结局。
+  var refuse = XB.core.defaults();
+  refuse.flags.condition = 1;
+  refuse.flags.rescues = 1;
+  XB.core.resolveGrassWarning(refuse);
+  if (refuse.flags["fate.player.dead"] !== true) fail("C40", "拒绝补给应判死");
+  var refuse7 = XB.core.defaults();
+  refuse7.flags["had.door"] = true;
+  refuse7.flags["item.door"] = true;
+  refuse7.flags.condition = 1;
+  refuse7.flags.rescues = 3;
+  XB.core.resolveGrassWarning(refuse7);
+  if (XB.core.settleDoor(refuse7) !== "others") fail("C40", "拒绝补给且救满三人应走空页");
 
   var door = XB.core.defaults();
   door.flags["had.door"] = true;
@@ -1396,7 +1546,317 @@ function checkFateMechanics() {
   });
   if (html.indexOf('data-action="roster-gallery"') === -1) fail("C40", "标题页缺名册入口");
   if (readProject("style.css").indexOf(".xb-roster-pages") === -1) fail("C40", "style.css 缺名册回廊样式");
-  notes.push("C40 OK requires 可见性/默认回退/8 半格容量/物资组合/草地结算/四类旧档迁移；名册与物资面板入口就位");
+  ["status-notice", "status-notice-list"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C40", "index.html 缺 #" + id);
+  });
+  if (html.indexOf("xb-status-notice") === -1) fail("C40", "index.html 缺状态弹窗样式类");
+  if (readProject("style.css").indexOf(".xb-status-notice") === -1) fail("C40", "style.css 缺状态弹窗样式");
+  if (engine.indexOf("takeStatusEvents") === -1 || engine.indexOf("recordStatusDiff") === -1) {
+    fail("C40", "engine.js 缺状态事件记录/导出");
+  }
+
+  // 状态弹窗：只报真的变了；原因优先取 statusReason；读档/normalize 不报。
+  // 草地分粮本身只扣粮，状态 +1 在 g008b 药膏回赠后发生，原因写“你与他人互相救助”。
+  XB.core.takeStatusEvents();
+  var statusShare = XB.core.defaults();
+  statusShare.flags["item.barley"] = true;
+  statusShare.inventory.items = ["roster", "pencil", "barley"];
+  if (!XB.core.startChapter(statusShare, "grass", "g008")) {
+    fail("C40", "定位不到 g008");
+  } else {
+    if (!XB.core.applyChoice(statusShare, XB.core.currentNode(statusShare), "A", false)) {
+      fail("C40", "g008 A 分粮失败");
+    }
+    var shareEvents = XB.core.takeStatusEvents();
+    if (shareEvents.length !== 0) {
+      fail("C40", "分粮本身不应立即改状态，实际 " + JSON.stringify(shareEvents));
+    } else if (statusShare.flags.condition !== 3) {
+      fail("C40", "分粮本身不应加状态，实际 condition=" + statusShare.flags.condition);
+    }
+    var shareNode = XB.core.locate("grass", "g008b");
+    if (!shareNode || !shareNode.node.status || shareNode.node.status.condition !== "+1") {
+      fail("C40", "g008b 缺状态 +1 元数据");
+    } else if (shareNode.node.statusOnce !== "memory.grass_mutual") {
+      fail("C40", "g008b 缺 statusOnce 幂等标记");
+    } else if (shareNode.node.statusReason !== "你与他人互相救助") {
+      fail("C40", "g008b 状态原因不对：" + shareNode.node.statusReason);
+    }
+    if (engine.indexOf("function applyNodeStatus") === -1 || engine.indexOf("statusOnce") === -1) {
+      fail("C40", "engine.js 缺节点级状态/幂等处理");
+    }
+    XB.core.applySet(statusShare, shareNode.node.status, "g008b:status", shareNode.node.statusReason);
+    var shareAidEvents = XB.core.takeStatusEvents();
+    if (shareAidEvents.length !== 1 || shareAidEvents[0].kind !== "player" || shareAidEvents[0].from !== 3 || shareAidEvents[0].to !== 4) {
+      fail("C40", "互助回赠应只报一条我的状态 3→4，实际 " + JSON.stringify(shareAidEvents));
+    } else if (shareAidEvents[0].reason !== "你与他人互相救助") {
+      fail("C40", "互助回赠状态原因不对：" + shareAidEvents[0].reason);
+    }
+  }
+
+  var statusUse = XB.core.defaults();
+  statusUse.chapterId = "grass";
+  statusUse.flags["item.shoes"] = true;
+  statusUse.inventory.items = ["roster", "pencil", "shoes"];
+  XB.core.usePackItems(statusUse, ["shoes"]);
+  var useEvents = XB.core.takeStatusEvents();
+  if (useEvents.length !== 1 || useEvents[0].kind !== "player" || useEvents[0].to !== 4) {
+    fail("C40", "用布鞋回状态应报一条我的状态变化，实际 " + JSON.stringify(useEvents));
+  } else if (useEvents[0].reason !== "你用了布鞋") {
+    fail("C40", "用布鞋状态原因不对：" + useEvents[0].reason);
+  }
+
+  var statusSettle = XB.core.defaults();
+  statusSettle.flags.condition = 2;
+  XB.core.settleGrass(statusSettle);
+  var settleEvents = XB.core.takeStatusEvents();
+  if (settleEvents.length !== 1 || settleEvents[0].kind !== "player" || settleEvents[0].from !== 2 || settleEvents[0].to !== 1) {
+    fail("C40", "草地结算应报一条我的状态 2→1，实际 " + JSON.stringify(settleEvents));
+  } else if (settleEvents[0].reason.indexOf("草地走到第七天") === -1) {
+    fail("C40", "草地结算状态原因不对：" + settleEvents[0].reason);
+  }
+
+  var statusPerson = XB.core.defaults();
+  statusPerson.flags["quality.feimao"] = 3;
+  XB.core.setFlag(statusPerson, "quality.feimao", 1, "飞毛腿倒在桥头");
+  var hurtEvents = XB.core.takeStatusEvents();
+  if (hurtEvents.length !== 1 || hurtEvents[0].kind !== "feimao" || hurtEvents[0].to !== 1) {
+    fail("C40", "飞毛腿掉到差应报一条人物状态变化，实际 " + JSON.stringify(hurtEvents));
+  }
+  XB.core.setFlag(statusPerson, "fate.feimao.dead", true, "你没有停");
+  var deathEvents = XB.core.takeStatusEvents();
+  if (deathEvents.length !== 1 || deathEvents[0].kind !== "feimao" || deathEvents[0].to !== 0) {
+    fail("C40", "飞毛腿牺牲应报一条人物状态变化，实际 " + JSON.stringify(deathEvents));
+  }
+  XB.core.setFlag(statusPerson, "quality.feimao", 0, "重复写入");
+  if (XB.core.takeStatusEvents().length !== 0) fail("C40", "状态没变时不应报状态弹窗");
+
+  notes.push("C40 OK requires 可见性/默认回退/8 半格容量/物资组合/草地结算/四类旧档迁移；名册与物资面板入口就位；状态事件只报真实变化");
+}
+
+// C41：剧情分支回看（v1.5）：19 个决策组覆盖 20 个结构节点，11 结局同一账本，结算先记录再清日志
+function checkBranchMap() {
+  var XB;
+  try {
+    XB = loadGame(["story.js", "engine.js"]);
+  } catch (err) {
+    fail("C41", "story/engine 无法在同一上下文加载：" + err.message);
+    return;
+  }
+  var story = XB.story;
+  var map = story && story.branchMap;
+  if (!map || !map.chapters || !map.decisions || !map.endings) {
+    fail("C41", "story.branchMap 缺 chapters/decisions/endings");
+    return;
+  }
+  var chapterIds = Object.keys(map.chapters);
+  if (chapterIds.length !== 7) fail("C41", "分支图应 7 章，实际 " + chapterIds.length);
+  var decisionIds = Object.keys(map.decisions);
+  if (decisionIds.length !== 19) fail("C41", "决策组应 19 个，实际 " + decisionIds.length);
+
+  var byId = {};
+  (story.chapters || []).forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) {
+      if (node.id) byId[node.id] = { chapter: chapter.id, node: node };
+    });
+  });
+
+  var covered = {};
+  var structured = [];
+  Object.keys(byId).forEach(function (id) {
+    var entry = byId[id];
+    if (["choice", "multichoice", "interact"].indexOf(entry.node.type) !== -1) structured.push(entry);
+  });
+
+  decisionIds.forEach(function (id) {
+    var decision = map.decisions[id];
+    if (!decision || !Array.isArray(decision.nodes) || !decision.nodes.length) {
+      fail("C41", "决策 " + id + " 缺 nodes");
+      return;
+    }
+    if (!decision.title || !decision.context) fail("C41", "决策 " + id + " 缺 title/context");
+    decision.nodes.forEach(function (nodeId) {
+      var entry = byId[nodeId];
+      if (!entry) {
+        fail("C41", "决策 " + id + " 指向不存在的节点 " + nodeId);
+        return;
+      }
+      if (covered[nodeId]) fail("C41", "节点 " + nodeId + " 被多个决策组覆盖");
+      covered[nodeId] = id;
+    });
+    if (decision.kind === "event") {
+      if (!decision.doneText || !decision.skipText) fail("C41", "事件决策 " + id + " 缺 doneText/skipText");
+    } else if (!decision.options || !Object.keys(decision.options).length) {
+      fail("C41", "选择决策 " + id + " 缺选项后果");
+    }
+    if (id === "p024" || id === "x015") {
+      if (decision.multi !== true) fail("C41", id + " 应标记 multi");
+    }
+  });
+
+  structured.forEach(function (entry) {
+    if (!covered[entry.node.id]) fail("C41", "剧情节点 " + entry.node.id + " 没有收进分支图");
+  });
+  if (structured.length !== 22) fail("C41", "choice/multichoice/interact 应 22 个，实际 " + structured.length);
+
+  chapterIds.forEach(function (chapterId) {
+    var meta = map.chapters[chapterId];
+    if (!meta.intro) fail("C41", "章节 " + chapterId + " 缺 intro");
+    if (!meta.image || !fs.existsSync(path.join(PROJECT_DIR, meta.image.replace(/^\.\//, "")))) {
+      fail("C41", "章节 " + chapterId + " 的缩略图不存在：" + meta.image);
+    }
+    (meta.decisions || []).forEach(function (decisionId) {
+      if (!map.decisions[decisionId]) fail("C41", "章节 " + chapterId + " 指向未知决策 " + decisionId);
+      else if (map.decisions[decisionId].nodes.some(function (nodeId) {
+        return byId[nodeId] && byId[nodeId].chapter !== chapterId && chapterId !== "wuqi";
+      })) {
+        fail("C41", "章节 " + chapterId + " 的决策 " + decisionId + " 跨章");
+      }
+    });
+  });
+
+  var routeIds = Object.keys(story.ending.routes || {});
+  if (routeIds.length !== 11) fail("C41", "ending.routes 应 11 条，实际 " + routeIds.length);
+  routeIds.forEach(function (route) {
+    if (!map.endings[route] || !map.endings[route].hint) fail("C41", "结局 " + route + " 缺回看提示");
+  });
+  Object.keys(map.endings).forEach(function (route) {
+    if (routeIds.indexOf(route) === -1) fail("C41", "回看多出未知结局 " + route);
+  });
+
+  var engine = readProject("engine.js");
+  if (engine.indexOf('BRANCH_KEY = "xiangbei.branches.v1"') === -1) fail("C41", "缺独立分支键 xiangbei.branches.v1");
+  var recordAt = engine.indexOf("recordBranchRun(state.ending);");
+  var clearAt = engine.indexOf("state.choices = [];", recordAt);
+  if (recordAt === -1 || clearAt === -1 || clearAt < recordAt) fail("C41", "结算必须先 recordBranchRun 再清 choices");
+  if (engine.indexOf("branchStorageOk") === -1 || engine.indexOf("openBranchDetail") === -1) fail("C41", "缺分支存储降级/详情逻辑");
+
+  var html = readProject("index.html");
+  if (html.indexOf('id="branch-map"') === -1) fail("C41", "index.html 缺 #branch-map");
+  if ((html.match(/data-action="branch"/g) || []).length < 2) fail("C41", "标题/暂停应各有剧情分支入口");
+  if (html.indexOf('data-action="ending-branch"') === -1) fail("C41", "结局页缺剧情分支入口");
+  var css = readProject("style.css");
+  [".xb-branch {", ".xb-branch__chapters", ".xb-branch__endings", ".xb-branch-detail", ".xb-branch-ending.is-locked"].forEach(function (needle) {
+    if (css.indexOf(needle) === -1) fail("C41", "style.css 缺 " + needle);
+  });
+  notes.push("C41 OK 分支图 7 章 / 19 决策组覆盖 22 个结构节点 / 11 结局提示；独立键与三入口；结算先记录后清日志");
+}
+
+// C42：成就 48 条（17 个选择组 46 + 记名 2），词条/章节/入口/结算快照
+function checkAchievements() {
+  var XB;
+  try {
+    XB = loadGame(["story.js", "engine.js"]);
+  } catch (err) {
+    fail("C42", "story/engine 无法在同一上下文加载：" + err.message);
+    return;
+  }
+  var story = XB.story;
+  var list = story && story.achievements;
+  if (!Array.isArray(list)) {
+    fail("C42", "story.achievements 不是数组");
+    return;
+  }
+  if (list.length !== 48) fail("C42", "成就应 48 条，实际 " + list.length);
+
+  var ids = {};
+  var titles = {};
+  var chapters = { prologue: 0, xiangjiang: 0, zunyi: 0, jinsha: 0, luding: 0, grass: 0, wuqi: 0 };
+  list.forEach(function (item) {
+    if (!item || typeof item.id !== "string" || !item.id) fail("C42", "成就缺 id");
+    else if (ids[item.id]) fail("C42", "成就 id 重复：" + item.id);
+    else ids[item.id] = true;
+    if (!item || typeof item.title !== "string" || !item.title) fail("C42", "成就缺词条：" + (item && item.id));
+    else {
+      var length = Array.from(item.title).length;
+      if (length < 1 || length > 8) fail("C42", "词条应 1–8 字：" + item.id + " " + item.title);
+      if (titles[item.title]) fail("C42", "词条重复：" + item.title);
+      titles[item.title] = true;
+    }
+    if (!chapters.hasOwnProperty(item.chapter)) fail("C42", "成就章不认识：" + item.chapter);
+    else chapters[item.chapter] += 1;
+    if (!story.branchMap.decisions[item.decision]) fail("C42", "成就指向未知决策：" + item.id);
+  });
+
+  var expectedChapters = { prologue: 9, xiangjiang: 9, zunyi: 8, jinsha: 5, luding: 5, grass: 10, wuqi: 2 };
+  Object.keys(expectedChapters).forEach(function (id) {
+    if (chapters[id] !== expectedChapters[id]) {
+      fail("C42", "章 " + id + " 成就数应为 " + expectedChapters[id] + "，实际 " + chapters[id]);
+    }
+  });
+
+  var map = story.branchMap;
+  var decisions = Object.keys(map.decisions).filter(function (id) {
+    var decision = map.decisions[id];
+    return decision.options && Object.keys(decision.options).length;
+  });
+  if (decisions.length !== 17) fail("C42", "有选项的决策组应 17 个，实际 " + decisions.length);
+  var choiceCount = 0;
+  decisions.forEach(function (decisionId) {
+    var decision = map.decisions[decisionId];
+    Object.keys(decision.options).forEach(function (key) {
+      choiceCount += 1;
+      var found = list.filter(function (item) {
+        return item.kind !== "interact" && item.decision === decisionId && item.key === key;
+      });
+      if (found.length !== 1) fail("C42", decisionId + " 的选项 " + key + " 应恰好 1 条成就，实际 " + found.length);
+    });
+  });
+  if (choiceCount !== 46) fail("C42", "选择成就应 46 条，实际 " + choiceCount);
+  var choiceAchievements = list.filter(function (item) { return item.kind !== "interact"; });
+  if (choiceAchievements.length !== 46) fail("C42", "kind=choice 的成就应 46 条");
+  if (list.some(function (item) { return item.decision === "w026"; })) fail("C42", "点名不应有成就");
+
+  var j018 = list.filter(function (item) { return item.kind === "interact"; });
+  if (j018.length !== 2) fail("C42", "记名应 2 条成就，实际 " + j018.length);
+  ["done", "skip"].forEach(function (outcome) {
+    var found = j018.filter(function (item) { return item.decision === "j018" && item.outcome === outcome; });
+    if (found.length !== 1) fail("C42", "记名 " + outcome + " 应 1 条成就");
+  });
+
+  var sample = XB.core.collectRunAchievements({
+    chapterId: "prologue",
+    choices: [
+      { chapter: "prologue", nodeId: "p021", option: "A", text: "带上这块门板", timedOut: false },
+      { chapter: "prologue", nodeId: "p024", option: "MULTI", text: "药、青稞", timedOut: false }
+    ],
+    flags: { "memory.namepick_done": true, "memory.zhang": true }
+  });
+  ["p021-A", "p024-medicine", "p024-barley", "j018-done"].forEach(function (id) {
+    if (sample.indexOf(id) === -1) fail("C42", "collectRunAchievements 漏了 " + id + "：" + sample.join(","));
+  });
+  var skip = XB.core.collectRunAchievements({ choices: [], flags: { "memory.namepick_done": true, "memory.zhang": false } });
+  if (skip.indexOf("j018-skip") === -1) fail("C42", "记名未动笔应收集 j018-skip");
+  var oldDone = XB.core.collectRunAchievements({ choices: [], flags: { "memory.zhang": true } });
+  if (oldDone.indexOf("j018-done") === -1) fail("C42", "旧档 memory.zhang 应收集 j018-done");
+
+  var ending = XB.core.buildEnding(XB.core.defaults());
+  if (!Array.isArray(ending.achievements)) fail("C42", "ending 快照缺 achievements 数组");
+
+  var engine = readProject("engine.js");
+  if (engine.indexOf('ACHIEVEMENT_KEY = "xiangbei.achievements.v1"') === -1) {
+    fail("C42", "缺独立成就键 xiangbei.achievements.v1");
+  }
+  var recordAt = engine.indexOf("recordRunAchievements(state.ending);");
+  var clearAt = engine.indexOf("state.choices = [];", recordAt);
+  if (recordAt === -1 || clearAt === -1 || clearAt < recordAt) {
+    fail("C42", "结算必须先记录成就再清 choices");
+  }
+  if (engine.indexOf("recordChoiceAchievement(") === -1 || engine.indexOf("recordMultiAchievements(") === -1) {
+    fail("C42", "缺单选/多选即时解锁");
+  }
+
+  var html = readProject("index.html");
+  if (html.indexOf('id="achievement-panel"') === -1) fail("C42", "index.html 缺 #achievement-panel");
+  if ((html.match(/data-action="achievements"/g) || []).length < 2) {
+    fail("C42", "标题/暂停应各有解锁成就入口");
+  }
+  if (html.indexOf('id="ending-achievements"') === -1) fail("C42", "结局缺本局成就区");
+  if (html.indexOf("此周目解锁的成就有：") === -1) fail("C42", "结局成就标题不对");
+  var css = readProject("style.css");
+  [".xb-achievements", ".xb-achievement-card.is-locked", ".xb-achievement-detail", ".xb-ending__achievement"].forEach(function (needle) {
+    if (css.indexOf(needle) === -1) fail("C42", "style.css 缺 " + needle);
+  });
+  notes.push("C42 OK 48 条（46 选择 + 记名 2）/ 词条唯一 / 17 组 1:1 / 章分布 9-9-8-5-5-10-2 / 三入口与结算快照");
 }
 
 // C38：发布运行时无外部请求/模块（步骤八冻结）
@@ -1449,6 +1909,8 @@ checkAudioSettings();
 checkFxLayer();
 checkFxLimits();
 checkCredits();
+checkBranchMap();
+checkAchievements();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {
