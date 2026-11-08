@@ -39,7 +39,11 @@ const REQUIRED_IDS = [
   "branch-detail-sub", "branch-detail-body", "ending-branch",
   "achievement-panel", "achievement-title", "achievement-count", "achievement-tabs",
   "achievement-grid", "achievement-close", "achievement-detail", "achievement-detail-close",
-  "achievement-detail-kicker", "achievement-detail-title", "achievement-detail-body"
+  "achievement-detail-kicker", "achievement-detail-title", "achievement-detail-body",
+  "saves-panel", "saves-title", "saves-count", "saves-list", "saves-empty", "saves-close",
+  "save-new", "save-latest", "save-delete", "saves-delete-bar", "saves-delete-count",
+  "saves-delete-confirm", "saves-delete-cancel", "saves-hint",
+  "save-confirm", "save-confirm-title", "save-confirm-body", "save-confirm-yes", "save-confirm-no"
 ];
 
 const PREVIEW_UI = [
@@ -1871,6 +1875,136 @@ function checkReleaseRuntime() {
   notes.push("C38 OK 六个运行时无 http(s)、无 fetch/XHR、无 type=module；CREDITS 仅文本署名");
 }
 
+// C43：存档列表（v1.6）：唯一持久层 xiangbei.saves.v1，单档仍走 v2 normalize，上限 20/512KB
+function checkSaveSlots() {
+  var engine = readProject("engine.js");
+  [
+    'SAVES_KEY = "xiangbei.saves.v1"',
+    "SAVE_SLOT_MAX = 20",
+    "MAX_SAVES_BYTES = 512 * 1024",
+    "function normalizeSavesStore(",
+    "function normalizeSlot(",
+    "function createSlotRecord(",
+    "function writeSavesStore(",
+    "function loadSavesAtBoot(",
+    "function migrateLegacySave(",
+    "function latestUnfinishedSlot(",
+    "function slotEnded(",
+    "function saveNow("
+  ].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C43", "engine.js 缺 " + needle);
+  });
+  // 主存档键只允许读/迁移/清，不允许再直接写：写入口必须只有 writeSavesStore。
+  if (engine.indexOf("localStorage.setItem(SAVE_KEY") !== -1) fail("C43", "仍直接写旧主存档键");
+  if (engine.indexOf("loadSavesAtBoot();") === -1) fail("C43", "init 没有走 loadSavesAtBoot");
+  var migrate = engine.indexOf('var keys = [SAVE_KEY, LEGACY_SAVE_KEY];');
+  if (migrate === -1) fail("C43", "迁移没有按 v2 → v1 顺序");
+  var migrateAt = engine.indexOf("function migrateLegacySave()");
+  var migrateBody = engine.slice(migrateAt, engine.indexOf("function activeSlot()", migrateAt));
+  if (migrateBody.indexOf("removeItem(SAVE_KEY)") === -1 ||
+      migrateBody.indexOf("removeItem(LEGACY_SAVE_KEY)") === -1) {
+    fail("C43", "迁移写入成功后没有删旧键");
+  }
+  // 覆盖而不是新建：有 activeId 就改原槽，没有才 unshift。
+  var saveNowAt = engine.indexOf("function saveNow()");
+  var saveNowBody = engine.slice(saveNowAt, engine.indexOf("/* ---------------- 存档列表与确认弹窗", saveNowAt));
+  if (saveNowBody.indexOf("var slot = activeSlot();") === -1) fail("C43", "saveNow 没有先找当前档");
+  if (saveNowBody.indexOf("slot.state = payload;") === -1) fail("C43", "saveNow 没有覆盖当前档");
+  if (saveNowBody.indexOf("createSlotRecord(payload)") === -1) fail("C43", "saveNow 缺首次建槽");
+  notes.push("C43 OK 存档列表 xiangbei.saves.v1 / 单档 normalize / 20 档 512KB / 迁移后删旧键 / 同档覆盖");
+}
+
+// C44：标题只留「存档」入口；「向北」两字是初始化按钮
+function checkTitleEntries() {
+  var html = readProject("index.html");
+  if (html.indexOf('class="title-main__button" data-action="init-game"') === -1) {
+    fail("C44", "标题「向北」不是初始化按钮");
+  }
+  if (html.indexOf('data-action="saves"') === -1) fail("C44", "标题菜单缺存档入口");
+  if (html.indexOf('data-action="start"') !== -1) fail("C44", "旧的开始按钮还在");
+  if (html.indexOf('data-action="continue"') !== -1) fail("C44", "旧的继续按钮还在");
+  var engine = readProject("engine.js");
+  if (engine.indexOf('case "saves":') === -1 || engine.indexOf('case "init-game":') === -1) {
+    fail("C44", "handleAction 缺 saves/init-game");
+  }
+  if (engine.indexOf('if (actionName === "init-game")') === -1) fail("C44", "缺初始化按钮的按下反馈");
+  if (engine.indexOf('classList.add("is-pressed")') === -1) fail("C44", "缺 is-pressed 加粗重影反馈");
+  var css = readProject("style.css");
+  if (css.indexOf(".title-main__button.is-pressed") === -1) fail("C44", "style.css 缺 .is-pressed");
+  if (css.indexOf("text-shadow") === -1) fail("C44", "缺标题重影");
+  notes.push("C44 OK 标题唯一入口「存档」/ 向北=初始化按钮 / 按下加粗重影 / 旧开始与继续已移除");
+}
+
+// C45：暂停菜单「保存」= 手动覆盖当前档
+function checkManualSave() {
+  var html = readProject("index.html");
+  var pauseAt = html.indexOf('id="pause-menu"');
+  var pauseEnd = html.indexOf("</div>", html.indexOf('data-action="pause-title"', pauseAt));
+  var pause = html.slice(pauseAt, pauseEnd);
+  if (pause.indexOf('data-action="save"') === -1) fail("C45", "暂停菜单缺保存");
+  var engine = readProject("engine.js");
+  if (engine.indexOf('case "save":') === -1) fail("C45", "handleAction 缺 save");
+  if (engine.indexOf("function manualSave()") === -1) fail("C45", "缺 manualSave");
+  var body = engine.slice(engine.indexOf("function manualSave()"), engine.indexOf("function manualSave()") + 240);
+  if (body.indexOf("saveNow()") === -1) fail("C45", "manualSave 没有写档");
+  if (body.indexOf("saveNow() && activeSlot()") === -1) fail("C45", "manualSave 写失败也报已保存");
+  notes.push("C45 OK 暂停「保存」写当前档 / 成功才提示 / 失败走原降级 toast");
+}
+
+// C46：存档列表文案与二选一确认逐字对齐需求
+function checkSavePanelCopy() {
+  var html = readProject("index.html");
+  [
+    "开启新档", "上次玩到", "删除存档", "还没有存档", "已选 0 个"
+  ].forEach(function (text) {
+    if (html.indexOf(text) === -1) fail("C46", "存档面板缺文案：" + text);
+  });
+  var engine = readProject("engine.js");
+  var copyAt = engine.indexOf("function confirmCopy(kind)");
+  var copy = engine.slice(copyAt, engine.indexOf("function openConfirm(", copyAt));
+  [
+    "是否重新开始长征？",
+    "是否继续未竟的长征？",
+    "是否继续长征？",
+    "确定要删除这些存档吗？",
+    "是否初始化游戏？",
+    "这意味着你的存档、剧情分支和成就记录会被全部清空"
+  ].forEach(function (text) {
+    if (copy.indexOf(text) === -1) fail("C46", "确认文案缺：" + text);
+  });
+  if (engine.indexOf('"的存档" + (slotEnded(slot) ? "（已完结）" : "（未完结）")') === -1) {
+    fail("C46", "存档主行格式不是「…的存档（已完结/未完结）」");
+  }
+  if (engine.indexOf("formatSaveDate(slot.createdAt)") === -1) fail("C46", "存档日期没有取创建时间");
+  var css = readProject("style.css");
+  if (css.indexOf(".xb-saves__row.is-selected") === -1) fail("C46", "缺选中加深样式");
+  if (css.indexOf("background: var(--ink);") === -1) fail("C46", "选中态没有墨色底");
+  notes.push("C46 OK 列表「YYYY年MM月DD日的存档（已完结/未完结）」/ 六句确认文案逐字 / 选中墨底朱砂条");
+}
+
+// C47：初始化清四类记录但保留设置；?reset=1 只清存档
+function checkInitIsolation() {
+  var engine = readProject("engine.js");
+  var initAt = engine.indexOf("function initializeGame()");
+  var init = engine.slice(initAt, engine.indexOf("function manualSave()", initAt));
+  [ "SAVES_KEY", "BRANCH_KEY", "ACHIEVEMENT_KEY", "ROSTER_KEY" ].forEach(function (key) {
+    if (init.indexOf(key) === -1) fail("C47", "初始化没有清 " + key);
+  });
+  if (init.indexOf("var settings = normalizeStoreSettings(state ? state.settings : null);") === -1) {
+    fail("C47", "初始化没有保留设置");
+  }
+  if (init.indexOf("branchMemory = null;") === -1) fail("C47", "初始化没有清分支内存缓存");
+  if (init.indexOf("achievementMemory = null;") === -1) fail("C47", "初始化没有清成就内存缓存");
+  if (init.indexOf("achievementState.runIds = [];") === -1) fail("C47", "初始化没有清本局成就");
+  var clearAt = engine.indexOf("function clearSave()");
+  var clear = engine.slice(clearAt, engine.indexOf("function saveNow()", clearAt));
+  ["BRANCH_KEY", "ACHIEVEMENT_KEY", "ROSTER_KEY"].forEach(function (key) {
+    if (clear.indexOf(key) !== -1) fail("C47", "?reset=1 不应清 " + key);
+  });
+  if (clear.indexOf("SAVES_KEY") === -1) fail("C47", "?reset=1 没清存档列表");
+  notes.push("C47 OK 初始化清存档/分支/成就/名册并清内存缓存，设置保留；?reset=1 只清存档");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -1911,6 +2045,11 @@ checkFxLimits();
 checkCredits();
 checkBranchMap();
 checkAchievements();
+checkSaveSlots();
+checkTitleEntries();
+checkManualSave();
+checkSavePanelCopy();
+checkInitIsolation();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

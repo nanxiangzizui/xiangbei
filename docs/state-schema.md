@@ -1,6 +1,6 @@
-# 《向北》存档与旗标（v1.5.1 · 成就系统，v1.5.1-dev）
+# 《向北》存档与旗标（v1.6 · 存档列表，v1.6.0-dev）
 
-> 存档键：`xiangbei.save.v2`（`SAVE_VERSION=2`）；旧键 `xiangbei.save.v1` 保留只读，载入 v2 失败时回退 v1 并就地迁移，迁移后写 v2、不删 v1。
+> 存档键：`xiangbei.saves.v1`（列表，一档一槽，见 §10）；单档仍是 v2 形状（`SAVE_VERSION=2`），逐槽走同一套 `normalize`。旧键 `xiangbei.save.v2` / `xiangbei.save.v1` 只读，首次启动（列表不存在时）迁移成第 1 档并删旧键；`?reset=1` 只清存档，初始化才清分支/成就/名册（§10.4）。
 > 所有 `localStorage` 读写 try/catch；不可用时提示“本局无法存档”，不白屏。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > v1.3.0-dev 的 34 旗标/四路线/3 格行囊已由 v1.4 取代；旧档迁移见 §8，旧字段 `strain` 只作兼容。
@@ -275,9 +275,53 @@
 
 ## 9. 调试与验收
 
-- `?debug=1` 右上显示 scene/chapter/node/flags 摘要/ending/save 字节/audio/peak。
-- `?chapter=coda&node=c006`、`?chapter=badend&node=b006` 可直达；未知节点回地图。
-- 单测：`node project/tools/smoke.js`（49 旗标、pack 4/8、11 路线、迁移、分支 mapping、成就 48 条）；`check-build` 覆盖 C14/C18/C24/C26/C39/C40/C41/C42。
+- `?debug=1` 右上显示 scene/chapter/node/flags 摘要/ending/save 字节与档数/audio/peak。
+- `?chapter=coda&node=c006`、`?chapter=badend&node=b006` 可直达；未知节点回地图。`?resume=1` 直接续最近未完结档（测试后门）；与 `?chapter=` 同用时保留 `activeId`，章末保存落回同一档。
+- `?reset=1` 只清存档列表（不清分支/成就/名册）；初始化用标题“向北”按钮。
+- 单测：`node project/tools/smoke.js`（49 旗标、pack 4/8、11 路线、迁移、分支 mapping、成就 48 条）；`check-build` 覆盖 C14/C18/C24/C26/C39/C40/C41/C42/C43/C44/C45/C46/C47。
 - 浏览器：`_pw-step14.js` 覆盖 48 条映射、标题/暂停/结局三入口、锁定不泄露、单选/多选/记名 pick/skip、结局快照与重进合并、844×390 标题与暂停；http 55/55、file:// 55/55、移动专项 11/11，0 console error / 0 failed request。
 - 浏览器：`_pw-step11.js` 覆盖 11 结局、危机、物资面板、差警告、门板弹窗、旧档、刷新、移动、`file://`；`_pw-step12.js` 覆盖分支空态/暂停实时/结算落档/全部 11 路线/详情/键盘/缩放/坏档/隐私/移动。
 - 实测：步骤十一 check-build 39/39、smoke 46/46、check-script 9 文件 OK；步骤十二 check-build 40/40、smoke 47/47；分支浏览器 98/98（http）、移动 24/24、file 19/19；证据 `docs/evidence/step-11/`、`docs/evidence/step-12/`。
+- 步骤十五（v1.6）：`_pw-step15.js` 覆盖空态、开新档、暂停保存、章末覆盖、刷新回标题、列表续玩、已完结整页回顾、上次玩到、删除选中、初始化、跨档隔离、设置保留、旧档迁移、隐私降级、移动与 `file://`；http 75/75、迁移 8/8、隐私 4/4、移动 9/9、file:// 75/75，0 console error / 0 failed request；check-build 46/46。证据 `docs/evidence/step-15/`。
+
+
+
+## 10. 存档列表（v1.6，2026-11-08）
+
+### 10.1 键与形状
+
+- 键：`xiangbei.saves.v1`；全局只此一份。设置也从单档移到列表上，`slots[].state.settings` 仍由 `serialize` 写入（兼容旧快照），读取时以 `store.settings` 为准。
+- 形状：
+
+    { "version": 1, "activeId": "slot-...", "settings": { ...DEFAULT_SETTINGS },
+      "slots": [ { "id": "slot-...", "createdAt": "ISO", "updatedAt": "ISO", "state": { ...v2 11 键 } } ] }
+
+- `id`：`slot-` + `Date.now().toString(36)` + `-` + 5 位随机；`createdAt` 决定列表日期与倒序，`updatedAt` 只用于“上次玩到”和副行时间。
+- 上限 `SAVE_SLOT_MAX=20` 档、整包 `MAX_SAVES_BYTES=512KB`、单档仍 `MAX_SAVE_BYTES=4096B`；超限 toast“存档空间已满，请先删除旧存档”，不写坏档。
+- 坏列表 JSON / 结构不认识：备份 `xiangbei.saves.v1.bad` 后回空列表并 toast；单个坏槽在 `normalizeSlot` 里丢弃，不拖垮其它档。
+- 已完结由 `isFullEnding(slot.state.ending)` 现算，不存冗余字段；列表主行“YYYY年MM月DD日的存档（已完结/未完结）”，副行未完结写“章名 · 上次保存 MM-DD HH:mm”，已完结写“结局 N/11 · 路线名 · 已完结”。
+
+### 10.2 写入时机
+
+- 每个 beat 仍调 `saveNow()`：有 `activeId` 就覆盖该槽（`slot.state`、`updatedAt`），没有才新建一槽并 `unshift`。所以章末自动保存、暂停“保存”、多选/物资/点名中间态都落在同一档，不会每章生成新档。
+- 开新档（`startNewGame`）才手动新建槽；读档（`loadSlot`）把该槽设为 `activeId` 后再按 beat 覆盖。
+- 回到标题 `go("title")` 也会写一次（`scene:"title"`，`nodeId` 保留）；读档时 `resumeSceneFor` 按 `ending → vn → map` 还原落点。
+
+### 10.3 界面与只读回顾
+
+- 标题菜单只剩“存档”一个入口；面板 `#saves-panel`（z=`--z-saves` 83）三段：列表、删除栏、提示。开启新档/上次玩到/删除存档三个按钮各 84 高。
+- 删除模式：行变 `role=checkbox`、`aria-checked`；选中 `background:var(--ink)` + 纸白字 + 左 6px 朱砂条 + 右侧 `✓`；确认后二次弹窗“确定要删除这些存档吗？”。
+- 二次确认统一用 `#save-confirm`（z=`--z-save-confirm` 89）：开新档/上次玩到/继续某档/删档/初始化五类文案见 `confirmCopy`，默认焦点在“否”。
+- 已完结档不读进主流程：`openEndingReview` 暂存当前 state，把快照塞进 `state` 并进 ending 场景；`renderEnding` 在 `endingReview.active` 时不重建结局、不记名册、不写档，隐藏“剧情分支/史实图鉴”，把“回到标题”改成“返回存档”；`closeEndingReview` 恢复原 state 与按钮。
+- 所有面板可 Esc 关闭、Tab 锁焦点；音频 duck 0.45。
+
+### 10.4 初始化与重置
+
+- 标题“向北”两字是 button（`data-action="init-game"`）：按下加粗 + 重影 220ms，再弹“是否初始化游戏？这意味着你的存档、剧情分支和成就记录会被全部清空”。
+- 选“是”删 6 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
+- `?reset=1` 只清三个存档键，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“存档”。
+
+### 10.5 与分支/成就的关系
+
+- 存档、分支、成就三套键互不读写：开多少档、删多少档都不改 `branches.v1` / `achievements.v1`；只有初始化才清空并回灰。
+- 名册 `roster.v1` 同样只由初始化清空；图鉴页“清档不会清掉它”的提示已删。

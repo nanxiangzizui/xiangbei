@@ -17,12 +17,11 @@
 
     <!-- 标题画面：ui-layout §2 -->
     <section id="scene-title" class="scene" aria-label="标题画面">
-      <h1 class="title-main">向北</h1>
+      <h1 class="title-main"><button type="button" class="title-main__button" data-action="init-game" aria-label="向北 · 点击初始化游戏">向北</button></h1>
       <span class="title-seal" aria-hidden="true">北</span>
       <p class="title-sub">一块门板，两万五千里</p>
       <div id="title-menu" class="title-menu" role="menu" aria-label="主菜单">
-        <button type="button" class="menu-button xb-btn xb-btn--primary" role="menuitem" data-action="start">开始</button>
-        <button type="button" class="menu-button xb-btn" role="menuitem" data-action="continue">继续</button>
+        <button type="button" class="menu-button xb-btn xb-btn--primary menu-button--wide" role="menuitem" data-action="saves">存档</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="roster-gallery">名册</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="branch">剧情分支</button>
@@ -153,6 +152,7 @@
       <div id="pause-menu" class="pause-panel" role="dialog" aria-modal="true" aria-label="暂停">
         <p class="pause-title">暂停</p>
         <button type="button" class="pause-button" data-action="resume">继续</button>
+        <button type="button" class="pause-button" data-action="save">保存</button>
         <button type="button" class="pause-button" data-action="open-settings">设置</button>
         <button type="button" class="pause-button" data-action="codex">史实图鉴</button>
         <button type="button" class="pause-button" data-action="branch">剧情分支</button>
@@ -299,7 +299,7 @@
         <h2 id="roster-gallery-title" class="xb-gallery__title">名册</h2>
         <p id="roster-gallery-count" class="xb-gallery__count"></p>
         <div id="roster-gallery-pages" class="xb-roster-pages"></div>
-        <p class="xb-gallery__hint">这里只记名字，不记分数。清档不会清掉它。</p>
+        <p class="xb-gallery__hint">这里只记名字，不记分数。</p>
       </div>
     </div>
 
@@ -360,6 +360,47 @@
         <h2 id="door-title" class="xb-door__title">必须舍弃门板</h2>
         <p class="xb-door__body">由于你体力透支，或帮手不足，无法将门板带到终点，你必须舍弃。</p>
         <button type="button" id="door-discard" class="xb-btn xb-btn--primary" data-action="door-discard">舍弃门板</button>
+      </div>
+    </div>
+
+    <!-- 存档列表：标题菜单唯一入口；已完结档点开是整页结局回顾 -->
+    <div id="saves-panel" class="xb-saves" role="dialog" aria-modal="true" aria-labelledby="saves-title" hidden>
+      <div class="xb-saves__panel">
+        <button type="button" id="saves-close" class="xb-modal__close" data-action="saves-close" aria-label="关闭存档">×</button>
+        <header class="xb-saves__head">
+          <p class="xb-saves__kicker">一块门板，两万五千里</p>
+          <h2 id="saves-title" class="xb-saves__title">存档</h2>
+          <p id="saves-count" class="xb-saves__count"></p>
+        </header>
+        <div class="xb-saves__actions">
+          <button type="button" id="save-new" class="xb-btn xb-btn--primary" data-action="save-new">开启新档</button>
+          <button type="button" id="save-latest" class="xb-btn" data-action="save-latest">上次玩到</button>
+          <button type="button" id="save-delete" class="xb-btn" data-action="save-delete">删除存档</button>
+        </div>
+        <div class="xb-saves__list-wrap">
+          <div id="saves-list" class="xb-saves__list" role="group" aria-label="存档列表"></div>
+          <p id="saves-empty" class="xb-saves__empty">还没有存档。点「开启新档」，从于都河出发。</p>
+        </div>
+        <div id="saves-delete-bar" class="xb-saves__delete-bar" hidden>
+          <p id="saves-delete-count" class="xb-saves__delete-count">已选 0 个</p>
+          <div class="xb-saves__delete-actions">
+            <button type="button" id="saves-delete-confirm" class="xb-btn xb-btn--primary" data-action="save-delete-confirm">确认</button>
+            <button type="button" id="saves-delete-cancel" class="xb-btn" data-action="save-delete-cancel">取消</button>
+          </div>
+        </div>
+        <p id="saves-hint" class="xb-saves__hint"></p>
+      </div>
+    </div>
+
+    <!-- 通用二选一确认：开新档 / 上次玩到 / 删档 / 初始化 / 继续某档 -->
+    <div id="save-confirm" class="xb-door-modal xb-save-confirm" role="dialog" aria-modal="true" aria-labelledby="save-confirm-title" hidden>
+      <div class="xb-door">
+        <h2 id="save-confirm-title" class="xb-door__title"></h2>
+        <p id="save-confirm-body" class="xb-door__body" hidden></p>
+        <div class="xb-danger__actions">
+          <button type="button" id="save-confirm-yes" class="xb-btn xb-btn--primary" data-action="save-confirm-yes">是</button>
+          <button type="button" id="save-confirm-no" class="xb-btn" data-action="save-confirm-no">否</button>
+        </div>
       </div>
     </div>
 

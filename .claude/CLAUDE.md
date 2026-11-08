@@ -25,7 +25,7 @@
 - 语言/运行时：原生 HTML5 + CSS3 + JavaScript（ES6）；不使用前端框架、不使用构建链
 - 渲染：DOM/CSS 负责 UI 与文字，Canvas 2D 负责程序化背景；v1.1.1 的小游戏画布随 v1.2.0 删除；固定 1280×720 舞台等比缩放，Canvas 按 `devicePixelRatio` 放大
 - 部署：纯静态站点，GitHub Pages 托管（本版已上线；Cloudflare Pages 备选）；无后端、无数据库、无登录
-- 存档：`localStorage`，键名带版本号（如 `xiangbei.save.v1`），刷新可恢复；读写用 try/catch，隐私模式下降级提示
+- 存档：`localStorage`；v1.6 起唯一键 `xiangbei.saves.v1`（列表，单档仍是 v2 11 键，20 档/512KB），旧 `xiangbei.save.v2/v1` 首次启动迁移；进入游戏只到标题，读档走“存档”面板；读写用 try/catch，隐私模式下降级提示
 - 剧情：内联进 `story.js`，不使用 `fetch`/XHR/ES module；为兼容 `file://` 离线 ZIP，脚本用经典 `<script>` + 全局命名空间（如 `window.XB`）
 - 美术：v1.0.0 为 Canvas/SVG 程序化版画（层叠山形、江面白线、雪粒、雾、铁索），人物用剪影；v1.1.0 加 12 张 CC/PD 影像的版画化改编 + 1 张 AI 标题插画；不使用未授权图片/影视/游戏素材
 - 音频：v1.0.0 为 Web Audio 合成风声、水声、鼓点、口琴五音动机；v1.1.0 加 5 条 CC0 环境录音 + 8 首 CC0/CC-BY 现代配乐（MP3 归一化 RMS 0.10、musicBus 0.62、gains 1.5；HTMLAudioElement → MediaElementSource，file:// 失败退回直连），仍无历史录音冒充；`AudioContext` 必须在用户首次点击后启动
@@ -55,6 +55,7 @@
 | 十二 剧情分支与结局收纳 | ✅ 完成（2026-11-08，v1.5.0-dev；已提交（tag `step-14-done`）/未打包/未部署） | 用户反馈 | 标题/结局/暂停三入口；固定 1280×720 深墨蓝歧路图；7 章缩略卡 + 11 结局灰锁；19 决策组/22 结构节点详情；独立键 xiangbei.branches.v1；结算先记录后清 choices | 空态 0/11、暂停实时、结算落档、11 路线收纳；http 98/98、移动 24/24、file empty 15/15 与 ending 21/21；完整实走 173s 路线 2/11 且 runs=1；check-build 40/40、smoke 47/47、check-script OK；0 console error；执行卡 step/step-12-剧情分支与结局收纳.md |
 | 十三 剧本扩写与关系加深 | ✅ 完成文本与主流程（2026-11-08，v1.5.0-dev；已提交（tag `step-14-done`）/未打包/未部署；20 分钟验收按用户要求挂起；11 路线/真人计时待回归） | 用户反馈（m00001） | 湘江/泸定加战火与敌军群像、战士倒下；四角色与“我”的日常对话；四角色彼此的革命情谊；新增 366 个 line 节点，文本源 11278 字/705 beat/766 节点 | check-build 40/40、smoke 47/47、check-script OK；http 完整流程 14/14、360s/614 line、路线 2/11、点名 7、五卡 5、0 error；证据 docs/evidence/text-expand；真人计时/11 路线/移动/隐私未重跑 |
 | 十四 成就系统 | ✅ 完成实现与主流程（2026-11-08，v1.5.1-dev；已提交（tag `step-14-done`）/未打包/未部署） | 用户反馈（m00001/m00188） | 48 条选择成就（46 choice + 记名 2）；标题/暂停/结局三入口；灰框锁定；详情原因；结局「此周目解锁的成就有：」；独立键 xiangbei.achievements.v1；ending 快照加 achievements | check-build 41/41、smoke 47/47、check-script 9 文件 OK；http 55/55、file:// 55/55、844×390 移动 11/11；0 console/pageerror/失败请求；执行卡 step/step-14-成就系统.md；证据 docs/evidence/step-14、step-14-file |
+| 十五 存档与读档 | ✅ 完成（2026-11-08，v1.6.0-dev；未打包/未部署） | 用户反馈（m00001；三点 m00117） | 存档列表 xiangbei.saves.v1（20 档/512KB）；标题唯一入口“存档”；开启新档/上次玩到/删除选中；已完结整页结局回顾；章末与暂停保存都覆盖同档；初始化清存档/分支/成就/名册但保留设置 | check-build 46/46（C43–C47）、smoke 47/47、check-script 9 文件 OK；http 75/75、迁移 8/8、隐私 4/4、移动 9/9、file:// 75/75；0 console error/失败请求；执行卡 step/step-15-存档与读档.md；证据 docs/evidence/step-15 |
 
 ## 项目结构
 
@@ -82,11 +83,11 @@
 │  ├─ style-guide.md           # 术语/文风/史实审校
 │  ├─ branch-map.md            # v1.5 剧情分支歧路图/收纳契约/19 决策组
 │  ├─ achievements.md          # 48 条选择成就/描述模板/存档/UI/测试
-│  ├─ state-schema.md          # 存档 JSON/旗标/迁移（v1.4 已实现；48 默认旗标 + memory.*，11 顶层键；save v2 + v1 迁移；roster.v1；branches.v1）
+│  ├─ state-schema.md          # 存档 JSON/旗标/迁移（v1.6 列表 xiangbei.saves.v1；单档 v2 11 键；旧键迁移；roster/branches/achievements 独立）
 │  ├─ audio-system.md          # 9 床/12 cue/五音/生命周期/duck/fx 上限（v1.1.1 小游戏 cue 标历史）
 │  ├─ minigame-tuning.md       # v1.1.1 历史数值（v1.2.0-dev 起不适用）
 │  ├─ ui-layout.md             # 1280×720 坐标/线框（§3 多选与结算）
-│  ├─ test-cases.md            # T01–T51 + C01–C08 + T11-01…T11-24 + T12-01…T12-10 + T14-01…T14-10 验收用例
+│  ├─ test-cases.md            # T01–T51 + C01–C08 + T11-01…T11-24 + T12-01…T12-10 + T14-01…T14-10 + T15-01…T15-12 验收用例
 │  ├─ demo-script.md           # 3 分钟演示逐字稿
 │  ├─ quality-bar.md           # 可访问性/性能预算
 │  ├─ design-note.md           # 交差用一页设计说明（步骤八）
@@ -106,7 +107,7 @@
 - **本文件是唯一状态源**；`SKILL.md` 不再维护独立状态，只链接到这里。
 - Cursor 常驻规则：`.cursor/rules/xiangbei.mdc`（本文件与计划书的摘要，不另存状态；冲突以本文件/计划书为准）。原 `.cursor/rules/000`–`040` 编码规范已合并进同一文件，不再单独维护。
 - **代码目录约定（用户指令）**：所有代码/运行文件放 `project/`（index.html、style.css、engine.js、story.js、art.js、assets/、tools/）；docs、step、.claude、.cursor 留在根目录。
-- 已有：`向北-项目计划书.md`（唯一权威计划）、`README.md`（交差入口）、`docs/`（story-bible / sources / codex / ending-routes / script×9 / style-guide / state-schema / audio-system / chapter-integration / minigame-tuning / minigame-system / ui-layout / visual-system / visual-reading / test-cases / demo-script / quality-bar / design-note / release-record / credits / achievements）、`step/`（step-00 … step-14 执行卡）、`docs/test-record.md`（步骤七实测与有条件交差）、`project/`（四运行时 index/style/engine/story/art + assets/ + CREDITS.txt + tools/ 含 ui-preview.html / ui-preview.js / redlines.js / check-build.js / smoke.js / check-script.js / count-words.js / release.py / _pw-step8.js / _pw-step9.js / _pw-step10.js / _pw-step11.js / _pw-step12.js / _pw-step14.js / design-note.html）、`docs/evidence/step-01|…|step-14/`（浏览器证据与实测记录，gitignored）。
+- 已有：`向北-项目计划书.md`（唯一权威计划）、`README.md`（交差入口）、`docs/`（story-bible / sources / codex / ending-routes / script×9 / style-guide / state-schema / audio-system / chapter-integration / minigame-tuning / minigame-system / ui-layout / visual-system / visual-reading / test-cases / demo-script / quality-bar / design-note / release-record / credits / achievements）、`step/`（step-00 … step-15 执行卡）、`docs/test-record.md`（步骤七实测与有条件交差）、`project/`（四运行时 index/style/engine/story/art + assets/ + CREDITS.txt + tools/ 含 ui-preview.html / ui-preview.js / redlines.js / check-build.js / smoke.js / check-script.js / count-words.js / release.py / _pw-step8.js / _pw-step9.js / _pw-step10.js / _pw-step11.js / _pw-step12.js / _pw-step14.js / _pw-step15.js / design-note.html）、`docs/evidence/step-01|…|step-15/`（浏览器证据与实测记录，gitignored）。
 - 步骤零：✅ 完成（2026-11-01）。七章剧本 4108 字 / 229 beat / 12 抉择点 / 26 选项 / 9 限时；口播 A 口径 11:22，整章合计 19:44；7 张史实注（120–220 字，含 4 项争议口径）；红线 10/10；T0.0–T0.9 逐卡记录见 `step/step-00-定题史料与剧本.md` §11.1；tag `step-0-done`。
 - 步骤一：✅ 完成（2026-11-01，tag `step-1-done`）。固定 1280×720 舞台等比缩放；title/map/vn 三场景 + 暂停遮罩；`XB.core` 纯状态层 + `XB.engine`；`xiangbei.save.v1` 每 beat 存档、坏档备份 `.bad`/`.bak` 后回标题；序章 p001–p020（20 句逐字）+ p900 临时章末；工具 redlines / check-build（9 项）/ smoke（14 项）；浏览器实测 12 项全绿（Edge 156 + Playwright，file:// 与本地 http）。记录见 `step/step-01-工程骨架.md` §11。
 - 步骤二：✅ 完成（2026-11-01，tag `step-2-done`）。`style.css` 重写为令牌层（:root 五色 + 派生 + 字号/间距/z-index/动效/--paper-texture，组件只写 var()）；`art.js` 四场景程序化版画（title / map / yudu_river / yudu_night，FNV-1a→mulberry32 定种，DPR 上限 2，paint 0.04–0.18ms）；单画布 `#stage-art` 取代 `.vn-bg`，engine 接入 paintStage + 失败隐藏画布 + 一次性 toast；标题 96px + 朱砂印章「北」+ 门板刻痕；10 类 `xb-*` 组件壳（btn / dialog / choice / title-card / codex / ending / pause / settings / hud / feedback）+ `project/tools/ui-preview.html` 预览页；`?fonts=fallback` 回退开关。修复两处实测 bug：手机横屏改用 `clientWidth`（innerWidth 被 shrink-to-fit 放大到 1062）与 ?debug 画布尺寸过期（updateDebug 移入 resize rAF 回调）。check-build 12/12、smoke 17/17、check-script OK；浏览器 B1–B14 全绿、0 console error；记录见 `step/step-02-视觉系统.md` §11 与 `docs/evidence/step-02/run-log.md`。
@@ -128,6 +129,7 @@
 - 十二 剧情分支与结局收纳：✅ 完成（2026-11-08，v1.5.0-dev，本地完成，已提交（tag `step-14-done`）/未打包/未部署）。三入口（标题第 5 项、结局页「查看剧情分支」、暂停菜单）；固定 1280×720 深墨蓝星尘歧路图，7 章缩略卡 + 11 结局灰锁，朱砂标本次、纸白标已抵达；19 决策组/22 结构节点逐条详情，普通「在这个……选择中，你选择了……，因此——」、超时「时间到了，默认项……替你做了决定」、未发生与未来不泄露选项；暂停实时读当前局，未来章节灰色；独立键 `xiangbei.branches.v1`（不占主档 11 键/ending 16 键），结算在 `state.choices=[]` 前写入，坏档备份 `.bad`，写失败保留内存态并 toast。测试：http 98/98（empty/live/ending/deep/routes/keyboard/reduce/bad/private）、移动 844×390 24/24、file empty 15/15 与 ending 21/21、完整实走 flow 173s 路线 2/11 且 runs=1；check-build 40/40、smoke 47/47、check-script 9 剧本 OK、0 console/pageerror/失败请求。执行卡 `step/step-12-剧情分支与结局收纳.md`；证据 `docs/evidence/step-12/`。
 - 十三 剧本扩写与关系加深：✅ 完成文本与主流程（2026-11-08，v1.5.0-dev，本地完成，已提交（tag `step-14-done`）/未打包/未部署）。按用户 m00001 要求，湘江加几天几夜夜行军/飞机炮火/浮桥被炸/路边倒下的人/陈班长守桥未归，泸定加一昼夜 240 里/桥头火/敌军抽板浇煤油/22 个光点逐个灭/飞毛腿第四次搬板；四角色与“我”加日常对话（老家/参军几年/走得到吗/饿不饿/门板沉不沉/上药/补鞋/分锅巴），四角色彼此加斗嘴/自我批评/背锅/让水/写名字/帽中纸；新增 366 个 line 节点（p100–p138、x100–x160、z100–z181、j100–j143、l100–l155、g100–g156、w100–w119、c100–c104、b100–b101），文本源 11278 字/705 beat/766 节点/712 line。测试：check-build 40/40、smoke 47/47、check-script OK；http 完整流程 14/14、360s/614 line、路线 2/11、点名 7、五卡 5、0 error；证据 docs/evidence/text-expand（run.log/result.json/flow-ending.png/README.md）。真人计时、11 路线、移动、隐私未重跑；20 分钟验收按用户要求挂起。
 - 十四 成就系统：✅ 完成实现与主流程（2026-11-08，v1.5.1-dev，本地完成，已提交（tag `step-14-done`）/未打包/未部署）。48 条（46 choice + 记名 2；序章 9 / 湘江 9 / 遵义 8 / 金沙江 5 / 泸定 5 / 草地 10 / 吴起 2）；标题第 6 项、暂停第 5 项（共 8 项）、结局五卡上方「此周目解锁的成就有：」三入口；未解锁灰框只写“未解锁”，已解锁点开看“章 / 选择 / 原选项 / 后果”与首次解锁时间；独立键 `xiangbei.achievements.v1`，主档仍 v2 / 11 键，ending 快照加 achievements（17 键），重进已结算结局合并 previous，避免 22 条掉 1 条；标题后四项改 2×2，移动 844×390 面板 1240×688、热区≈44.4 CSS。测试：check-build 41/41（C42）、smoke 47/47、check-script 9 文件 OK；http 55/55、file:// 55/55、移动 11/11；0 console/pageerror/失败请求。执行卡 `step/step-14-成就系统.md`；证据 `docs/evidence/step-14`、`step-14-file`。
+- 十五 存档与读档：✅ 完成（2026-11-08，v1.6.0-dev，本地完成，未打包/未部署）。存档改列表 `xiangbei.saves.v1`（`{version:1,activeId,settings,slots[≤20]}`，单档仍 v2 11 键，整包 512KB）；标题菜单只留“存档”，进入游戏永远先到标题；面板支持开启新档/上次玩到/删除选中（二次确认）/已完结整页回顾（只读，不写档）；章末与暂停“保存”都覆盖同档；标题“向北”点击加粗+重影后弹初始化，清存档/分支/成就/名册但保留设置；旧 `xiangbei.save.v2/v1` 首次启动迁移成第 1 档。测试：check-build 46/46（C43–C47）、smoke 47/47、check-script 9 文件 OK；http 75/75、迁移 8/8、隐私 4/4、移动 9/9、file:// 75/75；0 console error/失败请求。执行卡 `step/step-15-存档与读档.md`；证据 `docs/evidence/step-15/`。
 - 建议下一步：先验收本轮剧本扩写（湘江/泸定战火、四角色日常与彼此关系），再决定是否按真人计时裁剪以恢复 20 分钟口径；随后回归 11 条人物结局、移动/隐私、重打包与部署；`main` 不合并、`dist/` 不打包不部署直到确认；线上 Netlify/GitHub Pages 仍为 v1.1.1 四关版。第 8 项（清理/兼容性，含未用 `plate_loushan`、Chrome/Safari/真机、移动 WebP）继续后置。
 
 ## 关键约束与红线

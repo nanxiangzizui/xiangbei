@@ -142,9 +142,11 @@
   --z-transition: 60;
   --z-pause: 80;
   --z-gallery: 82;
+  --z-saves: 83;
   --z-codex: 84;
   --z-branch: 86;
   --z-branch-detail: 88;
+  --z-save-confirm: 89;
   --z-toast: 90;
   --z-debug: 95;
   --z-orientation: 100;
@@ -4011,4 +4013,270 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-ending__achievement { min-height: 82px; padding: 2px 10px; font-size: 21px; }
   .xb-ending__achievements-empty { font-size: 19px; }
   .xb-ending__achievements-count { font-size: 16px; }
+}
+
+/* ---------- 存档：标题入口、列表、确认弹窗（v1.6） ---------- */
+.title-main__button {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* 点下与初始化确认期间：加粗 + 重影，给一次“按到了”的反馈 */
+.title-main__button:active,
+.title-main__button.is-pressed {
+  font-weight: 700;
+  text-shadow:
+    4px 4px 0 var(--ink-a30),
+    -1px 0 0 var(--ink),
+    1px 0 0 var(--ink);
+}
+
+.title-main__button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-w) var(--focus-color),
+    0 0 0 calc(var(--focus-w) + var(--focus-offset)) var(--focus-gap);
+}
+
+.xb-saves {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-saves);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+}
+
+.xb-saves__panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 920px;
+  max-height: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px 32px 20px;
+  background-color: var(--paper-hi);
+  background-image: var(--paper-texture);
+  border: var(--border-strong) solid var(--ink);
+  border-top: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.xb-saves__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 56px;
+}
+
+.xb-saves__kicker {
+  margin: 0;
+  font-size: var(--fs-small);
+  letter-spacing: 3px;
+  color: var(--cinnabar);
+}
+
+.xb-saves__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--fs-h2);
+  font-weight: 400;
+  letter-spacing: var(--ls-chapter);
+}
+
+.xb-saves__count {
+  margin: 0;
+  font-family: var(--font-num);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+
+.xb-saves__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.xb-saves__actions .xb-btn {
+  min-height: 84px;
+  font-size: 18px;
+}
+
+.xb-saves__list-wrap {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.xb-saves__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xb-saves__row {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a20);
+  border-left: 6px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.xb-saves__row:hover,
+.xb-saves__row:focus-visible {
+  border-color: var(--ink);
+}
+
+.xb-saves__row:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-w) var(--focus-color),
+    0 0 0 calc(var(--focus-w) + var(--focus-offset)) var(--focus-gap);
+}
+
+.xb-saves__row-main {
+  font-size: var(--fs-body);
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+
+.xb-saves__row-sub {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+
+/* 删除模式：整行变墨色底纸白字，左上角朱砂条 + 勾，选中一眼可辨 */
+.xb-saves__row.is-selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  border-left-color: var(--cinnabar);
+}
+
+.xb-saves__row.is-selected .xb-saves__row-main {
+  color: var(--paper-hi);
+}
+
+.xb-saves__row.is-selected .xb-saves__row-sub {
+  color: var(--paper-a72);
+}
+
+.xb-saves__row.is-selected::after {
+  content: "✓";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-num);
+  font-size: 24px;
+  color: var(--cinnabar);
+}
+
+.xb-saves__empty {
+  margin: 0;
+  padding: 28px 24px;
+  font-size: var(--fs-body);
+  color: var(--ink-muted);
+  text-align: center;
+  border: var(--border) dashed var(--ink-a30);
+  border-radius: var(--radius);
+}
+
+.xb-saves__delete-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: var(--border) solid var(--ink-a12);
+}
+
+.xb-saves__delete-count {
+  margin: 0;
+  font-family: var(--font-num);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+
+.xb-saves__delete-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.xb-saves__delete-actions .xb-btn {
+  min-width: 160px;
+  min-height: 64px;
+}
+
+.xb-saves__hint {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+
+.xb-save-confirm {
+  z-index: var(--z-save-confirm);
+}
+
+.xb-save-confirm .xb-door {
+  width: 560px;
+}
+
+.xb-save-confirm .xb-door__body[hidden] {
+  display: none;
+}
+
+.xb-save-confirm .xb-danger__actions {
+  justify-content: flex-end;
+}
+
+.xb-save-confirm .xb-danger__actions .xb-btn {
+  min-width: 160px;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .xb-saves__panel {
+    width: 1240px;
+    height: 688px;
+    max-height: 688px;
+    padding: 18px 28px 14px;
+    gap: 10px;
+  }
+  .xb-saves__kicker { font-size: 16px; letter-spacing: 3px; }
+  .xb-saves__title { font-size: 42px; }
+  .xb-saves__count { font-size: 20px; }
+  .xb-saves__actions { gap: 10px; }
+  .xb-saves__actions .xb-btn { min-height: 82px; font-size: 22px; }
+  .xb-saves__row { min-height: 96px; padding: 10px 16px; }
+  .xb-saves__row-main { font-size: 26px; }
+  .xb-saves__row-sub { font-size: 18px; }
+  .xb-saves__row.is-selected::after { font-size: 28px; }
+  .xb-saves__delete-count { font-size: 20px; }
+  .xb-saves__delete-actions .xb-btn { min-height: 82px; font-size: 22px; }
+  .xb-saves__hint { font-size: 18px; }
+  .xb-saves__empty { font-size: 22px; }
+  .xb-save-confirm .xb-door { width: 760px; }
+  .xb-save-confirm .xb-door__body { font-size: 26px; }
+  .xb-save-confirm .xb-danger__actions .xb-btn { min-height: 82px; font-size: 22px; }
 }
