@@ -1,0 +1,136 @@
+《向北》—— 一块门板，两万五千里
+版本 v1.1.1 · 2026-11-05 · 慢网/竖屏适配版（发布包；公网部署见 README.md）
+课程项目，非商业使用
+
+【制作】
+制作 / 程序：刘子政
+剧本 / 文案：刘子政
+美术 / 版画：刘子政
+测试 / 演示：刘子政
+史料核对：刘子政
+
+【字体】
+本版随包打包两个 SIL Open Font License 1.1 子集（woff2），只含游戏实际用字；
+字体文件位于 assets/fonts/，授权原文同目录：
+- XB Smiley：得意黑 Smiley Sans v2.0.1 子集，OFL 1.1，上游 https://github.com/atelier-anchor/smiley-sans ；
+  文件 assets/fonts/smiley-game.woff2；已改名为 XB Smiley，仅用于“向北”大标题与印章。
+- XB Zhuque：朱雀仿宋 Zhuque Fangsong v0.212 子集，OFL 1.1，上游 https://github.com/TrionesType/zhuque ；
+  文件 assets/fonts/zhuque-game.woff2；已改名为 XB Zhuque，用于章节标题、正文、图鉴与 UI。
+- 回退：title/body 为 Songti SC / SimSun / Noto Serif CJK SC；display 为 Microsoft YaHei /
+  PingFang SC / Noto Sans CJK SC。?fonts=fallback 可强制走回退。
+- 未使用来源不明字体；没有把未授权字体打进包。
+- 历史说明：v1.0.0 曾因官方源不可达而只写 local()、不打包；本版已改为随包 OFL 子集。
+
+【图像】
+来源：Wikimedia Commons（http://commons.wikimedia.org/）与用户本地 AI 生成。
+12 张场景/地图底图 + 1 张标题插画位于 assets/backgrounds/，原图为 1920×1080 JPEG。
+运行包优先使用 assets/backgrounds/webp/ 下的 1600×900 WebP；慢网占位图为 assets/backgrounds/placeholders/ 下的 480×270 WebP；原 JPEG 保留兜底。
+图鉴/史实注缩略图由上述底图裁切为 480×270 JPEG，位于 assets/backgrounds/thumbs/；占位图与缩略图均不再单独署名。
+12 张场景底图经过裁切、去色、双色调、颗粒、暗角与顶部压暗处理，属于改编作品；
+它们不是“1935 年现场照片”，而是氛围底图；具体年代/地点见每条说明。
+CC BY-SA 底图的改编版按相同协议共享。
+
+- plate_title.jpg：标题画面《于都河北上》。第二版：豆包（Doubao）Seedream 生成，
+  2026-11-04，用户本地生成并提供；提示词见 resource/title/prompt.txt。源图
+  resource/title/title_yudu_doubao_v2.jpg；去水印/右下压暗后的 clean 源图
+  resource/title/title_yudu_clean.jpg。十六七岁的普通红军小战士、于都河渡口、浮桥与
+  送行人群均为虚构场景；非史料人物，不是 1934 年现场照片。原图右下角带“豆包 AI 生成”
+  水印，已用同质暗影修补并在右下加压暗；clean 源图仍保留，署名仍保留在本名单与
+  docs/credits.md。第一版源图 title_yudu_doubao_v1.png 仅留存，不上游戏。
+  仅作课程项目非商业使用；如商用请按豆包服务条款另行确认。
+- plate_yudu.jpg：于都河。原图《贡江涨水 - panoramio》，陈剑鸣，CC BY 3.0，
+  https://commons.wikimedia.org/wiki/File:贡江涨水_-_panoramio.jpg
+  2011 年于都贡江；不是 1934 年现场。
+- plate_xiangjiang.jpg：湘江。原图《湘江一景 - panoramio》，天王星，CC BY-SA 3.0，
+  https://commons.wikimedia.org/wiki/File:湘江一景_-_panoramio.jpg
+  2008 年湖南湘江边河街；不是广西界首渡口，不能当战役地点证据。
+- plate_xiangjiang_map.jpg：湘江作战地图。原图《中国工农红军红星司令部在抢渡湘江前
+  绘制的地图 03572》，上传者 Cangminzho，CC BY-SA 4.0，
+  https://commons.wikimedia.org/wiki/File:中国工农红军红星司令部在抢渡湘江前绘制的地图_03572.jpg
+  1934 年 11 月地图的现代照片；作第一章标题卡，不是全屏战地照。
+- plate_zunyi_hall.jpg：遵义会议会址主楼。原图《ZunyiMeeting.jpg》，小小新手，
+  CC BY-SA 3.0，https://commons.wikimedia.org/wiki/File:ZunyiMeeting.jpg
+  2005 年照片；建筑后来修缮过。
+- plate_zunyi_street.jpg：遵义旧城·红军遵义警备司令部旧址门楼。原图
+  《红军遵义警备司令部旧址 2024-06-20》，xiquinhosilva，CC BY 4.0，
+  https://commons.wikimedia.org/wiki/File:红军遵义警备司令部旧址_2024-06-20.jpg
+  实际是旧址门楼/院落，不是一条街。
+- plate_loushan.jpg：娄山关。原图《1967-10 1967年娄山关》，《人民画报》1967 年第 10 期，
+  Public domain，https://commons.wikimedia.org/wiki/File:1967-10_1967年娄山关.jpg
+  1967 年影像，不是 1935 年现场；本版暂未挂在剧情场景上，保留为素材。
+- plate_jinsha.jpg：金沙江峡谷。原图《Jinsha River, Yunnan (50769833923)》，
+  Rod Waddington，CC BY-SA 2.0，
+  https://commons.wikimedia.org/wiki/File:Jinsha_River,_Yunnan_(50769833923).jpg
+  2018 年金沙江云南段；不是皎平渡实景，峡谷气质接近。
+- plate_luding.jpg：泸定桥。原图《1967-10 红军时期泸定桥》，《人民画报》1967 年第 10 期，
+  Public domain，https://commons.wikimedia.org/wiki/File:1967-10_红军时期泸定桥.jpg
+  1967 年影像；铁索、木板、水势可辨，桥后来维修过。
+- plate_luding_after.jpg：泸定桥与两岸。原图《Luding Bridge over the Dadu River,
+  in Luding County, Sichuan, China, 2018》，Huangdan2060，CC0，
+  https://commons.wikimedia.org/wiki/File:Luding_Bridge_over_the_Dadu_River,_in_Luding_County,_Sichuan,_China,_2018.jpg
+  2018 年照片；作“过桥之后/回望”。
+- plate_grass.jpg：草地·日落。原图《九曲黄河第一湾1.JPG》，Zhangmoon618，
+  Public domain，https://commons.wikimedia.org/wiki/File:九曲黄河第一湾1.JPG
+  四川若尔盖/唐克，云层低；作草地夜行军/宿营。
+- plate_grass_dawn.jpg：草地·黎明。原图《若尔盖 黄河九曲第一湾景区 02》，Liuxingy，
+  CC BY-SA 4.0，https://commons.wikimedia.org/wiki/File:若尔盖_黄河九曲第一湾景区_02.jpg
+  2023 年阴天草原；作“天亮了”的冷白黎明。
+- plate_wuqi.jpg：陕北窑洞。原图《1967-10 陕北杨家岭》，《人民画报》1967 年第 10 期，
+  Public domain，https://commons.wikimedia.org/wiki/File:1967-10_陕北杨家岭.jpg
+  1967 年影像，延安杨家岭；不是吴起镇，作“陕北/终点地域”意象，不能写成吴起实景。
+
+【声音】
+保留原有 Web Audio 合成环境床、12 个短 cue 与原创五音动机（D4–F4–G4–A4–C5）；
+本版另加 5 条环境录音与 8 首配乐，全部是现代录音/现代创作，不是 1930 年代历史录音。
+音频文件位于 assets/audio/；环境/配乐经 HTMLAudioElement -> MediaElementSource 进入既有
+Web Audio 总线，静音、音量、暂停 duck 与淡入淡出继续生效。
+
+环境录音（均 CC0）：
+- wind_loop.mp3：风，Thimras / OpenGameArt “Park ambiences”，CC0。
+- river_loop.mp3：河，Thimras / OpenGameArt “Park ambiences”，CC0。
+- rain_loop.mp3：雨，Ylmir / OpenGameArt “Rain (loopable)”，CC0。
+- birds_loop.mp3：鸟，Thimras / OpenGameArt “Park ambiences”，CC0。
+- fire_loop.mp3：火，PagDev / OpenGameArt，CC0；由短录音交叉淡化铺成循环。
+以上循环只做了首尾交叉淡化、响度归一与单声道化。
+配乐接入前做了整体增益归一（约 RMS 0.10，峰值上限 0.95），只改响度，不改旋律与结构；
+file:// 下若 MediaElementSource 失败，退回 <audio> 直连并按设置/duck 计算音量。
+
+配乐（现代创作）：
+- shangri_river.mp3：Shangri River，Tozan，CC0；标题、地图、结局。
+- oriental.mp3：Oriental，CC0（OpenGameArt）；于都。
+- a_bitter_hope.mp3：A Bitter Hope，InspectorJ，CC BY 3.0；
+  https://opengameart.org/content/a-bitter-hope-rpg-orchestral-essentials-dungeon-music
+  湘江。授权/说明 PDF 见 assets/audio/music/LICENSE-A-Bitter-Hope.pdf 与 README-A-Bitter-Hope.pdf。
+- visions_of_freedom.mp3：Visions Of Freedom，Jonathan Shaw & César da Rocha，CC BY 3.0；
+  https://opengameart.org/content/visions-of-freedom-jonathan-shaw-c%C3%A9sar-da-rocha
+  遵义。
+- sunrise_dynasty.mp3：Sunrise in the Dynasty，Yottabyte1024，CC BY 3.0；金沙江。
+- final_heros_monologue.mp3：Final Hero’s Monologue，Radiance，CC BY 4.0；
+  https://opengameart.org/content/final-hero%E2%80%99s-monologue
+  泸定。
+- misty_mountains.mp3：Misty Mountains，Hitctrl，CC BY 3.0；草地/雪山。
+- frozen_orchard.mp3：frozen orchard，Bobjt，CC BY 4.0；
+  https://opengameart.org/content/frozen-orchard
+  吴起。
+未使用“听起来像历史录音”的影视配乐；没有把现代配乐标成 1935 年现场声音。
+
+【史料】
+史实锚点 A1–A7 与出处 S1–S15 见 docs/sources.md；2026-11-03 复核。
+真实人物只进史实注，不进剧情对白；不虚构领导人台词。
+争议细节（X 光机、22 勇士姓名/牺牲人数、金沙江船数等）标注“有不同说法”。
+《七根火柴》《金色的鱼钩》是小说，不作为史料。
+大事件结局不可改：湘江必败、遵义必开、泸定必夺。
+
+【虚构声明】
+满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构人物，非史料人物。
+本连 104 → 19 为虚构设定；历史数字以 docs/sources.md 为准。
+
+【工具】
+开发：原生 HTML5/CSS3/JavaScript、Canvas 2D、Web Audio；无框架、无构建链。
+测试：Node + Playwright（仅测试，不进运行时）。
+发布：纯静态站点；离线 ZIP 可直接打开 index.html。
+
+【入口】
+游戏：index.html
+一页设计说明：design-note.pdf
+发布记录：docs/release-record.md

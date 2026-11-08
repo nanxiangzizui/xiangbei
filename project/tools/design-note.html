@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>向北 · 一页设计说明</title>
+<style>
+  @page { size: A4 portrait; margin: 9mm 10mm 8mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "SimSun", serif;
+    color: #1A1714; background: #fff; font-size: 8.15pt; line-height: 1.34;
+  }
+  .head { border-bottom: 2.2px solid #A8322D; padding-bottom: 3px; margin-bottom: 4px; }
+  h1 { margin: 0; font-size: 19.5pt; letter-spacing: 2px; font-weight: 700; }
+  .sub { margin: 1px 0 0; font-size: 8.8pt; color: #5C564D; letter-spacing: .4px; }
+  .tag { float: right; margin-top: 2px; border: 1px solid #A8322D; color: #A8322D; padding: 1px 4px; font-size: 7.2pt; }
+  .lede { margin: 3px 0 3px; font-size: 8.4pt; }
+  .lede b { color: #A8322D; }
+  h2 { font-size: 9.6pt; margin: 5px 0 2px; padding-left: 5px; border-left: 3px solid #A8322D; line-height: 1.25; }
+  p { margin: 1.5px 0; }
+  ul { margin: 1px 0 1px 14px; padding: 0; }
+  li { margin: 0 0 .8px; }
+  table { width: 100%; border-collapse: collapse; margin: 1.5px 0 2px; font-size: 7.05pt; line-height: 1.28; }
+  th, td { border: .5px solid #B9AF9C; padding: 1.1px 2.6px; vertical-align: top; }
+  th { background: #E8E1D0; font-weight: 700; text-align: left; }
+  td.n { width: 4%; text-align: center; }
+  .two { display: flex; gap: 8px; }
+  .two > div { flex: 1; min-width: 0; }
+  .note { color: #5C564D; font-size: 7.1pt; }
+  .red { color: #A8322D; font-weight: 700; }
+  .foot { margin-top: 3px; padding-top: 2px; border-top: .6px solid #B9AF9C; font-size: 6.9pt; color: #5C564D; }
+  .foot b { color: #1A1714; }
+  .avoid { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <span class="tag">虚构人物 · 非史料人物</span>
+    <h1>向北</h1>
+    <p class="sub">一块门板，两万五千里 · 16 岁红军文书 · 七段 · 四个小游戏 · 20 分钟设计上限 · v1.1.1</p>
+  </div>
+
+  <p class="lede">玩家是 1934 年于都的 16 岁文书“满崽”，背着一块从自家门上锯下的木板，从于都走到吴起；通过对话、限时取舍和四个小游戏，决定带什么、救谁、记住谁。<b>历史结局不可改：湘江必败、遵义必开、泸定必夺。</b>不做战斗、养成、多结局、排行榜。</p>
+
+  <h2>怎么玩</h2>
+  <ul>
+    <li>点击 / 空格 / Enter 推进；选项按 1–3；Esc 暂停。设置可调文字速度、字号、总音量/配乐/环境音三个滑块、静音、减少动效、跳读已读。</li>
+    <li>四关单手可完成：门板拖拽摆放；湘江拖拽弃物；金沙江数字键调度船次、Shift+数字让船工休息、Enter 确认；泸定在 0.35 秒窗口点亮 22 个光点。手机请横屏。</li>
+    <li>没有 Game Over；失败不重开，只改变代价与结算里的一句话。结局只有“到吴起、点名、放门板”一种；五卡只改亮度与文案，全灰合法。章首卡配场景图/日期/地点，暂停可翻花名册，图鉴卡带缩略图与照片年代说明。</li>
+  </ul>
+
+  <h2>七段与机制</h2>
+  <table>
+    <tr><th style="width:12%">段</th><th style="width:34%">史实锚点</th><th style="width:27%">玩家动作</th><th>机制</th></tr>
+    <tr><td>序章·于都</td><td>1934.10 于都河；8.6 万余人出发；门板/床板/寿材架桥</td><td>从家里锯门板；选带什么</td><td>门板 6 格，门板占 2 格；天亮倒计时</td></tr>
+    <tr><td>一·湘江</td><td>1934.11 末–12 初；8.6 万→3 万余人；红 34 师断后</td><td>弃物；回头 / 断后</td><td>限时弃物；X 光机 300 斤；追兵 45s</td></tr>
+    <tr><td>二·遵义</td><td>1935.1.15–17；约 3.7 万人</td><td>复盘，承认错误</td><td>3 条错误卡，admit≥2 亮“独立自主”</td></tr>
+    <tr><td>三·金沙江</td><td>1935.5 皎平渡；6 条船（有 7 条说）；37 船工；7 天 7 夜</td><td>调度渡船；先渡谁；记船工名字</td><td>6 船×3 船工；疲劳；追兵 120s；民心→船工</td></tr>
+    <tr><td>四·泸定</td><td>1935.5.29；22 人；13 根铁索；240 余里</td><td>攀索，点亮 22 个光点</td><td>3 段命中窗 0.35s；失误扣火种</td></tr>
+    <tr><td>五·草地</td><td>1935.8 松潘→班佑；7 天；近 800 人（王平回忆录）</td><td>分炒面；抬人</td><td>纯对话 + 资源选择，无小游戏</td></tr>
+    <tr><td>终章·吴起</td><td>1935.10.19；约 7000 人</td><td>点名；看五卡</td><td>名字被划掉；数字；五卡</td></tr>
+  </table>
+
+  <h2>史实锚点（A1–A7，出处见 docs/sources.md）</h2>
+  <table>
+    <tr><th style="width:4%">#</th><th style="width:19%">时间 / 地点</th><th>关键事实（争议标注“有不同说法”）</th><th style="width:12%">出处</th></tr>
+    <tr><td class="n">A1</td><td>1934.10.17–21<br>江西于都</td><td>中央红军主力 8.6 万余人；8 个主要渡口（一说 10 个）；5 座浮桥，架拆 15 次；桥板为门板、床板、寿材</td><td>S1、S2、S5</td></tr>
+    <tr><td class="n">A2</td><td>1934.11 末–12 初<br>广西全州、兴安、灌阳</td><td>浴血七昼夜；8.6 万→3 万余人；红五军团第 34 师断后，四天五夜几乎全部牺牲</td><td>S6、S7、S14、S15</td></tr>
+    <tr><td class="n">A3</td><td>1935.1.15–17<br>贵州遵义</td><td>中共中央政治局扩大会议，连开三天；此时中央红军约 3.7 万余人</td><td>S3、S7、S5</td></tr>
+    <tr><td class="n">A4</td><td>1935.5<br>云南禄劝皎平渡</td><td>6 条小船（另有 7 条说）、37 名船工、7 天 7 夜；5 月 9 日渡完；纪念碑镌 37 个名字或绰号</td><td>S8、S5</td></tr>
+    <tr><td class="n">A5</td><td>1935.5.29<br>四川泸定</td><td>下午四时，22 名突击队员攀 13 根铁索过桥；桥板被抽；此前一昼夜奔袭 240 余里；部分勇士姓名佚散</td><td>S9、S10、S6</td></tr>
+    <tr><td class="n">A6</td><td>1935.8<br>四川松潘草地→班佑</td><td>红三军在草地走七天进入班佑；班佑河畔近 800 名战士长眠（王平回忆录）</td><td>S11、S6</td></tr>
+    <tr><td class="n">A7</td><td>1935.10.19<br>陕西吴起镇</td><td>陕甘支队进入吴起镇；到陕北 7000 余人；一个月后与红十五军团会合</td><td>S12、S7、S5</td></tr>
+  </table>
+  <p class="note">争议：X 光机具体情形、22 勇士姓名/牺牲人数、金沙江船数、于都渡口数、草地减员、夹金山高度均有不同说法；正文不展开，图鉴标注。夹金山垭口 4114 米仅作图鉴补充（S13），正文只写“四千米以上”。真实人物只进史实注，不进剧情对白；《七根火柴》《金色的鱼钩》是小说，不当史料。</p>
+
+  <h2>五张精神卡（可失败，不改变结局）</h2>
+  <table>
+    <tr><th style="width:9%">卡</th><th style="width:27%">触发条件</th><th style="width:39%">玩家机制</th><th>精神</th></tr>
+    <tr><td>火种</td><td>fire ≥ 20</td><td>门板 / 弃物 / 攀索 / 分粮的资源链</td><td>理想信念</td></tr>
+    <tr><td>断后</td><td>choice.xiangjiang.hold === true</td><td>湘江限时抉择</td><td>不怕牺牲</td></tr>
+    <tr><td>复盘</td><td>choice.zunyi.admit ≥ 2</td><td>遵义错误卡</td><td>独立自主、实事求是</td></tr>
+    <tr><td>先渡</td><td>choice.jinsha.priority === "main"</td><td>渡船调度</td><td>顾全大局、严守纪律</td></tr>
+    <tr><td>船工</td><td>trust ≥ 3 且 memory.zhang</td><td>民心→船工；记名</td><td>依靠人民、艰苦奋斗</td></tr>
+  </table>
+
+  <div class="two avoid">
+    <div>
+      <h2>20 分钟口径</h2>
+      <table>
+        <tr><th style="width:34%">口径</th><th>数值</th></tr>
+        <tr><td>设计上限</td><td>20:00（硬验收）</td></tr>
+        <tr><td>真人首玩 4 次</td><td>04:52、06:42、07:36、08:33</td></tr>
+        <tr><td>静态慢读预算</td><td>19:48（仅余 12 秒）</td></tr>
+        <tr><td>极端等待</td><td>约 23:44（9 个限时项全超时且翻倍；压力上限，不是常速）</td></tr>
+      </table>
+      <p class="note">自动化 191 秒（约 03:11）不当真人计时。若按 23:44 质疑，按“草地→金沙江→遵义改纯对话”裁剪；本轮未裁剪。</p>
+    </div>
+    <div>
+      <h2>已知例外（不写成“通过”）</h2>
+      <p class="note">Chrome 未安装、Safari 无设备：P0 环境例外，2026-11-02 用户接受。真机触摸、音频听感、真实后台/锁屏未验（X3–X5）。fps 已补测：桌面 60.0/60.0、移动 60.0/48.7（最低 29.9），不写成“稳定 60”（X11）。制作名单移动物理热区 41.2×24.4，按 B16 同类例外（X12）。</p>
+      <p class="note">2026-11-04 <b>素材增强</b>：字体改为 OFL 子集随包（约 552 KB），场景底图为 12 张 CC/PD 影像的版画化改编，标题页另加 1 张豆包 Seedream 生成的虚构插画，音频加 5 条环境录音 + 8 首现代配乐；阅读层加照片章首卡、图鉴缩略图与照片年代说明、总/配乐/环境三档音量、暂停花名册。2026-11-05 <b>慢网/竖屏适配</b>：480 WebP 占位图先出、1600 WebP 替换、JPEG 兜底；竖屏提示“在浏览器打开”。<b>v1.1.1 已发布，与离线 ZIP 同步。</b>演示视频经用户 2026-11-03 明确取消，不列为缺口。</p>
+    </div>
+  </div>
+
+  <h2>制作名单 / 字体 / 素材</h2>
+  <p>制作：<b>刘子政</b>（程序、剧本、美术、测试、史料核对）。字体：随包 OFL 1.1 子集；大标题/印章用得意黑（XB Smiley），章节/正文/图鉴用朱雀仿宋（XB Zhuque）；回退 Microsoft YaHei / Songti SC / SimSun。图像：程序化版画 + 12 张双色调场景底图（1600×900 WebP + 480×270 占位图，JPEG 兜底；CC BY / CC BY-SA / PD / CC0）+ 1 张豆包 Seedream 生成的标题插画（虚构红军小战士/于都河，非史料人物/现场）；逐张署名见 docs/credits.md；音频：既有 Web Audio 合成 + 5 条环境录音 + 8 首现代配乐；无 CDN、无 fetch。工具：Playwright 仅测试；参考只借节奏，不用素材。</p>
+  <p class="foot"><b>史料出处</b>：docs/sources.md（S1–S15；数字/人名可追溯）；<b>制作名单</b>：project/CREDITS.txt；<b>发布记录</b>：docs/release-record.md。游戏内标题页右下“制作名单”可打开 CREDITS.txt。<b>虚构人物，非史料人物。</b></p>
+</body>
+</html>

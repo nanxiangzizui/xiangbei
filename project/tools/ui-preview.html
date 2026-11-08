@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>向北 · 组件库预览（开发工具）</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    /* 预览页专用样式：只做测量与排版，不进游戏运行时 */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--night-deep);
+      color: var(--paper);
+      font-family: var(--font-body);
+    }
+
+    #preview-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--night);
+      border-bottom: 2px solid var(--cinnabar);
+      font-size: 14px;
+    }
+
+    #preview-bar strong {
+      font-family: var(--font-title);
+      font-size: 18px;
+      letter-spacing: 4px;
+    }
+
+    #preview-bar button {
+      min-width: 72px;
+      min-height: 44px;
+      padding: 0 12px;
+      color: var(--paper);
+      background: transparent;
+      border: 1px solid var(--paper-a72);
+      border-radius: var(--radius);
+      font-size: 14px;
+    }
+
+    #preview-bar button[aria-pressed="true"] {
+      color: var(--paper-hi);
+      background: var(--cinnabar);
+      border-color: var(--cinnabar);
+    }
+
+    #preview-meta {
+      margin-left: auto;
+      color: var(--paper-a72);
+      font-family: var(--font-num);
+      font-size: 12px;
+    }
+
+    #preview-frame {
+      position: relative;
+      margin: 16px auto;
+      width: 1280px;
+      overflow: hidden;
+    }
+
+    #preview-sheet {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1280px;
+      background-color: var(--paper);
+      background-image: var(--paper-texture);
+      color: var(--ink);
+      transform-origin: top left;
+    }
+
+    .preview-block {
+      position: relative;
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--ink-a20);
+    }
+
+    .preview-h {
+      margin: 0 0 16px;
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 2px;
+      color: var(--ink-muted);
+    }
+
+    .preview-stage {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      background-color: var(--night);
+    }
+
+    .preview-dim {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: var(--overlay);
+    }
+
+    .preview-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .preview-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .preview-label {
+      font-family: var(--font-num);
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .preview-note {
+      margin: 12px 0 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--ink-muted);
+    }
+  </style>
+</head>
+<body>
+  <div id="preview-bar">
+    <strong>向北 · 组件库</strong>
+    <button type="button" data-scale="1" aria-pressed="true">1280</button>
+    <button type="button" data-scale="1.067">1366</button>
+    <button type="button" data-scale="1.5">1920</button>
+    <button type="button" data-scale="0.659">844×390</button>
+    <button type="button" data-fonts="toggle" aria-pressed="false">字体回退</button>
+    <span id="preview-meta"></span>
+  </div>
+
+  <div id="preview-frame">
+    <div id="preview-sheet">
+      <!-- 1 按钮 -->
+      <section class="preview-block" data-ui="btn">
+        <h2 class="preview-h">01 按钮 xb-btn（default / primary / ghost / danger / sm / disabled）</h2>
+        <div class="preview-row">
+          <div class="preview-col">
+            <span class="preview-label">xb-btn</span>
+            <button type="button" class="xb-btn">开始</button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">--primary</span>
+            <button type="button" class="xb-btn xb-btn--primary">开始</button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">--ghost</span>
+            <button type="button" class="xb-btn xb-btn--ghost">继续</button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">--danger</span>
+            <button type="button" class="xb-btn xb-btn--danger">留在原地</button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">--sm</span>
+            <button type="button" class="xb-btn xb-btn--sm">设为默认</button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">disabled</span>
+            <button type="button" class="xb-btn" aria-disabled="true">未解锁</button>
+          </div>
+        </div>
+        <p class="preview-note">Tab 键切焦点看双环（2px 朱砂 + 2px 纸白）；触摸目标 220×56 / 120×44，均 ≥44。</p>
+      </section>
+
+      <!-- 2 对话框 -->
+      <section class="preview-block" data-ui="dialog">
+        <h2 class="preview-h">02 对话框 xb-dialog（有名 / 旁白）</h2>
+        <div class="xb-panel xb-dialog">
+          <p class="xb-dialog__name">老周</p>
+          <p class="xb-dialog__text">把重东西都放下。人过去，比东西过去要紧。</p>
+          <span class="xb-dialog__next" aria-hidden="true">▼</span>
+        </div>
+        <div class="xb-panel xb-dialog xb-dialog--narration" style="margin-top: 32px;">
+          <p class="xb-dialog__name">旁白</p>
+          <p class="xb-dialog__text">雾里看不见对岸，只看得见火把。火把从村口一直排到水边。</p>
+          <span class="xb-dialog__next" aria-hidden="true">▼</span>
+        </div>
+      </section>
+
+      <!-- 3 选项 -->
+      <section class="preview-block" data-ui="choice">
+        <h2 class="preview-h">03 选项 xb-choice（default / selected / disabled / timeout）</h2>
+        <div class="preview-row">
+          <div class="preview-col">
+            <span class="preview-label">default</span>
+            <button type="button" class="xb-choice">
+              <span class="xb-choice__index">1</span>
+              <span class="xb-choice__label">把门板锯成两块，轻一些</span>
+              <span class="xb-choice__cost">代价：门板不再是同一块</span>
+              <span class="xb-choice__timer"><i></i></span>
+            </button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">selected</span>
+            <button type="button" class="xb-choice is-selected">
+              <span class="xb-choice__index">2</span>
+              <span class="xb-choice__label">一整块背走</span>
+              <span class="xb-choice__cost">代价：过河时慢一步</span>
+              <span class="xb-choice__timer"><i></i></span>
+            </button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">disabled</span>
+            <button type="button" class="xb-choice is-disabled" aria-disabled="true">
+              <span class="xb-choice__index">3</span>
+              <span class="xb-choice__label">留下一句嘱托</span>
+              <span class="xb-choice__cost">代价：名字从名册上划掉</span>
+              <span class="xb-choice__timer"><i></i></span>
+            </button>
+          </div>
+          <div class="preview-col">
+            <span class="preview-label">timeout</span>
+            <button type="button" class="xb-choice is-timeout">
+              <span class="xb-choice__index">—</span>
+              <span class="xb-choice__label">超时：按默认项结算</span>
+              <span class="xb-choice__cost">代价：来不及说的话</span>
+              <span class="xb-choice__timer"><i style="width: 28%"></i></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 章节标题卡 -->
+      <section class="preview-block" data-ui="title-card">
+        <h2 class="preview-h">04 章节标题卡 xb-title-card（1280×720）</h2>
+        <div class="preview-stage">
+          <div class="xb-title-card">
+            <p class="xb-title-card__chapter">第一章 · 湘江</p>
+            <span class="xb-title-card__rule" aria-hidden="true"></span>
+            <p class="xb-title-card__sub">一九三四年十一月</p>
+            <span class="xb-title-card__seal" aria-hidden="true">北</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 史实图鉴 -->
+      <section class="preview-block" data-ui="codex">
+        <h2 class="preview-h">05 史实图鉴 xb-codex（900×560，3+3+1，锁定/解锁）</h2>
+        <div class="preview-stage">
+          <div class="xb-modal xb-codex">
+            <h3 class="xb-modal__title">史实图鉴 · 7 张</h3>
+            <button type="button" class="xb-modal__close" aria-label="关闭">×</button>
+            <div class="xb-codex-grid">
+              <div class="xb-codex__card is-unlocked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--fact">史实</span></div>
+                <h3>于都河</h3>
+                <p>正文 120–220 字，步骤五接入。</p>
+              </div>
+              <div class="xb-codex__card is-unlocked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--fact">史实</span></div>
+                <h3>湘江</h3>
+                <p>正文 120–220 字，步骤五接入。</p>
+              </div>
+              <div class="xb-codex__card is-locked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--memoir">回忆录</span></div>
+                <h3>遵义</h3>
+                <p>未解锁：走到这一站再打开。</p>
+              </div>
+              <div class="xb-codex__card is-locked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--fact">史实</span></div>
+                <h3>金沙江</h3>
+                <p>争议处标注「有不同说法」。</p>
+              </div>
+              <div class="xb-codex__card is-locked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--literature">文学</span></div>
+                <h3>泸定桥</h3>
+                <p>小说与史料分开标注。</p>
+              </div>
+              <div class="xb-codex__card is-locked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--memoir">回忆录</span></div>
+                <h3>草地</h3>
+                <p>回忆录口径需注明来源。</p>
+              </div>
+              <div class="xb-codex__card is-locked">
+                <div class="xb-codex__badges"><span class="xb-badge xb-badge--fact">史实</span></div>
+                <h3>吴起</h3>
+                <p>点名与数字在结局出现。</p>
+              </div>
+            </div>
+            <p class="xb-note" style="padding: 0 24px;">虚构人物，非史料人物；出处见 docs/sources.md。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 结局面板 -->
+      <section class="preview-block" data-ui="ending">
+        <h2 class="preview-h">06 结局面板 xb-ending（760×480，五卡 3+2）</h2>
+        <div class="preview-stage">
+          <div class="xb-ending">
+            <h3 class="xb-ending__title">到吴起了</h3>
+            <ul class="xb-ending__names">
+              <li>名单在步骤五接入：活着的、被划掉的、你记得的。</li>
+              <li>这里只做壳，不含真实姓名与数字。</li>
+            </ul>
+            <div class="xb-ending__cards">
+              <div class="xb-ending__card"><h3>理想信念</h3><p>机制待接</p></div>
+              <div class="xb-ending__card"><h3>不怕牺牲</h3><p>机制待接</p></div>
+              <div class="xb-ending__card"><h3>独立自主</h3><p>机制待接</p></div>
+              <div class="xb-ending__card"><h3>顾全大局</h3><p>机制待接</p></div>
+              <div class="xb-ending__card"><h3>艰苦奋斗</h3><p>机制待接</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 暂停 -->
+      <section class="preview-block" data-ui="pause">
+        <h2 class="preview-h">07 暂停 xb-pause（280×300，叠在遮罩上）</h2>
+        <div class="preview-stage">
+          <div class="preview-dim">
+            <div class="xb-panel xb-pause">
+              <p class="pause-title">暂停</p>
+              <button type="button" class="xb-btn xb-btn--sm">继续</button>
+              <button type="button" class="xb-btn xb-btn--sm">返回地图</button>
+              <button type="button" class="xb-btn xb-btn--sm">回到标题</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 设置 -->
+      <section class="preview-block" data-ui="settings">
+        <h2 class="preview-h">08 设置 xb-settings（560×400，热区 44）</h2>
+        <div class="preview-stage">
+          <div class="preview-dim">
+            <div class="xb-panel xb-settings">
+              <div class="xb-settings__row">
+                <span class="xb-settings__label">文字速度</span>
+                <span class="xb-slider"><span class="xb-slider__track"><i></i><b></b></span></span>
+              </div>
+              <div class="xb-settings__row">
+                <span class="xb-settings__label">音量</span>
+                <span class="xb-slider"><span class="xb-slider__track"><i style="width: 40%"></i><b style="left: 40%"></b></span></span>
+              </div>
+              <div class="xb-settings__row">
+                <span class="xb-settings__label">静音</span>
+                <button type="button" class="xb-switch" role="switch" aria-checked="false" aria-label="静音"></button>
+              </div>
+              <div class="xb-settings__row">
+                <span class="xb-settings__label">文字大小</span>
+                <span class="xb-segmented">
+                  <button type="button" aria-pressed="true">1.0</button>
+                  <button type="button" aria-pressed="false">1.15</button>
+                  <button type="button" aria-pressed="false">1.3</button>
+                </span>
+              </div>
+              <div class="xb-settings__row">
+                <span class="xb-settings__label">减少动效</span>
+                <button type="button" class="xb-switch" role="switch" aria-checked="true" aria-label="减少动效"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 HUD -->
+      <section class="preview-block" data-ui="hud">
+        <h2 class="preview-h">09 HUD xb-hud（1280×72，无分数、无血条）</h2>
+        <div class="preview-stage" style="height: 200px;">
+          <div class="xb-hud">
+            <span class="xb-hud__chapter">序章 · 于都</span>
+            <span class="xb-hud__meta">火种 ×1 · 门板 1</span>
+            <span class="xb-hud__timer">09:30</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 反馈 -->
+      <section class="preview-block" data-ui="feedback">
+        <h2 class="preview-h">10 反馈 xb-toast / xb-badge / xb-seal / xb-rule</h2>
+        <div class="xb-toast">这一段还没接上</div>
+        <div class="preview-row" style="margin-top: 16px;">
+          <span class="xb-badge xb-badge--fact">史实</span>
+          <span class="xb-badge xb-badge--memoir">回忆录</span>
+          <span class="xb-badge xb-badge--literature">文学</span>
+          <span class="xb-seal" aria-hidden="true">北</span>
+        </div>
+        <div class="xb-rule" style="margin-top: 16px;"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./ui-preview.js"></script>
+</body>
+</html>

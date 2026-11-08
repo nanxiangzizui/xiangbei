@@ -1,0 +1,43 @@
+# 依赖与本地工具（不进游戏仓库 / 最终 ZIP）
+node_modules/
+my-playwright-project/
+.tools/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# 测试、截图与录像产物
+test-results/
+playwright-report/
+blob-report/
+screenshots/
+docs/evidence/
+
+# 系统与编辑器
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# 构建与交付产物
+*.zip
+*.mp4
+*.webm
+dist/
+*.log
+.env
+.env.*
+
+# 素材源库（约 134 MB：原图、全字库、原始音频；运行时子集在 project/assets/）
+resource/
+
+# 本地备份与调试脚本（不是交付内容）
+docs/script.bak-expand/
+project/story.js.bak-expand
+project/tools/_pw-debug-*.js
+
+# Netlify 本地站点状态
+.netlify/
