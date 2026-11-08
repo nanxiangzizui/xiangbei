@@ -2731,6 +2731,10 @@
   var SAVE_SLOT_MAX = 20;
   var MAX_SAVE_BYTES = 4096;
   var MAX_SAVES_BYTES = 512 * 1024;
+  // 剧情回顾与主档分开存：只记节点引用，不复制台词；按存档槽隔离。
+  var HISTORY_KEY = "xiangbei.history.v1";
+  var HISTORY_MAX_ENTRIES = 800;
+  var HISTORY_MAX_RUNS = 24;
   var PAGE_HEIGHT = 66;
   var INPUT_LOCK_MS = 100;
   var CHOICE_SETTLE_MS = 240;
@@ -2768,6 +2772,8 @@
   };
 
   var TOAST_MS = 2500;
+  // 章末自动存档提示：独立于普通 toast，固定停留 3.5 秒。
+  var AUTOSAVE_NOTICE_MS = 3500;
   // 状态弹窗比普通 toast 多留一会儿；用户要求单条至少 6 秒，多行再按行数延长。
   var STATUS_NOTICE_MS = 6000;
   var STATUS_NOTICE_LINE_MS = 700;
@@ -2827,9 +2833,16 @@
     "save-confirm-body",
     "save-confirm-yes",
     "save-confirm-no",
+    "history-panel",
+    "history-title",
+    "history-body",
+    "history-list",
+    "history-empty",
+    "history-close",
     "pause",
     "pause-menu",
     "toast",
+    "autosave-notice",
     "debug",
     "orientation",
     "title-menu",
@@ -2839,6 +2852,7 @@
     "vn-condition",
     "vn-pack-button",
     "vn-pack-count",
+    "vn-history-button",
     "vn-toolbar",
     "vn-auto",
     "vn-skip",
@@ -2957,6 +2971,7 @@
   var debugEnabled = false;
   var debugExtra = "";
   var toastTimer = 0;
+  var autosaveNoticeTimer = 0;
   var statusNoticeTimer = 0;
   var statusNoticeOpen = false;
   var statusQueue = [];
@@ -2966,6 +2981,12 @@
   var packState = { open: false, mode: "browse", onClose: null, previousFocus: null };
   var doorState = { open: false, previousFocus: null };
   var dangerState = { open: false, previousFocus: null };
+  // 回顾层只读、按槽隔离；内存副本保证隐私模式下本局仍能翻看。
+  var historyStore = { version: 1, runs: {} };
+  var historyState = { open: false, previousFocus: null };
+  var historyStorageOk = true;
+  var historyStorageWarned = false;
+  var historySaveTimer = 0;
   var artResizeFrame = 0;
   var artResizeScale = 1;
   var inputLockUntil = 0;
@@ -3098,6 +3119,7 @@
 
     var loaded = loadSavesAtBoot();
     savesStore = loaded.store;
+    historyStore = historyLoadAtBoot();
     state = defaults();
     state.settings = cloneJson(savesStore.settings);
 
@@ -3353,20 +3375,427 @@
     }
   }
 
-  // ?reset=1 与调试用：只清存档，不动分支/成就/名册（初始化在 initializeGame 里另清）。
+  /* ---------------- 剧情回顾：独立只读记录 ---------------- */
+
+  function emptyHistoryStore() {
+    return { version: 1, runs: {} };
+  }
+
+  function normalizeHistoryEntry(raw) {
+    if (!isPlainObject(raw)) return null;
+    if (typeof raw.c !== "string" || typeof raw.n !== "string") return null;
+    if (raw.t === "line") return { t: "line", c: raw.c, n: raw.n };
+    if (raw.t === "prompt") {
+      if (["choice", "multi", "namepick"].indexOf(raw.k) === -1) return null;
+      return { t: "prompt", c: raw.c, n: raw.n, k: raw.k };
+    }
+    if (raw.t === "choice") {
+      if (typeof raw.key !== "string") return null;
+      return { t: "choice", c: raw.c, n: raw.n, k: "choice", key: raw.key, timedOut: raw.timedOut === true };
+    }
+    if (raw.t === "multi") {
+      if (!Array.isArray(raw.ids)) return null;
+      var ids = raw.ids.filter(function (id) { return typeof id === "string"; }).slice(0, 16);
+      return { t: "multi", c: raw.c, n: raw.n, ids: ids };
+    }
+    if (raw.t === "namepick") {
+      return {
+        t: "namepick",
+        c: raw.c,
+        n: raw.n,
+        nameId: typeof raw.nameId === "string" ? raw.nameId : "",
+        timedOut: raw.timedOut === true
+      };
+    }
+    return null;
+  }
+
+  function normalizeHistoryRun(raw) {
+    if (!isPlainObject(raw) || !Array.isArray(raw.entries)) return null;
+    var total = raw.entries.length;
+    var kept = raw.entries.slice(-HISTORY_MAX_ENTRIES);
+    var dropped = total - kept.length;
+    var entries = kept.map(normalizeHistoryEntry).filter(Boolean);
+    var claimed = isFiniteNumber(raw.checkpoint) ? Math.floor(raw.checkpoint) - dropped : entries.length;
+    return {
+      entries: entries,
+      checkpoint: clamp(claimed, 0, entries.length),
+      updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : nowIso()
+    };
+  }
+
+  function normalizeHistoryStore(raw) {
+    if (!isPlainObject(raw) || raw.version !== 1 || !isPlainObject(raw.runs)) return null;
+    var store = emptyHistoryStore();
+    Object.keys(raw.runs).forEach(function (key) {
+      if (key.length > 96) return;
+      var run = normalizeHistoryRun(raw.runs[key]);
+      if (run) store.runs[key] = run;
+    });
+    var all = Object.keys(store.runs);
+    all.sort(function (a, b) {
+      return String(store.runs[b].updatedAt).localeCompare(String(store.runs[a].updatedAt));
+    });
+    all.slice(HISTORY_MAX_RUNS).forEach(function (key) {
+      delete store.runs[key];
+    });
+    return store;
+  }
+
+  function historyLoadAtBoot() {
+    var read = readStorage(HISTORY_KEY);
+    if (!read.ok) {
+      historyStorageOk = false;
+      return emptyHistoryStore();
+    }
+    if (!read.raw) return emptyHistoryStore();
+    var parsed = null;
+    try {
+      parsed = JSON.parse(read.raw);
+    } catch (err) {
+      console.error("[XB] 回顾记录不是合法 JSON：" + err.message);
+      backupSave("bad", HISTORY_KEY);
+      toast("回顾记录损坏，已备份");
+      return emptyHistoryStore();
+    }
+    var store = normalizeHistoryStore(parsed);
+    if (!store) {
+      console.error("[XB] 回顾记录校验失败");
+      backupSave("bad", HISTORY_KEY);
+      toast("回顾记录与当前版本不匹配，已备份");
+      return emptyHistoryStore();
+    }
+    return store;
+  }
+
+  function historyRunKey() {
+    return savesStore.activeId || "session";
+  }
+
+  function historyRun() {
+    return historyStore.runs[historyRunKey()] || null;
+  }
+
+  function historyEnsureRun() {
+    var key = historyRunKey();
+    if (!historyStore.runs[key]) {
+      historyStore.runs[key] = { entries: [], checkpoint: 0, updatedAt: nowIso() };
+    }
+    return historyStore.runs[key];
+  }
+
+  function historyTrimRuns() {
+    var keep = historyRunKey();
+    var keys = Object.keys(historyStore.runs);
+    if (keys.length <= HISTORY_MAX_RUNS) return;
+    var others = keys.filter(function (key) { return key !== keep; });
+    others.sort(function (a, b) {
+      return String(historyStore.runs[b].updatedAt).localeCompare(String(historyStore.runs[a].updatedAt));
+    });
+    var allowed = historyStore.runs[keep] ? HISTORY_MAX_RUNS - 1 : HISTORY_MAX_RUNS;
+    others.slice(allowed).forEach(function (key) {
+      delete historyStore.runs[key];
+    });
+  }
+
+  function historyWrite() {
+    var json = "";
+    try {
+      json = JSON.stringify(historyStore);
+    } catch (err) {
+      console.error("[XB] 回顾记录无法序列化：" + err.message);
+      return false;
+    }
+    try {
+      window.localStorage.setItem(HISTORY_KEY, json);
+      historyStorageOk = true;
+      historyStorageWarned = false;
+      return true;
+    } catch (err) {
+      console.error("[XB] 写入回顾记录失败：" + err.message);
+      if (!historyStorageWarned) {
+        historyStorageWarned = true;
+        toast("本局无法保存回顾记录（浏览器限制）");
+      }
+      historyStorageOk = false;
+      return false;
+    }
+  }
+
+  function historyFlush() {
+    if (historySaveTimer) {
+      clearTimeout(historySaveTimer);
+      historySaveTimer = 0;
+    }
+    if (!historyStore.runs[historyRunKey()]) return true;
+    historyTrimRuns();
+    return historyWrite();
+  }
+
+  function historyScheduleWrite() {
+    clearTimeout(historySaveTimer);
+    historySaveTimer = window.setTimeout(function () {
+      historySaveTimer = 0;
+      historyWrite();
+    }, 400);
+  }
+
+  function historyPush(entry) {
+    var normalized = normalizeHistoryEntry(entry);
+    if (!normalized) return;
+    var run = historyEnsureRun();
+    var last = run.entries[run.entries.length - 1];
+    // 刷新会重渲染同一节点：连续同类型同节点只留一条。
+    if (last && last.t === normalized.t && last.c === normalized.c && last.n === normalized.n) {
+      run.updatedAt = nowIso();
+      historyScheduleWrite();
+      return;
+    }
+    if (run.entries.length >= HISTORY_MAX_ENTRIES) {
+      run.entries.shift();
+      if (run.checkpoint > 0) run.checkpoint -= 1;
+    }
+    run.entries.push(normalized);
+    run.updatedAt = nowIso();
+    historyTrimRuns();
+    historyScheduleWrite();
+  }
+
+  function historyAdoptSession(slotId) {
+    if (!slotId || !historyStore.runs.session) return;
+    if (!historyStore.runs[slotId]) historyStore.runs[slotId] = historyStore.runs.session;
+    delete historyStore.runs.session;
+    historyWrite();
+  }
+
+  function historyResetForSlot(slotId) {
+    if (historySaveTimer) {
+      clearTimeout(historySaveTimer);
+      historySaveTimer = 0;
+    }
+    delete historyStore.runs.session;
+    historyStore.runs[slotId] = { entries: [], checkpoint: 0, updatedAt: nowIso() };
+    historyTrimRuns();
+    historyWrite();
+  }
+
+  function historyTruncateToCheckpoint(slotId) {
+    var run = historyStore.runs[slotId];
+    if (!run) return;
+    if (run.entries.length > run.checkpoint) run.entries = run.entries.slice(0, run.checkpoint);
+  }
+
+  function historyDeleteRuns(ids) {
+    ids.forEach(function (id) { delete historyStore.runs[id]; });
+    historyTrimRuns();
+    historyWrite();
+  }
+
+  function historyResetAll() {
+    if (historySaveTimer) {
+      clearTimeout(historySaveTimer);
+      historySaveTimer = 0;
+    }
+    historyStore = emptyHistoryStore();
+    historyStorageOk = true;
+    historyStorageWarned = false;
+    historyState.open = false;
+  }
+
+  function historyClearStorage() {
+    try {
+      window.localStorage.removeItem(HISTORY_KEY);
+    } catch (err) {
+      console.error("[XB] 清除回顾记录失败：" + err.message);
+    }
+    historyResetAll();
+  }
+
+  function historyEntryView(entry) {
+    var found = locate(entry.c, entry.n);
+    if (!found) return null;
+    var node = found.node;
+    if (entry.t === "line") {
+      return {
+        kind: "line",
+        speaker: node.speaker && node.speaker !== "旁白" ? node.speaker : "",
+        text: node.text || ""
+      };
+    }
+    if (entry.t === "prompt") {
+      if (!node.prompt) return null;
+      return { kind: "prompt", text: node.prompt };
+    }
+    if (entry.t === "choice") {
+      var chosen = null;
+      (node.options || []).forEach(function (option) {
+        if (option.key === entry.key) chosen = option;
+      });
+      if (!chosen) return null;
+      return {
+        kind: "choice",
+        text: chosen.text,
+        meta: entry.timedOut ? "（时间到了，默认项）" : ""
+      };
+    }
+    if (entry.t === "multi") {
+      var picked = [];
+      (entry.ids || []).forEach(function (id) {
+        (node.options || []).forEach(function (option) {
+          if (option.id === id) picked.push(option.text);
+        });
+      });
+      return {
+        kind: "choice",
+        text: picked.length ? picked.join("、") : "没有选任何一样",
+        meta: ""
+      };
+    }
+    if (entry.t === "namepick") {
+      var pickedName = null;
+      (node.names || []).forEach(function (name) {
+        if (name.id === entry.nameId) pickedName = name;
+      });
+      return {
+        kind: "choice",
+        text: pickedName ? "抄下「" + pickedName.name + "」的名字" : "一个名字也没抄",
+        meta: entry.timedOut ? "（时间到了）" : ""
+      };
+    }
+    return null;
+  }
+
+  function appendHistoryChapter(chapter) {
+    var heading = document.createElement("p");
+    heading.className = "xb-history__chapter";
+    heading.textContent = chapter ? chapter.title : "路上";
+    els.historyList.append(heading);
+  }
+
+  function appendHistoryTextRow(rowLabel, item) {
+    var row = document.createElement("div");
+    row.className = "xb-history__row";
+
+    var speaker = document.createElement("p");
+    speaker.className = "xb-history__speaker";
+    speaker.textContent = rowLabel;
+    if (!rowLabel) speaker.setAttribute("aria-hidden", "true");
+
+    var rule = document.createElement("span");
+    rule.className = "xb-history__rule";
+    rule.setAttribute("aria-hidden", "true");
+
+    var text = document.createElement("p");
+    text.className = "xb-history__text" + (item.kind === "choice" ? " is-choice" : "");
+    if (item.kind === "choice") {
+      var arrow = document.createElement("span");
+      arrow.className = "xb-history__arrow";
+      arrow.textContent = "➤";
+      arrow.setAttribute("aria-hidden", "true");
+      text.append(arrow, document.createTextNode(item.text));
+      if (item.meta) {
+        var meta = document.createElement("span");
+        meta.className = "xb-history__meta";
+        meta.textContent = item.meta;
+        text.append(meta);
+      }
+    } else {
+      text.textContent = item.text;
+    }
+
+    row.append(speaker, rule, text);
+    els.historyList.append(row);
+  }
+
+  function renderHistoryPanel() {
+    els.historyList.textContent = "";
+    var run = historyRun();
+    var entries = run ? run.entries : [];
+    var lastChapter = null;
+    var hasVisible = false;
+    entries.forEach(function (entry) {
+      var item = historyEntryView(entry);
+      if (!item) return;
+      if (entry.c !== lastChapter) {
+        appendHistoryChapter(chapterById(entry.c));
+        lastChapter = entry.c;
+      }
+      hasVisible = true;
+      if (item.kind === "prompt") {
+        var row = document.createElement("div");
+        row.className = "xb-history__row xb-history__row--prompt";
+        var prompt = document.createElement("p");
+        prompt.className = "xb-history__prompt";
+        prompt.textContent = item.text;
+        row.append(prompt);
+        els.historyList.append(row);
+        return;
+      }
+      appendHistoryTextRow(item.speaker || "", item);
+    });
+    els.historyEmpty.hidden = hasVisible;
+  }
+
+  function openHistory() {
+    if (!state || state.scene !== "vn" || historyState.open) return;
+    if (state.paused || titleCardState.open) return;
+    if (savePanelState.open || confirmState.open || endingReview.active) return;
+    if (packState.open || doorState.open || dangerState.open) return;
+    if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open) return;
+    historyFlush();
+    renderHistoryPanel();
+    historyState.open = true;
+    historyState.previousFocus = document.activeElement;
+    state.paused = true;
+    refreshAudioDuck();
+    cancelAuto();
+    if (vnRun.typing) {
+      cancelTyping();
+      vnRun.paused = true;
+    }
+    els.historyPanel.hidden = false;
+    els.historyClose.focus({ preventScroll: true });
+    requestAnimationFrame(function () {
+      els.historyBody.scrollTop = els.historyBody.scrollHeight;
+    });
+  }
+
+  function closeHistory() {
+    if (!historyState.open) return;
+    historyState.open = false;
+    els.historyPanel.hidden = true;
+    state.paused = false;
+    refreshAudioDuck();
+    if (vnRun.typing && vnRun.paused) {
+      vnRun.paused = false;
+      vnRun.lastTs = 0;
+      vnRun.rafId = requestAnimationFrame(typeStep);
+    }
+    if (choiceRun.active) choiceRun.lastTs = 0;
+    if (interactRun.active) interactRun.lastTs = 0;
+    var previous = historyState.previousFocus;
+    historyState.previousFocus = null;
+    if (previous && previous.focus && previous !== document.body) previous.focus({ preventScroll: true });
+    if (!vnRun.typing && (autoEnabled || skipEnabled)) scheduleAdvance(AUTO_DELAY_MS);
+    historyFlush();
+  }
+
+  // ?reset=1 与调试用：只清存档与回顾，不动分支/成就/名册（初始化在 initializeGame 里另清）。
   function clearSave() {
     try {
       window.localStorage.removeItem(SAVES_KEY);
       window.localStorage.removeItem(SAVE_KEY);
       window.localStorage.removeItem(LEGACY_SAVE_KEY);
+      window.localStorage.removeItem(HISTORY_KEY);
     } catch (err) {
       console.error("[XB] 清除存档失败：" + err.message);
     }
     savesStore = emptySavesStore();
     savesStore.settings = normalizeStoreSettings(state ? state.settings : null);
+    historyResetAll();
   }
 
-  // 章节切换、手动保存都走这里：有当前档就覆盖它，没有才新建一档。
+  // 只在章末、结局与手动「保存」时调用：中途对话不落盘，退出后回到本章开头。
   function saveNow() {
     if (!state) return false;
     if (endingReview.active) return false;
@@ -3385,15 +3814,32 @@
       slot = createSlotRecord(payload);
       savesStore.slots.unshift(slot);
       savesStore.activeId = slot.id;
+      // 调试局（?chapter=）没有槽位，第一次落盘时把 session 桶迁到新槽。
+      historyAdoptSession(slot.id);
     } else {
       slot.state = payload;
       slot.updatedAt = nowIso();
     }
     savesStore.settings = normalizeStoreSettings(payload.settings);
     var ok = writeSavesStore(savesStore);
+    // 只有写档成功才推进 checkpoint：读档时截到这里，当前行由 render 重新记。
+    if (ok) {
+      var history = historyStore.runs[historyRunKey()];
+      if (history) {
+        history.checkpoint = history.entries.length;
+        history.updatedAt = nowIso();
+        historyFlush();
+      }
+    }
     debugExtra = "save=" + bytes + " B · " + savesStore.slots.length + " 档";
     updateDebug();
     return ok;
+  }
+
+  // 设置是全局一份：只写 store.settings，不动任何档的进度与「上次保存」时间。
+  function saveSettingsOnly() {
+    savesStore.settings = normalizeStoreSettings(state ? state.settings : null);
+    return writeSavesStore(savesStore);
   }
 
   /* ---------------- 存档列表与确认弹窗 ---------------- */
@@ -3497,7 +3943,7 @@
       ? "本局无法存档（浏览器限制），进度只在本次有效。"
       : deleting
         ? "点选要删除的存档，再按「确认」。"
-        : "每过一章会自动保存；继续同一档只会覆盖它。";
+        : "每过一章会自动保存；中途退出回到本章开头，想停在原处请点暂停「保存」。";
   }
 
   function chooseSaveSlot(id) {
@@ -3547,6 +3993,7 @@
     });
     if (removedActive) savesStore.activeId = null;
     writeSavesStore(savesStore);
+    historyDeleteRuns(ids);
     savePanelState.mode = "list";
     savePanelState.selected = {};
     closeConfirm(true);
@@ -3557,7 +4004,7 @@
 
   function confirmCopy(kind) {
     if (kind === "init") {
-      return { title: "是否初始化游戏？", body: "这意味着你的存档、剧情分支和成就记录会被全部清空" };
+      return { title: "是否初始化游戏？", body: "这意味着你的存档、剧情分支、成就和回顾记录会被全部清空" };
     }
     if (kind === "new") return { title: "是否重新开始长征？", body: "" };
     if (kind === "continue") return { title: "是否继续未竟的长征？", body: "" };
@@ -3623,7 +4070,7 @@
     return "map";
   }
 
-  // 读档：快照进 state，设置用全局一份；读出来先落一次，保证 activeId 指向它。
+  // 读档：快照进 state，设置用全局一份；只改 activeId，不改「上次保存」时间。
   function loadSlot(slot) {
     if (!slot) return;
     var result = normalize(slot.state);
@@ -3636,14 +4083,14 @@
     state = result.state;
     state.settings = cloneJson(savesStore.settings);
     state.paused = false;
+    historyFlush();
     savesStore.activeId = slot.id;
-    slot.updatedAt = nowIso();
+    historyTruncateToCheckpoint(slot.id);
     writeSavesStore(savesStore);
     closeSaves(true);
     applySettings();
     state.scene = resumeSceneFor(state);
     render();
-    if (state.scene !== "ending") saveNow();
     toast("已载入 " + slotLabel(slot));
   }
 
@@ -3682,7 +4129,7 @@
 
   // 初始化：清存档、分支、成就、名册；音量/字号/速度等设置保留。
   function initializeGame() {
-    var keys = [SAVES_KEY, SAVE_KEY, LEGACY_SAVE_KEY, BRANCH_KEY, ACHIEVEMENT_KEY, ROSTER_KEY];
+    var keys = [SAVES_KEY, SAVE_KEY, LEGACY_SAVE_KEY, HISTORY_KEY, BRANCH_KEY, ACHIEVEMENT_KEY, ROSTER_KEY];
     var failures = 0;
     keys.forEach(function (key) {
       try {
@@ -3709,6 +4156,7 @@
     achievementStorageWarned = false;
     achievementState.store = null;
     achievementState.runIds = [];
+    historyResetAll();
     endingReview.active = false;
     endingReview.backup = null;
     state = defaults();
@@ -3722,7 +4170,7 @@
     applySettings();
     render();
     if (failures) toast("初始化未完全成功：浏览器未允许清除全部记录");
-    else toast("已初始化：存档、分支、成就与名册已清空");
+    else toast("已初始化：存档、分支、成就、名册与回顾已清空");
   }
 
   function manualSave() {
@@ -4016,7 +4464,6 @@
     if (!here || !firstCrisis) return;
     if (here.index >= firstCrisis.index) {
       XB.core.setFlag(state, "memory.luding_status", true);
-      saveNow();
       return;
     }
     ["feimao", "zaowang", "dongsheng"].forEach(function (id) {
@@ -4024,7 +4471,6 @@
       XB.core.setFlag(state, "quality." + id, 2, LUDING_STATUS_REASON);
     });
     XB.core.setFlag(state, "memory.luding_status", true);
-    saveNow();
   }
 
   // 节点级状态：choice 在选项出现前写，line 在本句显示前写。
@@ -4034,7 +4480,6 @@
     if (node.statusOnce && state.flags[node.statusOnce] === true) return;
     XB.core.applySet(state, node.status, node.id + ":status", node.statusReason || "他撑不住了");
     if (node.statusOnce) XB.core.setFlag(state, node.statusOnce, true);
-    saveNow();
   }
 
   function renderVn(node) {
@@ -4118,6 +4563,7 @@
   }
 
   function renderLine(node) {
+    historyPush({ t: "line", c: state.chapterId, n: node.id });
     els.vnDialogue.hidden = false;
     els.vnToolbar.hidden = false;
     updateToolbar();
@@ -4270,13 +4716,13 @@
       toast("这段到此为止");
       return;
     }
-    saveNow();
     renderVn(next);
   }
 
   /* ---------------- 限时选项 ---------------- */
 
   function renderChoice(node) {
+    historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "choice" });
     els.vnChoices.hidden = false;
     els.vnChoicePrompt.hidden = !node.prompt;
     els.vnChoicePrompt.textContent = node.prompt || "";
@@ -4374,10 +4820,10 @@
       toast("选项数据异常，已按默认项继续");
       return;
     }
+    historyPush({ t: "choice", c: state.chapterId, n: node.id, k: "choice", key: key, timedOut: timedOut === true });
     recordChoiceAchievement(node, key, timedOut);
     XB.audio.cue(timedOut ? "choice-timeout" : "choice-select");
     markChoice(node, key, timedOut);
-    saveNow();
     if (timedOut) {
       var timeoutText = "超时：已按默认选项结算 —— " + option.text;
       if (option.cost && !node.hideCost) timeoutText += "（" + option.cost + "）";
@@ -4428,6 +4874,7 @@
   }
 
   function renderMultiChoice(node) {
+    historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "multi" });
     els.vnMultichoice.hidden = false;
     els.vnDialogue.hidden = true;
     els.vnToolbar.hidden = true;
@@ -4555,9 +5002,9 @@
     }
     multiRun.locked = true;
     updateMultiChoice();
+    historyPush({ t: "multi", c: state.chapterId, n: node.id, ids: result.selected.slice() });
     recordMultiAchievements(node, result.selected);
     XB.audio.cue("choice-select");
-    saveNow();
     debugExtra = "multi=" + result.selected.join(",");
     updateDebug();
 
@@ -4892,6 +5339,7 @@
       renderRollcallChips();
       nextRollcall();
     } else if (node.mode === "namepick") {
+      historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "namepick" });
       els.interactKicker.textContent = "记名";
       els.interactName.textContent = "抄名字";
       els.interactAnswer.textContent = "跳过";
@@ -4996,7 +5444,6 @@
     state.ending = { names: names, answered: answered, missed: missed };
     setFlag(state, "memory.rollcall_missed_any", missed > 0);
     lastInteractResult = null;
-    saveNow();
     stopInteract();
     advanceVn();
   }
@@ -5033,6 +5480,7 @@
     if (nameId === "zhang") setFlag(state, "memory.zhang", true);
     recordAchievement("j018-done", false);
     lastInteractResult = { count: 1, name: entry.name, id: entry.id };
+    historyPush({ t: "namepick", c: state.chapterId, n: interactRun.node.id, nameId: nameId, timedOut: false });
     announceInteract("记下 " + entry.name);
     stopInteract();
     advanceVn();
@@ -5044,6 +5492,7 @@
     setFlag(state, "memory.namepick_done", true);
     recordAchievement("j018-skip", timedOut === true);
     lastInteractResult = { count: 0, name: "", id: "" };
+    historyPush({ t: "namepick", c: state.chapterId, n: interactRun.node.id, nameId: "", timedOut: timedOut === true });
     announceInteract("一个没抄");
     stopInteract();
     advanceVn();
@@ -5129,6 +5578,7 @@
     if (!nextId || nextId === "map") {
       state.nodeId = null;
       go("map");
+      saveChapterProgress();
       return;
     }
 
@@ -5136,6 +5586,7 @@
     if (!chapter || !chapter.playable) {
       state.nodeId = null;
       go("map");
+      saveChapterProgress();
       return;
     }
     // 隐藏章（空页 coda）不进地图、不弹解锁；玩家从草地直接走进去。
@@ -5150,11 +5601,12 @@
     }
     if (startChapter(state, nextId)) {
       render();
-      saveNow();
+      saveChapterProgress();
       return;
     }
     state.nodeId = null;
     go("map");
+    saveChapterProgress();
   }
 
   /* ---------------- 标题卡与史实注 ---------------- */
@@ -5295,7 +5747,6 @@
   function unlockCodex(id) {
     if (state.codex.indexOf(id) !== -1) return;
     state.codex.push(id);
-    saveNow();
     toast("史实注已记入图鉴：" + codexById(id).title);
   }
 
@@ -6942,7 +7393,6 @@
     var callback = packState.onClose;
     if (mode === "warning") {
       XB.core.resolveGrassWarning(state);
-      saveNow();
     }
     closePackPanel(false);
     updateHud();
@@ -6957,7 +7407,6 @@
     }
     XB.audio.cue("choice-select");
     drainStatusEvents();
-    saveNow();
     updateHud();
     if (packState.mode === "warning" && state.flags.condition > 1) {
       toast("状态回到" + XB.core.conditionLabel(state.flags.condition) + "，能走了。");
@@ -6970,7 +7419,6 @@
   // 草地结束：先扣状态，再按 7(5)/坏结局/门板条件收口；刷新到 g027a 不重复扣。
   function runGrassSettlement() {
     var result = XB.core.settleGrass(state);
-    saveNow();
     updateHud();
     if (result.condition === 0) {
       finishGrassSettlement();
@@ -6987,7 +7435,6 @@
     if (state.flags.condition <= 1) XB.core.resolveGrassWarning(state);
     var outcome = XB.core.settleDoor(state);
     XB.core.syncDerivedFlags(state);
-    saveNow();
     updateHud();
     var needsDoorModal = outcome === "grass" &&
       state.flags["had.door"] === true &&
@@ -7044,7 +7491,6 @@
     if (!dangerState.open) return;
     closeDangerModal(true);
     XB.core.resolveGrassWarning(state);
-    saveNow();
     updateHud();
     finishGrassSettlement();
   }
@@ -7052,7 +7498,7 @@
   // 暂停、图鉴、史实注可能叠在一起，取最安静的一档，不叠乘。
   function refreshAudioDuck() {
     var duck = 1;
-    if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open) duck = Math.min(duck, 0.45);
+    if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open || historyState.open) duck = Math.min(duck, 0.45);
     if (packState.open || doorState.open || dangerState.open) duck = Math.min(duck, 0.45);
     if (savePanelState.open || confirmState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
@@ -7081,7 +7527,6 @@
     cancelTyping();
     state.scene = scene;
     render();
-    saveNow();
   }
 
   // 开新档：只新建一个槽位，不动其它存档、分支与成就。
@@ -7097,6 +7542,7 @@
     branchLastRun = null;
     branchRecordedEnding = null;
     branchState.run = null;
+    historyFlush();
     if (!startChapter(state, "prologue")) {
       toast("序章没能载入");
       return;
@@ -7104,6 +7550,7 @@
     var slot = createSlotRecord(serialize(state));
     savesStore.slots.unshift(slot);
     savesStore.activeId = slot.id;
+    historyResetForSlot(slot.id);
     writeSavesStore(savesStore);
     closeSaves(true);
     applySettings();
@@ -7130,7 +7577,6 @@
     if (resume && isVisible(state, resume.node)) {
       state.scene = "vn";
       render();
-      saveNow();
       return;
     }
     if (!startChapter(state, chapterId)) {
@@ -7138,7 +7584,6 @@
       return;
     }
     render();
-    saveNow();
   }
 
   function openPause() {
@@ -7262,6 +7707,7 @@
   function onVisibilityChange() {
     // 切走标签页时停表：倒计时和打字机都不该在看不见时偷跑。
     if (document.hidden) {
+      historyFlush();
       XB.audio.suspend();
       if (state && state.scene === "vn" && !state.paused) openPause();
       return;
@@ -7275,49 +7721,49 @@
     els.setSpeed.addEventListener("input", function () {
       state.settings.textSpeed = Number(els.setSpeed.value);
       els.setSpeedValue.textContent = state.settings.textSpeed + " 字/秒";
-      saveNow();
+      saveSettingsOnly();
     });
     els.setVolume.addEventListener("input", function () {
       state.settings.volume = Number(els.setVolume.value) / 100;
       els.setVolumeValue.textContent = els.setVolume.value;
       XB.audio.applySettings({ volume: state.settings.volume });
-      saveNow();
+      saveSettingsOnly();
     });
     els.setMusicVolume.addEventListener("input", function () {
       state.settings.musicVolume = Number(els.setMusicVolume.value) / 100;
       els.setMusicVolumeValue.textContent = els.setMusicVolume.value;
       XB.audio.applySettings({ musicVolume: state.settings.musicVolume });
-      saveNow();
+      saveSettingsOnly();
     });
     els.setEnvVolume.addEventListener("input", function () {
       state.settings.ambienceVolume = Number(els.setEnvVolume.value) / 100;
       els.setEnvVolumeValue.textContent = els.setEnvVolume.value;
       XB.audio.applySettings({ ambienceVolume: state.settings.ambienceVolume });
-      saveNow();
+      saveSettingsOnly();
     });
     els.setScale.addEventListener("click", function (event) {
       var button = event.target.closest("[data-scale]");
       if (!button) return;
       state.settings.textScale = Number(button.dataset.scale);
       applySettings();
-      saveNow();
+      saveSettingsOnly();
     });
     els.setMuted.addEventListener("click", function () {
       state.settings.muted = !state.settings.muted;
       applySettings();
-      saveNow();
+      saveSettingsOnly();
     });
     els.setMotion.addEventListener("click", function () {
       state.settings.reducedMotion = !state.settings.reducedMotion;
       applySettings();
-      saveNow();
+      saveSettingsOnly();
       if (!state.settings.reducedMotion) return;
       if (vnRun.typing) finishPageNow();
     });
     els.setSkip.addEventListener("click", function () {
       state.settings.skipSeen = !state.settings.skipSeen;
       applySettings();
-      saveNow();
+      saveSettingsOnly();
     });
   }
 
@@ -7444,6 +7890,7 @@
     if (branchState.open || achievementState.open) return;
     if (savePanelState.open || confirmState.open || endingReview.active) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
+    if (historyState.open) return;
     if (packState.open || doorState.open || dangerState.open) return;
     if (titleCardState.open) {
       closeTitleCard();
@@ -7475,6 +7922,16 @@
 
   function onKeyDown(event) {
     XB.audio.unlock();
+    // 回顾层在最上面：Esc 关闭，Tab 只在关闭键与正文之间走，其余键不穿透。
+    if (historyState.open) {
+      if (event.key === "Escape") {
+        closeHistory();
+        event.preventDefault();
+      } else if (event.key === "Tab") {
+        trapFocus(event, els.historyPanel);
+      }
+      return;
+    }
     // 确认弹窗 > 存档面板 > 结局回顾：各层自己锁焦点，避免键盘穿透到标题/剧情。
     if (confirmState.open) {
       if (event.key === "Tab") {
@@ -7672,6 +8129,12 @@
 
   function handleAction(action, target) {
     switch (action) {
+      case "history":
+        openHistory();
+        break;
+      case "history-close":
+        closeHistory();
+        break;
       case "saves":
         openSaves();
         break;
@@ -7859,6 +8322,24 @@
     toastTimer = window.setTimeout(function () {
       els.toast.classList.remove("is-visible");
     }, TOAST_MS);
+  }
+
+  // 章末自动存档后单独提示：不占用 toast，避免覆盖「章节已解锁」等章末消息。
+  function showAutoSaveNotice() {
+    els.autosaveNotice.textContent = "已自动存档";
+    els.autosaveNotice.setAttribute("aria-hidden", "false");
+    els.autosaveNotice.classList.add("is-visible");
+    clearTimeout(autosaveNoticeTimer);
+    autosaveNoticeTimer = window.setTimeout(function () {
+      els.autosaveNotice.classList.remove("is-visible");
+      els.autosaveNotice.setAttribute("aria-hidden", "true");
+    }, AUTOSAVE_NOTICE_MS);
+  }
+
+  function saveChapterProgress() {
+    if (!saveNow()) return false;
+    showAutoSaveNotice();
+    return true;
   }
 
   /* ---------------- 状态变化弹窗 ---------------- */

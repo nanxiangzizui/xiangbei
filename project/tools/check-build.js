@@ -18,9 +18,9 @@ const REQUIRED_IDS = [
   "ending-title", "ending-date", "ending-lede", "ending-names", "ending-stats", "ending-cards",
   "ending-achievements", "ending-achievements-title", "ending-achievements-count", "ending-achievement-chips",
   "ending-disclaimer", "ending-home", "ending-codex",
-  "pause", "pause-menu", "toast", "debug", "orientation",
+  "pause", "pause-menu", "toast", "autosave-notice", "debug", "orientation",
   "title-menu", "map-stations", "map-route",
-  "vn-chapter", "vn-toolbar", "vn-auto", "vn-skip", "vn-dialogue", "vn-name", "vn-text", "vn-next",
+  "vn-chapter", "vn-toolbar", "vn-auto", "vn-skip", "vn-history-button", "vn-dialogue", "vn-name", "vn-text", "vn-next",
   "vn-choice-prompt", "vn-choices", "vn-result",
   "vn-multichoice", "vn-multi-prompt", "vn-multi-options", "vn-multi-status", "vn-multi-confirm",
   "vn-interact", "interact-kicker", "interact-name", "interact-status", "interact-progress",
@@ -43,7 +43,8 @@ const REQUIRED_IDS = [
   "saves-panel", "saves-title", "saves-count", "saves-list", "saves-empty", "saves-close",
   "save-new", "save-latest", "save-delete", "saves-delete-bar", "saves-delete-count",
   "saves-delete-confirm", "saves-delete-cancel", "saves-hint",
-  "save-confirm", "save-confirm-title", "save-confirm-body", "save-confirm-yes", "save-confirm-no"
+  "save-confirm", "save-confirm-title", "save-confirm-body", "save-confirm-yes", "save-confirm-no",
+  "history-panel", "history-title", "history-body", "history-list", "history-empty", "history-close"
 ];
 
 const PREVIEW_UI = [
@@ -1968,7 +1969,7 @@ function checkSavePanelCopy() {
     "是否继续长征？",
     "确定要删除这些存档吗？",
     "是否初始化游戏？",
-    "这意味着你的存档、剧情分支和成就记录会被全部清空"
+    "这意味着你的存档、剧情分支、成就和回顾记录会被全部清空"
   ].forEach(function (text) {
     if (copy.indexOf(text) === -1) fail("C46", "确认文案缺：" + text);
   });
@@ -2003,6 +2004,87 @@ function checkInitIsolation() {
   });
   if (clear.indexOf("SAVES_KEY") === -1) fail("C47", "?reset=1 没清存档列表");
   notes.push("C47 OK 初始化清存档/分支/成就/名册并清内存缓存，设置保留；?reset=1 只清存档");
+}
+
+// C48：自动存档只在章末/结局；逐句、选项、多选、场景切换、读档都不落盘；设置只写全局 settings
+function checkSaveCadence() {
+  const engine = readProject("engine.js");
+  const html = readProject("index.html");
+  const css = readProject("style.css");
+  function bodyOf(name) {
+    const start = engine.indexOf("function " + name + "(");
+    if (start === -1) return "";
+    const end = engine.indexOf("\n  function ", start + 10);
+    return end === -1 ? engine.slice(start) : engine.slice(start, end);
+  }
+  ["advanceVn", "resolveChoice", "resolveMultiChoice", "go", "loadSlot"].forEach(function (name) {
+    const body = bodyOf(name);
+    if (!body) fail("C48", "找不到 " + name + " 函数体");
+    else if (body.indexOf("saveNow(") !== -1) fail("C48", name + " 仍在自动落盘");
+  });
+  const finish = bodyOf("finishChapter");
+  const finishSaves = finish.split("saveChapterProgress(").length - 1;
+  if (finishSaves !== 4) fail("C48", "finishChapter 的章末出口没有全部保存（" + finishSaves + " 处）");
+  if (finish.split("saveNow(").length - 1 !== 1) fail("C48", "finishChapter 的结局出口应单独落盘 1 次");
+  if (bodyOf("manualSave").indexOf("saveNow()") === -1) fail("C48", "manualSave 不再写档");
+  if (bodyOf("renderEnding").indexOf("saveNow()") === -1) fail("C48", "结局完成没有落盘");
+  if (bodyOf("saveSettingsOnly").indexOf("savesStore.settings =") === -1) fail("C48", "saveSettingsOnly 没写全局 settings");
+  const settings = bodyOf("bindSettings");
+  if (settings.indexOf("saveNow(") !== -1) fail("C48", "设置监听仍会覆盖当前档的对话进度");
+  if (settings.split("saveSettingsOnly(").length - 1 !== 8) fail("C48", "设置监听的 saveSettingsOnly 数量不是 8");
+  if (engine.indexOf("中途退出回到本章开头") === -1) fail("C48", "存档面板没有说明中途退出回章首");
+  const totalSaves = (engine.split("saveNow();").length - 1) + (engine.split("saveChapterProgress();").length - 1);
+  if (totalSaves !== 7) fail("C48", "落盘调用点应为 7 个（手动/结局/章末 4 出口/开新档），实际 " + totalSaves);
+  if (engine.indexOf("AUTOSAVE_NOTICE_MS = 3500") === -1) fail("C48", "章末提示未固定 3.5 秒");
+  if (engine.indexOf('els.autosaveNotice.textContent = "已自动存档"') === -1) fail("C48", "章末提示文案不是「已自动存档」");
+  if (html.indexOf('id="autosave-notice"') === -1) fail("C48", "index.html 缺 #autosave-notice");
+  if (css.indexOf("#autosave-notice") === -1) fail("C48", "style.css 缺 #autosave-notice");
+  notes.push("C48 OK 自动存档只在章末/结局；逐句、选择、场景切换与读档不落盘；设置只写全局 settings；章末「已自动存档」3.5 秒");
+}
+
+// C49：剧情回顾只读层：独立键、所有选择金色加粗、固定字号不可选、X 关闭
+function checkHistoryPanel() {
+  const engine = readProject("engine.js");
+  [
+    'HISTORY_KEY = "xiangbei.history.v1"',
+    "function historyLoadAtBoot(",
+    "function historyPush(",
+    "function renderHistoryPanel(",
+    "function openHistory(",
+    "function closeHistory(",
+    "historyState.open = true;",
+    "state.paused = true;"
+  ].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C49", "engine.js 缺 " + needle);
+  });
+  if (engine.indexOf('t: "choice"') === -1 || engine.indexOf("key: key") === -1) {
+    fail("C49", "选择结果没有记录选项 key，回顾无法显示具体选择");
+  }
+  const html = readProject("index.html");
+  ["history-panel", "history-title", "history-body", "history-list", "history-empty", "history-close"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C49", "index.html 缺 #" + id);
+  });
+  if (html.indexOf('data-action="history"') === -1) fail("C49", "剧情画面缺回顾入口");
+  if (html.indexOf('data-action="history-close"') === -1) fail("C49", "回顾层缺 X 关闭");
+  if (html.indexOf(">剧情回顾<") === -1) fail("C49", "回顾层缺标题");
+  if (/contenteditable/.test(html)) fail("C49", "回顾层不应可编辑");
+  const css = readProject("style.css");
+  [
+    "--history-choice:",
+    ".xb-history {",
+    ".xb-history__text.is-choice",
+    ".xb-history__close",
+    "-webkit-user-select: none",
+    "user-select: none"
+  ].forEach(function (needle) {
+    if (css.indexOf(needle) === -1) fail("C49", "style.css 缺 " + needle);
+  });
+  const historyAt = css.indexOf("/* ---------- 剧情回顾");
+  const historyCss = historyAt === -1 ? "" : css.slice(historyAt, css.indexOf("/* ---------- 存档", historyAt));
+  if (historyCss.indexOf("font-size: 22px") === -1) fail("C49", "回顾正文不是固定字号");
+  if (historyCss.indexOf("--text-scale") !== -1) fail("C49", "回顾层不应跟随字号设置");
+  if (historyCss.indexOf("font-weight: 700") === -1) fail("C49", "选择行没有加粗");
+  notes.push("C49 OK 剧情回顾 xiangbei.history.v1 / 选择金色加粗 / 固定字号不可选 / X 关闭");
 }
 
 checkCompile();
@@ -2050,6 +2132,8 @@ checkTitleEntries();
 checkManualSave();
 checkSavePanelCopy();
 checkInitIsolation();
+checkSaveCadence();
+checkHistoryPanel();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

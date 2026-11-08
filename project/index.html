@@ -55,6 +55,7 @@
       </div>
 
       <button type="button" class="vn-pause" data-action="pause" aria-label="暂停">Ⅱ</button>
+      <button type="button" id="vn-history-button" class="vn-history-button" data-action="history" aria-haspopup="dialog">回顾</button>
 
       <div id="vn-dialogue" class="vn-dialogue">
         <p id="vn-name" class="vn-name"></p>
@@ -363,6 +364,21 @@
       </div>
     </div>
 
+    <!-- 剧情回顾：游玩中只读翻看前面的对话与选择；按档隔离，不写主档 -->
+    <div id="history-panel" class="xb-history" role="dialog" aria-modal="true" aria-labelledby="history-title" hidden>
+      <div class="xb-history__panel">
+        <header class="xb-history__head">
+          <span class="xb-history__seal" aria-hidden="true"></span>
+          <h2 id="history-title" class="xb-history__title">剧情回顾</h2>
+        </header>
+        <button type="button" id="history-close" class="xb-history__close" data-action="history-close" aria-label="关闭剧情回顾">×</button>
+        <div id="history-body" class="xb-history__body" tabindex="0">
+          <p id="history-empty" class="xb-history__empty">还没有走过的对话。</p>
+          <div id="history-list" class="xb-history__list"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 存档列表：标题菜单唯一入口；已完结档点开是整页结局回顾 -->
     <div id="saves-panel" class="xb-saves" role="dialog" aria-modal="true" aria-labelledby="saves-title" hidden>
       <div class="xb-saves__panel">
@@ -405,6 +421,7 @@
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
+    <div id="autosave-notice" class="xb-autosave" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
     <pre id="debug" hidden></pre>
   </div>
 

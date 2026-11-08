@@ -249,4 +249,24 @@
 - **未做**：公网完整流程、四关、移动完整流程、96/96 全用例未在 Netlify 重跑；这些结果仍来自本地发布包。完整流程/公网四关不能写成“已通过”。
 - **维护**：Netlify 站点由用户账号持有；后续更新需用 Netlify 账号/CLI 重新上传 `dist/site`。GitHub Pages 备站仍为 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，部署提交 `88771d3`）。
 
+## 13. v1.7.0-dev 本地打包（2026-11-08，未部署）
 
+- **触发**：用户 2026-11-08 要求“把当前项目工程打包，打 tag 并提交仓库”；本次只打本地包与本地提交，不部署、不改线上。
+- **基线**：分支 `v1.4-dev`，步骤十六「剧情回顾」完成后；源码提交与 tag 见 §13.3。
+- **版本**：`project/tools/release.py` 的 `VERSION = "1.7.0-dev"`；离线包 README 改写为现行玩法（四段选择 + 三次危机、行囊 4 格/状态 0–4、11 条人物结局、存档列表 `xiangbei.saves.v1`、剧情分支/成就/回顾三个独立键），删除 v1.1.1 的“四个小游戏 / xiangbei.save.v1”描述。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,600,743 B |
+| 离线包目录 | `dist/xiangbei-v1.7.0-dev/` | 73 文件 / 31,603,691 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.7.0-dev-offline.zip` | 74 条目 / 30,871,186 B / SHA256 `9F548CEEAE4D9307231FC751A02C8167AE97381316235F7F10FA74B9D31A6DB2` |
+| 设计说明 | `dist/design-note.pdf` | 303,713 B（沿用 v1.1.1 的一页 PDF，内容仍是 v1.0 设计说明，本轮未重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 9,667 B |
+
+- **门禁**：`check-build` 48/48、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` OK（站点与包逐文件一致、ZIP 条目与白名单一致、无外链、PDF 1 页含 ToUnicode）。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：http 与 file:// 共 21 项全绿，0 console error / pageerror / failed request。覆盖标题菜单（存档 / 史实图鉴 / 名册 / 剧情分支 / 解锁成就）、存档面板空态、开新档“是/否”确认、进入序章并推进 6 句、右上“回顾”入口与章节条目、暂停菜单、`xiangbei.saves.v1` 与 `xiangbei.history.v1` 落键、`file://` 字体与标题。证据 `docs/evidence/package-v1.7.0/`（gitignored）。
+- **未做**：部署（Netlify / GitHub Pages 仍是 v1.1.1 四关版）；20 分钟真人计时、11 条结局代表路线、Chrome/Safari/真机、844×390 打包冒烟、隐私模式均未在打包产物上重跑；设计说明 PDF 未按 v1.7 重制。
+- **仓库范围**：`.gitignore` 新增 `resource/`（134 MB 素材源库）、`.netlify/`、`docs/script.bak-expand/`、`project/story.js.bak-expand`、`project/tools/_pw-debug-*.js`；`dist/` 与 `*.zip` 原本即不入库。
+- **回滚**：删除 `dist/xiangbei-v1.7.0-dev*` 与 `dist/site` 即可重建；不影响已上线站点。

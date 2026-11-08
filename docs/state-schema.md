@@ -1,6 +1,6 @@
 # 《向北》存档与旗标（v1.6 · 存档列表，v1.6.0-dev）
 
-> 存档键：`xiangbei.saves.v1`（列表，一档一槽，见 §10）；单档仍是 v2 形状（`SAVE_VERSION=2`），逐槽走同一套 `normalize`。旧键 `xiangbei.save.v2` / `xiangbei.save.v1` 只读，首次启动（列表不存在时）迁移成第 1 档并删旧键；`?reset=1` 只清存档，初始化才清分支/成就/名册（§10.4）。
+> 存档键：`xiangbei.saves.v1`（列表，一档一槽，见 §10）；单档仍是 v2 形状（`SAVE_VERSION=2`），逐槽走同一套 `normalize`。旧键 `xiangbei.save.v2` / `xiangbei.save.v1` 只读，首次启动（列表不存在时）迁移成第 1 档并删旧键；`?reset=1` 只清存档与回顾，初始化才清分支/成就/名册（§10.4）。剧情回顾另存 `xiangbei.history.v1`（§11），不占单档 11 键。
 > 所有 `localStorage` 读写 try/catch；不可用时提示“本局无法存档”，不白屏。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > v1.3.0-dev 的 34 旗标/四路线/3 格行囊已由 v1.4 取代；旧档迁移见 §8，旧字段 `strain` 只作兼容。
@@ -255,7 +255,9 @@
 
 ## 7. 保存点与体积
 
-- 每个 beat 后落档；多选/物资/结算/点名中间态也写。
+- 只有章末、结局完成、手动「保存」与开新档落档；逐句推进、多选/物资/结算/点名中间态与回标题都不写。
+- 非结局章末保存成功后，屏幕上方 `#autosave-notice` 显示 3.5 秒“已自动存档”；结局保存不显示，避免盖住结局页。提示只在本局显示，刷新不重放。
+- v1.5 及以前每 beat 存档；v1.6 起取消 beat 存档，避免中途退出读到半个章节，读档统一回到本章开头（手动保存除外）。
 - 结局落档前清空 `choices`：v1.3 实测完整日志 4267B > 4096B；清空后正常。
 - 存档 >4096B 仍按坏档处理；名册、分支、成就收纳独立键不占主档预算。
 - `ending.achievements` 最多 48 个短 id；结算清空 `choices` 后仍在 4096B 以内。重进已结算结局时 `choices` 已空，但 `flags.memory.zhang` 仍会产出 `j018-done`；`buildEnding` 必须把 `previous.achievements` 合并回来，否则快照从 22 条掉成 1 条。
@@ -278,11 +280,12 @@
 - `?debug=1` 右上显示 scene/chapter/node/flags 摘要/ending/save 字节与档数/audio/peak。
 - `?chapter=coda&node=c006`、`?chapter=badend&node=b006` 可直达；未知节点回地图。`?resume=1` 直接续最近未完结档（测试后门）；与 `?chapter=` 同用时保留 `activeId`，章末保存落回同一档。
 - `?reset=1` 只清存档列表（不清分支/成就/名册）；初始化用标题“向北”按钮。
-- 单测：`node project/tools/smoke.js`（49 旗标、pack 4/8、11 路线、迁移、分支 mapping、成就 48 条）；`check-build` 覆盖 C14/C18/C24/C26/C39/C40/C41/C42/C43/C44/C45/C46/C47。
+- 单测：`node project/tools/smoke.js`（49 旗标、pack 4/8、11 路线、迁移、分支 mapping、成就 48 条）；`check-build` 覆盖 C14/C18/C24/C26/C39/C40/C41/C42/C43/C44/C45/C46/C47/C48。
 - 浏览器：`_pw-step14.js` 覆盖 48 条映射、标题/暂停/结局三入口、锁定不泄露、单选/多选/记名 pick/skip、结局快照与重进合并、844×390 标题与暂停；http 55/55、file:// 55/55、移动专项 11/11，0 console error / 0 failed request。
 - 浏览器：`_pw-step11.js` 覆盖 11 结局、危机、物资面板、差警告、门板弹窗、旧档、刷新、移动、`file://`；`_pw-step12.js` 覆盖分支空态/暂停实时/结算落档/全部 11 路线/详情/键盘/缩放/坏档/隐私/移动。
 - 实测：步骤十一 check-build 39/39、smoke 46/46、check-script 9 文件 OK；步骤十二 check-build 40/40、smoke 47/47；分支浏览器 98/98（http）、移动 24/24、file 19/19；证据 `docs/evidence/step-11/`、`docs/evidence/step-12/`。
-- 步骤十五（v1.6）：`_pw-step15.js` 覆盖空态、开新档、暂停保存、章末覆盖、刷新回标题、列表续玩、已完结整页回顾、上次玩到、删除选中、初始化、跨档隔离、设置保留、旧档迁移、隐私降级、移动与 `file://`；http 75/75、迁移 8/8、隐私 4/4、移动 9/9、file:// 75/75，0 console error / 0 failed request；check-build 46/46。证据 `docs/evidence/step-15/`。
+- 步骤十五（v1.6）：`_pw-step15.js` 覆盖空态、开新档、逐句推进不落盘、设置不覆盖进度、手动保存精确回原句、章末覆盖并落下一章开头、刷新回标题、列表续玩、读档后推进/回标题不覆盖、已完结整页回顾、上次玩到、删除选中、初始化、跨档隔离、设置保留、旧档迁移、隐私降级、移动与 `file://`；http 88/88、迁移 8/8、隐私 4/4、移动 9/9、file:// 88/88，0 console error / 0 failed request；check-build 48/48（含步骤十六 C49）。证据 `docs/evidence/step-15/`。
+- 步骤十六（v1.7）：`_pw-step16.js` 覆盖回顾入口、单选/多选/记名金色加粗、超时默认项、限时冻结、刷新与手动保存去重、不可选中/固定字号、坏档与隐私、Esc/Tab/X、移动与 `file://`；http 56/56、file 56/56、移动 11/11、隐私 5/5，合计 128/128，0 pageerror / 0 失败请求；check-build 48/48。证据 `docs/evidence/step-16/`。
 
 
 
@@ -303,9 +306,12 @@
 
 ### 10.2 写入时机
 
-- 每个 beat 仍调 `saveNow()`：有 `activeId` 就覆盖该槽（`slot.state`、`updatedAt`），没有才新建一槽并 `unshift`。所以章末自动保存、暂停“保存”、多选/物资/点名中间态都落在同一档，不会每章生成新档。
-- 开新档（`startNewGame`）才手动新建槽；读档（`loadSlot`）把该槽设为 `activeId` 后再按 beat 覆盖。
-- 回到标题 `go("title")` 也会写一次（`scene:"title"`，`nodeId` 保留）；读档时 `resumeSceneFor` 按 `ending → vn → map` 还原落点。
+- 只有章末（`finishChapter` 的下一章/地图/结局出口）、结局渲染、手动「保存」与开新档 `startNewGame` 调 `saveNow()`：有 `activeId` 就覆盖该槽（`slot.state`、`updatedAt`），没有才新建一槽并 `unshift`。
+- 非结局章末走 `saveChapterProgress()`：`saveNow()` 成功后显示 3.5 秒“已自动存档”；结局出口仍只 `saveNow()`，不弹提示。
+- 逐句推进、选项/多选提交、物资/状态变化、图鉴解锁、切场景、回标题、读档都不写槽。中途退出后，只能读到上一次章末或手动保存的位置；章末保存落在下一章开头。
+- 手动保存写当前节点（含选项/多选/点名等节点），读档回到该节点；读档只改 `activeId`，不改 `updatedAt`，列表“上次保存”时间保持真实保存时间。
+- 设置改动只写 `store.settings`（`saveSettingsOnly`），不覆盖任何槽的进度与保存时间。
+- 读档时 `resumeSceneFor` 按 `ending → vn → map` 还原落点。
 
 ### 10.3 界面与只读回顾
 
@@ -317,11 +323,59 @@
 
 ### 10.4 初始化与重置
 
-- 标题“向北”两字是 button（`data-action="init-game"`）：按下加粗 + 重影 220ms，再弹“是否初始化游戏？这意味着你的存档、剧情分支和成就记录会被全部清空”。
-- 选“是”删 6 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
-- `?reset=1` 只清三个存档键，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“存档”。
+- 标题“向北”两字是 button（`data-action="init-game"`）：按下加粗 + 重影 220ms，再弹“是否初始化游戏？这意味着你的存档、剧情分支、成就和回顾记录会被全部清空”。
+- 选“是”删 7 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.history.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清回顾/分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
+- `?reset=1` 清四个键：三个存档键与 `xiangbei.history.v1`，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“存档”。
 
 ### 10.5 与分支/成就的关系
 
 - 存档、分支、成就三套键互不读写：开多少档、删多少档都不改 `branches.v1` / `achievements.v1`；只有初始化才清空并回灰。
 - 名册 `roster.v1` 同样只由初始化清空；图鉴页“清档不会清掉它”的提示已删。
+
+## 11. 剧情回顾（v1.7，2026-11-08）
+
+### 11.1 键与形状
+
+- 独立键：`xiangbei.history.v1`；只记“走过哪些节点”，不复制台词，不占主档 11 键，也不进单档 4096B/整包 512KB。
+- 形状：
+
+    { "version": 1,
+      "runs": {
+        "slot-...": { "entries": [ ... ], "checkpoint": 0, "updatedAt": "ISO" },
+        "session": { "entries": [ ... ], "checkpoint": 0, "updatedAt": "ISO" }
+      } }
+
+- `runs` 的键是存档槽 id；尚未落档的第一局用 `session`，首次 `saveNow()` 建槽成功后把 `session` 桶迁到新槽并删除旧桶。
+- 每个桶最多 `HISTORY_MAX_ENTRIES=800` 条，整键最多 `HISTORY_MAX_RUNS=24` 个桶；超限只裁最旧的桶，当前桶不动。
+- `checkpoint` 是该桶“已经写进主档”的条数；`updatedAt` 用于跨槽裁剪的先后。坏桶/坏条直接丢弃，不拖垮其它桶。
+
+### 11.2 条目形状
+
+| `t` | 字段 | 用途 / 解析 |
+|---|---|---|
+| `line` | `c`, `n` | 一句对话或旁白；打开面板时用 `locate(c,n)` 取 `speaker`/`text`。`speaker==="旁白"` 不显示人名。 |
+| `prompt` | `c`, `n`, `k` | 选择提示句；`k` 为 `choice` / `multi` / `namepick`，取 `node.prompt`。 |
+| `choice` | `c`, `n`, `k:"choice"`, `key`, `timedOut` | 单选取值；按 `option.key` 找原文。超时选项在面板追加“（时间到了，默认项）”。 |
+| `multi` | `c`, `n`, `ids[]` | 多选实际选中的 id，最多 16 个；按 `node.options` 顺序还原文本，`、` 连接；空数组合成“没有选任何一样”。 |
+| `namepick` | `c`, `n`, `nameId`, `timedOut` | 金沙江记名；按 `names[]` 找名字，显示“抄下「张老幺」的名字”；`nameId` 为空时显示“一个名字也没抄”。 |
+
+- 同一 `t+c+n` 连续出现只保留最后一条：刷新会重渲染当前节点，靠这条去重，不产生重复行。
+- 条目只存引用；`story.js` 改文案后，旧记录打开时显示新文案。找不到的节点/选项/名字跳过，不显示空白行。
+
+### 11.3 写入、截断与清理
+
+- 记录点：`renderLine`、`renderChoice` 的提示、单选提交成功后、`renderMultiChoice` 的提示、多选提交成功后、记名提示、`pickName`、`skipNamepick`。
+- 写入 400ms debounce；`openHistory` / `closeHistory` / `saveNow` 成功 / 页面隐藏时 flush。写失败只 toast 一次“本局无法保存回顾记录（浏览器限制）”，面板仍读内存。
+- 只有 `saveNow()` 成功写槽后，才把该槽 `checkpoint` 推进到当前条数；`saveNow` 失败（含超 4096B）不推进。
+- `loadSlot` 在主流程渲染前把该槽 `entries` 截到 `checkpoint`：读档回到上次保存点，回顾也只显示到那一点；章末自动保存与暂停手动保存都会推进 checkpoint。
+- `startNewGame` 重置新槽的桶；删除槽时同步删桶；初始化清整个历史键；`?reset=1` 清历史键与内存；`clearSave` 同样清回顾，不动分支/成就/名册。
+- 坏 JSON / 版本或结构不符：备份 `xiangbei.history.v1.bad` 后回空，再 toast；读写异常都不白屏。
+- 隐私模式/`file://` 写失败：内存仍可查看本局历史；跨刷新不保留，提示语只出现一次。
+
+### 11.4 界面与不可选中
+
+- 入口 `#vn-history-button`（`data-action="history"`）在暂停下方；只在 VN 场景显示，章首卡/地图/结局隐藏。
+- 面板 `#history-panel` 全屏实色 `--history-bg:#080D13`，左上朱砂竖条 + “剧情回顾”，右上 `×`（`data-action="history-close"`，桌面 56×56、移动 82×82）；Esc 关闭，点背景不关，Tab 焦点锁在关闭键与正文之间。
+- 两栏 200px / 1px / 1fr（移动 150px / 1px / 1fr）；人名右对齐、正文纸白；选择行 `➤ + 文本` 用 `--history-choice:#F2C45C` 加粗 700；提示句弱化；章节变化插分隔标题；打开滚到底。
+- 正文固定 22px/1.9（移动 28px 逻辑），不跟 `--text-scale`，字号设置只影响游戏正文；`html`/`body`/`#stage` 及子元素 `user-select:none`（横屏提示也不例外），回顾层额外 `-webkit-user-drag:none`，无 `contenteditable`。
+- 打开时冻结游戏：`state.paused=true`、取消自动、暂停打字机与所有限时倒计时、音频 duck 0.45；关闭恢复选项/点名计时、自动/跳过和焦点。历史打开时数字键/空格不穿透到剧情。

@@ -83,6 +83,13 @@
   --branch-detail-scrim: rgba(4, 8, 12, 0.74);
   --branch-panel-shadow: rgba(0, 0, 0, 0.34);
   --branch-node-hover: rgba(26, 23, 20, 0.035);
+  /* 剧情回顾：近黑底、纸白台词、唯一的金色留给玩家选择。 */
+  --history-bg: #080D13;
+  --history-choice: #F2C45C;
+  --history-rule: rgba(232, 225, 208, 0.18);
+  --history-prompt: rgba(232, 225, 208, 0.55);
+  --history-speaker: rgba(232, 225, 208, 0.72);
+  --history-scroll-thumb: rgba(232, 225, 208, 0.22);
   --focus-color: #A8322D;
   --focus-gap: #F1EBDD;
 
@@ -144,6 +151,7 @@
   --z-gallery: 82;
   --z-saves: 83;
   --z-codex: 84;
+  --z-history: 85;
   --z-branch: 86;
   --z-branch-detail: 88;
   --z-save-confirm: 89;
@@ -211,7 +219,9 @@ body {
   overflow: hidden;
 }
 
-/* 双击推进剧情时不要选中文字；游戏内只有滑杆，没有需要选中的文本。 */
+/* 全站禁选：双击推进剧情、横屏提示与所有面板都不应选中文字；只有滑杆需要拖动。 */
+html,
+body,
 #stage,
 #stage * {
   -webkit-user-select: none;
@@ -644,6 +654,30 @@ a:focus-visible,
   border-radius: var(--radius);
 }
 
+/* 回顾放在暂停正下方：顶栏从「物资」到暂停已满，不抢自动/跳过的位置。 */
+.vn-history-button {
+  position: absolute;
+  right: 32px;
+  top: 84px;
+  width: 112px;
+  height: 44px;
+  z-index: var(--z-dialogue);
+  font-size: 16px;
+  letter-spacing: 4px;
+  color: var(--paper);
+  background: var(--scrim);
+  border: var(--border) solid var(--paper-a72);
+  border-radius: var(--radius);
+}
+
+.vn-history-button:focus-visible,
+.xb-history__close:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--focus-w) var(--focus-color),
+    0 0 0 calc(var(--focus-w) + var(--focus-offset)) var(--focus-gap);
+}
+
 .vn-dialogue {
   position: absolute;
   left: 60px;
@@ -786,6 +820,33 @@ a:focus-visible,
 
 #toast.is-visible {
   opacity: 1;
+}
+
+/* 章末自动存档：顶部独立纸条，避免与 toast 抢位置；3.5 秒后淡出。 */
+#autosave-notice {
+  position: absolute;
+  left: 50%;
+  top: 84px;
+  z-index: var(--z-toast);
+  box-sizing: border-box;
+  padding: 9px 18px;
+  font-size: var(--fs-note);
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border) solid var(--ink-a20);
+  border-left: var(--border-accent) solid var(--cinnabar);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
+}
+
+#autosave-notice.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 #debug {
@@ -1160,8 +1221,13 @@ a:focus-visible,
 /* 标题卡是透明地图/照片时，下面的 HUD 和空对话框会透出来。 */
 #scene-vn.is-title-card .vn-chapter,
 #scene-vn.is-title-card .vn-pause,
+#scene-vn.is-title-card .vn-history-button,
 #scene-vn.is-title-card .vn-dialogue {
   visibility: hidden;
+}
+
+#scene-vn.is-title-card .vn-history-button {
+  display: none;
 }
 
 .xb-title-card__sub {
@@ -3879,6 +3945,16 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
     font-size: 36px;
   }
 
+  /* 844×390 舞台缩到约 0.54；96/82 逻辑像素落在 44 CSS 像素以上 */
+  .vn-history-button {
+    right: 12px;
+    top: 120px;
+    width: 96px;
+    height: 96px;
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+
   .xb-ending {
     left: 16px;
     top: 16px;
@@ -4013,6 +4089,257 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-ending__achievement { min-height: 82px; padding: 2px 10px; font-size: 21px; }
   .xb-ending__achievements-empty { font-size: 19px; }
   .xb-ending__achievements-count { font-size: 16px; }
+}
+
+/* ---------- 剧情回顾：全屏只读层（v1.7 步骤十六） ---------- */
+.xb-history {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-history);
+  color: var(--paper-hi);
+  background: var(--history-bg);
+}
+
+/* 双保险：全局已禁选，这里再声明一次；回顾层没有输入框，也不接受拖拽。 */
+.xb-history,
+.xb-history * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+.xb-history__panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 36px 96px 40px;
+}
+
+.xb-history__head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  height: 48px;
+}
+
+.xb-history__seal {
+  width: 4px;
+  height: 28px;
+  background: var(--cinnabar);
+}
+
+.xb-history__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 8px;
+  color: var(--paper-hi);
+}
+
+/* 参考图里的关闭是无边框细X；命中区仍按 56 逻辑像素给足。 */
+.xb-history__close {
+  position: absolute;
+  right: 32px;
+  top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 42px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--paper-hi);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.xb-history__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 20px;
+  padding: 12px 16px 40px;
+  overflow-y: auto;
+  scrollbar-color: var(--history-scroll-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+.xb-history__body:focus-visible {
+  outline: var(--border) solid var(--history-rule);
+  outline-offset: 4px;
+}
+
+.xb-history__list {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.xb-history__chapter {
+  margin: 28px 0 14px;
+  padding-bottom: 8px;
+  font-family: var(--font-title);
+  font-size: 20px;
+  letter-spacing: 6px;
+  color: var(--paper-a72);
+  border-bottom: var(--border) solid var(--history-rule);
+}
+
+.xb-history__chapter:first-child {
+  margin-top: 0;
+}
+
+.xb-history__row {
+  display: grid;
+  grid-template-columns: 200px 1px minmax(0, 1fr);
+  column-gap: 24px;
+  padding: 9px 0;
+}
+
+.xb-history__speaker {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.85;
+  text-align: right;
+  color: var(--history-speaker);
+}
+
+.xb-history__rule {
+  width: 1px;
+  background: var(--history-rule);
+}
+
+.xb-history__text {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 22px;
+  line-height: 1.9;
+  color: var(--paper-hi);
+}
+
+/* 玩家的选择是整页唯一的金色，且加粗；加 ➤ 与参考图的选择行对齐。 */
+.xb-history__text.is-choice {
+  color: var(--history-choice);
+  font-weight: 700;
+}
+
+.xb-history__arrow {
+  margin-right: 10px;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.xb-history__meta {
+  margin-left: 8px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--paper-a72);
+}
+
+.xb-history__row--prompt {
+  display: block;
+  padding: 12px 0 2px 249px;
+}
+
+.xb-history__prompt {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--history-prompt);
+}
+
+.xb-history__empty {
+  max-width: 1000px;
+  margin: 64px auto 0;
+  font-size: 18px;
+  color: var(--paper-a72);
+}
+
+/* 844×390 覆盖必须放在基础回顾样式之后：同优先级下后写生效。 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .xb-history__panel {
+    padding: 20px 28px;
+  }
+
+  .xb-history__head {
+    height: 74px;
+  }
+
+  .xb-history__seal {
+    width: 5px;
+    height: 36px;
+  }
+
+  .xb-history__title {
+    font-size: 42px;
+    letter-spacing: 5px;
+  }
+
+  .xb-history__close {
+    right: 16px;
+    top: 8px;
+    width: 82px;
+    height: 82px;
+    font-size: 40px;
+  }
+
+  .xb-history__body {
+    margin-top: 8px;
+    padding: 8px 8px 24px;
+  }
+
+  .xb-history__chapter {
+    margin: 18px 0 8px;
+    font-size: 26px;
+    letter-spacing: 4px;
+  }
+
+  .xb-history__row {
+    grid-template-columns: 150px 1px minmax(0, 1fr);
+    column-gap: 14px;
+    padding: 7px 0;
+  }
+
+  .xb-history__speaker {
+    font-size: 24px;
+    line-height: 1.6;
+  }
+
+  .xb-history__text {
+    font-size: 28px;
+    line-height: 1.65;
+  }
+
+  .xb-history__arrow {
+    margin-right: 8px;
+    font-size: 20px;
+  }
+
+  .xb-history__meta {
+    font-size: 18px;
+  }
+
+  .xb-history__row--prompt {
+    padding: 8px 0 0 179px;
+  }
+
+  .xb-history__prompt {
+    font-size: 22px;
+    line-height: 1.5;
+  }
+
+  .xb-history__empty {
+    margin-top: 32px;
+    font-size: 22px;
+  }
 }
 
 /* ---------- 存档：标题入口、列表、确认弹窗（v1.6） ---------- */

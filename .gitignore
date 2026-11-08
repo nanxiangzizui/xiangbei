@@ -30,3 +30,14 @@ dist/
 *.log
 .env
 .env.*
+
+# 素材源库（约 134 MB：原图、全字库、原始音频；运行时子集在 project/assets/）
+resource/
+
+# 本地备份与调试脚本（不是交付内容）
+docs/script.bak-expand/
+project/story.js.bak-expand
+project/tools/_pw-debug-*.js
+
+# Netlify 本地站点状态
+.netlify/

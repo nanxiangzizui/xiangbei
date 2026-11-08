@@ -281,20 +281,53 @@ function stamp() {
       await click("#vn-title-card");
       await page.waitForTimeout(200);
 
-      // 暂停「保存」：覆盖同档
-      const beforeManual = first.slots[0].updatedAt;
+      // 逐句推进：没有手动保存，档仍停在章首
+      const firstLine = await text("#vn-text");
+      for (let i = 0; i < 6; i += 1) {
+        await click("#vn-dialogue");
+        await page.waitForTimeout(140);
+      }
+      ok("逐句推进改变当前对话", (await text("#vn-text")) !== firstLine, await text("#vn-text"));
+      const afterClicks = await store();
+      eq("逐句推进不自动保存", afterClicks.slots[0].state.nodeId, "p001");
+
+      // 设置改动只写全局 settings，不覆盖当前对话
+      await page.evaluate(() => {
+        const input = document.querySelector("#set-volume");
+        input.value = "40";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      const afterSetting = await store();
+      eq("改设置不改对话进度", afterSetting.slots[0].state.nodeId, "p001");
+      eq("改设置写入全局设置", Number(afterSetting.settings.volume), 0.4);
+
+      // 手动「保存」：记下当前对话
+      await page.waitForTimeout(2000);
+      const manualText = await text("#vn-text");
       await page.keyboard.press("Escape");
       await page.waitForTimeout(120);
       ok("暂停菜单可见", await vis("#pause"));
       ok("暂停有保存入口", await page.locator('#pause-menu [data-action="save"]').count() === 1);
+      const beforeManual = afterSetting.slots[0].updatedAt;
       await click('#pause-menu [data-action="save"]');
       const savedToast = await text("#toast");
       ok("手动保存有提示", savedToast.indexOf("已保存：") === 0, savedToast);
       const afterManual = await store();
+      const manualNode = afterManual.slots[0].state.nodeId;
+      ok("手动保存记下当前节点", manualNode && manualNode !== "p001", manualNode);
       eq("手动保存不新增档", afterManual.slots.length, 1);
       ok("手动保存刷新时间", afterManual.slots[0].updatedAt >= beforeManual, afterManual.slots[0].updatedAt + " / " + beforeManual);
       await shot("pause-save");
       await click('#pause-menu [data-action="resume"]');
+
+      // 退出重进：回到手动保存的那句，而不是章首
+      await boot("");
+      await openSaves();
+      await click("#saves-list .xb-saves__row");
+      await click("#save-confirm-yes");
+      await page.waitForTimeout(2200);
+      ok("重进回到手动保存的对话", (await text("#vn-text")) === manualText, (await text("#vn-text")) + " / " + manualText);
+      eq("读档不改存档节点", (await store()).slots[0].state.nodeId, manualNode);
 
       // 章末自动保存：借 p900 走完序章，覆盖同一档
       await boot("resume=1&chapter=prologue&node=p900");
@@ -312,7 +345,20 @@ function stamp() {
       eq("章末自动保存仍是同一档", afterChapter.slots.length, 1);
       eq("章末自动保存记录了章节", afterChapter.slots[0].state.chapterId, "xiangjiang");
       ok("章末自动保存沿用 activeId", afterChapter.activeId === afterChapter.slots[0].id);
+      const chapterStartNode = afterChapter.slots[0].state.nodeId;
+      ok("章末存档落在下一章开头", chapterStartNode && chapterStartNode !== "p900", chapterStartNode);
       await shot("chapter-saved");
+
+      const notice = await page.locator("#autosave-notice").evaluate((el) => ({
+        text: el.textContent.trim(),
+        visible: el.classList.contains("is-visible"),
+        top: Math.round(el.getBoundingClientRect().top),
+        opacity: getComputedStyle(el).opacity
+      }));
+      ok("章末提示文案", notice.text === "已自动存档", JSON.stringify(notice));
+      ok("章末提示在屏幕上方", notice.visible && notice.top >= 0 && notice.top < 200, String(notice.top));
+      await page.waitForTimeout(3600);
+      ok("章末提示 3.5 秒后淡出", !(await page.locator("#autosave-notice").evaluate((el) => el.classList.contains("is-visible"))), await page.locator("#autosave-notice").getAttribute("aria-hidden"));
 
       // 刷新只进开始菜单
       await boot("");
@@ -335,11 +381,18 @@ function stamp() {
       ok("是读档进入剧情", await vis("#scene-vn"));
       eq("读档回到保存章节", await text("#vn-chapter"), "第一章 · 湘江");
 
-      // 退出到标题（会覆盖当前档的 scene，但保留 nodeId）
+      // 读档后推进仍不落盘；回到标题也不覆盖章首
+      if (await vis("#vn-title-card")) await click("#vn-title-card");
+      for (let i = 0; i < 4; i += 1) {
+        await click("#vn-dialogue");
+        await page.waitForTimeout(140);
+      }
+      eq("读档后推进不自动保存", (await store()).slots[0].state.nodeId, chapterStartNode);
       await page.keyboard.press("Escape");
       await page.waitForTimeout(120);
       await click('#pause-menu [data-action="pause-title"]');
       await page.waitForTimeout(250);
+      eq("回到标题不覆盖章首", (await store()).slots[0].state.nodeId, chapterStartNode);
 
       // 造一个已完结档：用 core 快照，避免为了测回顾真跑 20 分钟
       const crafted = await page.evaluate((key) => {
@@ -457,7 +510,7 @@ function stamp() {
       eq("设置读回文字速度", await page.inputValue("#set-speed"), "45");
       await click(".title-main__button");
       eq("初始化确认标题", await text("#save-confirm-title"), "是否初始化游戏？");
-      eq("初始化确认正文", await text("#save-confirm-body"), "这意味着你的存档、剧情分支和成就记录会被全部清空");
+      eq("初始化确认正文", await text("#save-confirm-body"), "这意味着你的存档、剧情分支、成就和回顾记录会被全部清空");
       await shot("confirm-init");
       await click("#save-confirm-no");
       ok("否保留存档", (await store()).slots.length === 1);
