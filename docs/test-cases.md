@@ -1,4 +1,4 @@
-# 《向北》验收用例（T01–T51 + C01–C08 + T11-01…T11-25 + T12-01…T12-10 + T14-01…T14-10 + T15-01…T15-15 + T16-01…T16-10；v1.7.0-dev 已实现）
+# 《向北》验收用例（T01–T51 + C01–C08 + T11-01…T11-25 + T12-01…T12-10 + T14-01…T14-10 + T15-01…T15-15 + T16-01…T16-10 + T17-01…T17-08；v1.7.1-dev 已实现并部署）
 
 > 用法：每条按步骤跑一遍；通过填“通过”，失败记现象 + 截图/录屏。P0 必须全过，P1 可记录例外。
 > 测试数据：?reset=1 清档；?debug=1 看旗标；?chapter=&node= 直达节点；?fonts=fallback 查字体回退。v1.1.1 历史单关入口：?minigame=door|abandon|boat|climb（可加 ?trust=0..6&door=0/1&fire=0..100&lights=0..22）；v1.2.0-dev 已删除该入口，旧命令只作历史记录。浏览器：Chrome/Edge/Safari 各一次。
@@ -233,6 +233,7 @@
 | T17-08 | P0 | 键盘/连点/移动/file | Enter 落在“是”；连点确认；844×390 触摸；`file://` 全流程 | Enter 只结算一次；连点不重复推进；移动“是/否”热区 44.4 CSS、正文 26px 逻辑不横向溢出；file 与 http 同为 58/58 | `10-enter-yes.png`、`step-17/mobile/`、`step-17/file/` | PASS（15/15、58/58） |
 
 - 合计：http 58/58、file 58/58、移动 15/15；0 console error / 0 失败请求。首轮 51/57 的 6 个失败中 1 个是真 bug（点遮罩后焦点落到 body，Tab 回不到按钮；已用 mousedown 拦默认焦点移动 + Tab 兜底修复），其余 5 个是脚本期望未带“格”、结算页需点 `vn-result__more`、空行囊结算不带“空”字。
+- 部署回归（2026-11-09，v1.7.1-dev）：两站线上冒烟各 9/9，验证 p024 空行囊弹窗逐字、默认焦点“是”、“否”回多选、“是”进出发前 0/4 格；0 console error / pageerror / 失败请求。提交 db481e3、GitHub Pages d0fe7e9、Netlify 6af141ac…；证据 docs/evidence/live-v1.7.1/，详见 docs/release-record.md §14。
 - 交互：弹窗打开时 duck 0.45；点遮罩不关闭；Esc=否；Enter 等同当前焦点键；关窗/离开 VN 场景会复位；未确认前不写 `choices`、不记成就，连点只结算一次。
 - 未覆盖（P1）：真机触摸、Chrome/Safari（沿用既有环境例外）；未重跑 20 分钟全程与 11 结局，只验证本段不改变后续分支。
 

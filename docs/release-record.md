@@ -296,3 +296,43 @@
 - **未在 Netlify 重跑**：完整流程、11 结局路线、844×390 移动、隐私模式、Chrome/Safari/真机。
 - **回滚**：Netlify 后台 Deploys 选上一个成功部署（2026-11-05 v1.1.1）→ "Publish deploy"；或重新上传旧 `dist/site`。
 
+## 14. v1.7.1-dev 打包与部署（2026-11-09）
+
+- **触发**：用户 m00346「把本功能和工作区里的门板改动一起提交、部署线上」。把步骤十七「行囊未满确认」与 T11-25 门板去向 hotfix 一并提交、打包，覆盖 GitHub Pages 与 Netlify 线上版本。
+- **基线**：分支 `v1.4-dev`，起点 `0355b1f`；`project/tools/release.py` 的 `VERSION` 升为 `1.7.1-dev`。
+- **提交与 tag**：`git add -A` 后 20 files changed / 1,159 insertions / 65 deletions，commit `db481e3463f984bed0927947c8f1f28ee491e303`「feat: 行囊未满二次确认并合入门板去向修复（v1.7.1-dev）」；tag `step-17-done` 与 `v1.7.1-dev` 均指向该提交；`origin/v1.4-dev` 已更新（推送加 `-c http.version=HTTP/1.1`）。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,608,883 B |
+| 离线包目录 | `dist/xiangbei-v1.7.1-dev/` | 73 文件 / 31,611,831 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.7.1-dev-offline.zip` | 74 条目 / 30,873,612 B / SHA256 `588BEBD294CFF67193FC7FC17F9F1F146B38557D89F5DE55836C063C8F25AD8A` |
+| 设计说明 | `dist/design-note.pdf` | 303,713 B（沿用旧 PDF，未按 v1.7 重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 9,667 B |
+
+- **门禁**：`check-build` 49/49（C50 行囊未满确认）、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` OK。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：http 与 `file://` 共 21 项全绿，覆盖标题菜单、存档空态、开新档“是/否”、序章 6 句、回顾入口与条目、暂停菜单、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、`file://` 字体；0 console error / pageerror / failed request。证据 `docs/evidence/package-v1.7.1/`（gitignored）。
+
+### 14.1 部署到 GitHub Pages
+
+- **部署提交**：`d0fe7e931d72375c9a17922e530736ce57b67761`「deploy: v1.7.1-dev 站点（行囊未满确认 / 门板修复）」，父 `376a175`；本地分支 `deploy-gh-pages-v1.7.1`。
+- **生成方式**：`git worktree` 因旧树缺 `.nojekyll`、`project/engine.js`、`project/style.css` 的 blob 失败（`unable to read sha1 file`，目标目录未建成）；改用临时 index：`GIT_INDEX_FILE=dist/.deploy-index-171` → `git read-tree 376a175` → 删除 72 个旧站点路径 → 对 `dist/site` 每个文件 `hash-object -w` + `update-index` → 加空 `.nojekyll` → `write-tree` → `commit-tree -p 376a175`。第一次用 `git --work-tree=dist/site add -A .` 把非站点文件当删除，已丢弃重做。
+- **树与 diff**：共 225 项（project/docs/step 145、站点 73）；相对父提交仅 M `engine.js`、M `index.html`、M `story.js`、M `style.css`，其余站点文件同 blob。
+- **推送**：`376a175..d0fe7e9` fast-forward 到 `main`，`origin/main` = `d0fe7e9`。
+- **哈希核对**：GitHub Pages 的 `engine.js` 313,010 B、`style.css` 103,188 B 是 CRLF→LF 规范化（本地 321,571 / 107,799）；下载后用 `git hash-object --no-filters` 比对，engine `e286c00b…`、style `e6178bed…` 与提交 blob 相同；`index.html` / `story.js` 字节级一致。`Last-Modified` 是 CDN 头，内容已更新。
+
+### 14.2 部署到 Netlify
+
+- **部署**：`npx --yes netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.7.1-dev: 行囊未满确认 + 门板修复"`（registry 指向 npmjs）。
+- **deploy id**：`6af141ac81fe0a4b93f17be0`，Unique URL https://6af141ac81fe0a4b93f17be0--xiangbei.netlify.app ，生产 https://xiangbei.netlify.app ；73 文件、4 个新 blob、build 5.6s。
+- **哈希核对**：`engine.js` 321,571 B 与本地逐字节 SHA256 一致；story/style/art/CREDITS 也一致；`index.html` 28,186 B（本地 27,860 B，Netlify 注入约 326 B 托管注释），其余 5/6 精确匹配。
+
+### 14.3 线上冒烟与未覆盖
+
+- **脚本**：`dist/_smoke-live-171.js`（本地、gitignored；playwright-core + Edge headless，1280×720）。每站先 `?reset=1` 看标题，再 `?chapter=prologue&node=p024` 直达行囊选择。
+- **检查点**：标题；p024 多选与 prompt；点“系好行囊”弹窗正文逐字「行囊尚未装满，长征路途艰险，确定要继续吗？」；默认焦点“是”；“否”关窗回多选；“是”进出发前物资页且摘要含「行囊 0 格 / 4 格」。
+- **结果**：GitHub Pages 9/9、Netlify 9/9；0 console error / pageerror / failed request。证据 `docs/evidence/live-v1.7.1/`（result.json + 两站截图，gitignored）。
+- **未重跑**：20 分钟完整流程、11 条人物结局、844×390 移动、隐私模式、Chrome/Safari/真机；本次线上只验证行囊确认段，不把两站写成“完整流程通过”。
+- **回滚**：GitHub Pages 把 `main` 指回 `376a175`；Netlify 后台 Publish 旧 deploy `6af12cfd183ea39822016bc5`（v1.7.0-dev）。均不影响 `v1.4-dev`。

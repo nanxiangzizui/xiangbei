@@ -1,6 +1,6 @@
-# 步骤十七：行囊未满确认（v1.7.0-dev 增量）
+# 步骤十七：行囊未满确认（v1.7.1-dev 增量）
 
-> 2026-11-09 · 分支 v1.4-dev · 未打包/未部署 · 证据 docs/evidence/step-17/
+> 2026-11-09 · 分支 v1.4-dev · 已打包并部署（GitHub Pages / Netlify）· 证据 docs/evidence/step-17/、docs/evidence/live-v1.7.1/
 > 需求来源：用户 m00001。
 
 ## 1. 目标与范围
@@ -50,12 +50,12 @@
 | `_pw-step17.js --url=file --case=all` | 58/58 |
 | `_pw-step17.js --case=mobile` | 15/15（844×390，热区 44.4 CSS） |
 
-证据：`docs/evidence/step-17/http/`、`mobile/`、`file/`（result.json、run.log、10+3 张截图）。
+证据：`docs/evidence/step-17/http/`、`mobile/`、`file/`（result.json、run.log、10+3 张截图）。线上冒烟另见 `docs/evidence/live-v1.7.1/`（两站各 9/9）。
 
 首轮桌面 51/57：1 个真 bug（点遮罩后焦点落到 body，Tab 回不到按钮；mousedown 拦默认焦点移动 + Tab 兜底修复），5 个脚本期望错误（`行囊 1 格 / 4 格` 自带“格”、结算页需点 `vn-result__more`、空行囊结算不写“空”字）。
 
-## 6. 已知口径与未覆盖
+## 6. 已知口径、部署与未覆盖
 
 - 只对 p024 生效；其他多选（湘江弃物）不弹，避免“弃物越少越对”的暗示与额外打断。
 - 未重跑 20 分钟全程、11 条结局、真人计时与真机触摸（P1）；本段只改变确认时机，不改变结算值与后续分支。
-- 未打包 dist/、未部署；线上仍为此前部署版本。
+- 已随 v1.7.1-dev 打包并部署：commit `db481e3`（tag `step-17-done` / `v1.7.1-dev`），GitHub Pages 部署 `d0fe7e9`、Netlify deploy `6af141ac…`；两站 p024 冒烟各 9/9。打包与线上细节见 `docs/release-record.md` §14。
