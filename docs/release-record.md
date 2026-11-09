@@ -336,3 +336,45 @@
 - **结果**：GitHub Pages 9/9、Netlify 9/9；0 console error / pageerror / failed request。证据 `docs/evidence/live-v1.7.1/`（result.json + 两站截图，gitignored）。
 - **未重跑**：20 分钟完整流程、11 条人物结局、844×390 移动、隐私模式、Chrome/Safari/真机；本次线上只验证行囊确认段，不把两站写成“完整流程通过”。
 - **回滚**：GitHub Pages 把 `main` 指回 `376a175`；Netlify 后台 Publish 旧 deploy `6af12cfd183ea39822016bc5`（v1.7.0-dev）。均不影响 `v1.4-dev`。
+
+## 15. v1.7.2-dev 打包与部署（2026-11-09）
+
+- **触发**：用户 m00794「帮我提交，打包，部署」。把步骤十八「标题入口与门板唯一状态」提交、打包，覆盖 GitHub Pages 与 Netlify 线上版本。
+- **基线**：分支 `v1.4-dev`，起点 `3088d60`；`project/tools/release.py` 的 `VERSION` 升为 `1.7.2-dev`，离线 README 同步改“开始 / 继续”和“设置→危险操作→初始化游戏”。
+- **提交与 tag**：`a36cce1d4172a8e158dab8d13374b69881e1534a`「feat: 标题入口重做与门板唯一状态（v1.7.2-dev）」，13 files changed / 726 insertions / 221 deletions；tag `step-18-done` 与 `v1.7.2-dev` 均指向该提交；`origin/v1.4-dev` 已更新，两 tag 已推送。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,610,174 B |
+| 离线包目录 | `dist/xiangbei-v1.7.2-dev/` | 73 文件 / 31,613,167 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.7.2-dev-offline.zip` | 74 条目 / 30,873,926 B / SHA256 `56A2641203AFDF86847B0FC5E04607118889B3318E429B40D3BB48D87204696C` |
+| 设计说明 | `dist/design-note.pdf` | 303,713 B（沿用旧 PDF，未按 v1.7 重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 9,667 B |
+
+- **门禁**：`check-build` 50/50、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` OK。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：http 与 `file://` 共 21 项全绿，覆盖标题菜单、存档空态、开新档“是/否”、序章 6 句、回顾入口与条目、暂停菜单、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、`file://` 字体；0 console error / pageerror / failed request。证据 `docs/evidence/package-v1.7.2/`（gitignored）。
+
+### 15.1 部署到 GitHub Pages
+
+- **部署提交**：`a120af024ae432a7734d164bf5bc1efc37d92a03`「deploy: v1.7.2-dev 站点（标题入口 / 门板唯一状态）」，父 `d0fe7e9`；本地分支 `deploy-gh-pages-v1.7.2`。
+- **生成方式**：临时 index `dist/.deploy-index-172` → `git read-tree origin/main` → 删除 72 个旧站点路径（保留 project/docs 等源文件）→ 对 `dist/site` 每个文件 `git hash-object -w --no-filters` + `update-index` → 保留 `.nojekyll` → `write-tree --missing-ok` → `commit-tree -p d0fe7e9`。
+- **树与 diff**：共 225 项；相对父提交仅 M `engine.js`、M `index.html`、M `story.js`、M `style.css`，其余站点文件同 blob。
+- **推送**：`d0fe7e9..a120af0` fast-forward 到 `main`，`origin/main` = `a120af0`。
+- **哈希核对**：公网下载 `index.html` 28,362 B、`engine.js` 322,283 B、`story.js` 155,930 B、`style.css` 107,980 B，SHA256 四项均与 `dist/site` 逐字节一致（本次未出现 CRLF 规范化差异）。
+
+### 15.2 部署到 Netlify
+
+- **部署**：`npx --yes netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.7.2-dev: 标题入口 + 门板唯一状态"`（registry 指向 npmjs）。
+- **deploy id**：`6af15f30eb860f2c58fc6369`，Unique URL https://6af15f30eb860f2c58fc6369--xiangbei.netlify.app ，生产 https://xiangbei.netlify.app ；CLI 报 73 文件、4 个新 blob、build 30.2s。
+- **哈希核对**：`engine.js` 322,283 B、`story.js` 155,930 B、`style.css` 107,980 B 与本地逐字节 SHA256 一致；`index.html` 28,688 B（本地 28,362 B，Netlify 注入约 326 B 托管注释），其余关键文件精确匹配。
+
+### 15.3 线上冒烟与未覆盖
+
+- **脚本**：`dist/_smoke-live-172.js`（本地、gitignored；playwright-core + Edge headless，1280×720）。每站先 `?reset=1&v=172` 看标题，再依次点设置、危险操作、初始化确认“否”、Esc、开始/继续。
+- **检查点**：h1 纯文本「向北」且无按钮；首项「开始 / 继续」；旧 `.title-main__button` 不存在；设置打开后暂停菜单隐藏、危险操作可见、焦点到文字速度；初始化确认含“存档、剧情分支、成就和回顾记录会被全部清空”和“不可撤销”；“否”回设置且焦点回初始化按钮；Esc 回标题且焦点回设置入口；开始/继续打开存档面板；关键文件 HTTP 200。
+- **结果**：GitHub Pages 22/22、Netlify 22/22；0 console error / pageerror / failed request。证据 `docs/evidence/live-v1.7.2/`（result.json + 两站截图，gitignored）。
+- **README 同步**：顶部交付物、运行目录、操作表、线上自检与版本号已从 v1.7.0-dev 更新到 v1.7.2-dev；历史 v1.7.0 冒烟保留并标注“历史”。
+- **未重跑**：20 分钟完整流程、11 条人物结局、844×390 移动、隐私模式、Chrome/Safari/真机；本次线上只验证标题/设置/初始化和关键文件，不把两站写成“完整流程通过”。
+- **回滚**：GitHub Pages 把 `main` 指回 `d0fe7e9`；Netlify 后台 Publish 旧 deploy `6af141ac81fe0a4b93f17be0`（v1.7.1-dev）。均不影响 `v1.4-dev`。
