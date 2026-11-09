@@ -83,14 +83,14 @@
                 key: "A",
                 text: "带上这块门板",
                 value: true,
-                set: { "item.door": true, "had.door": true, load: "+2", fire: "+10" },
+                set: { doorOutcome: "carried", load: "+2", fire: "+10" },
                 cost: "行囊只剩两格，多背三十斤"
               },
               {
                 key: "B",
                 text: "只带花名册",
                 value: false,
-                set: { "item.door": false, "had.door": false, load: "+0" },
+                set: { doorOutcome: "none", load: "+0" },
                 cost: "终章没有门板可放，娘的手停在半空"
               }
             ]
@@ -534,7 +534,7 @@
                 key: "C",
                 text: "把门板横在桥头挡一下",
                 value: true,
-                set: { "choice.xiangjiang.hold": true, "item.door": false, doorOutcome: "bridge" },
+                set: { "choice.xiangjiang.hold": true, doorOutcome: "bridge" },
                 cost: "门板留在了浮桥，三号担架少一块垫板"
               }
             ]
@@ -1211,7 +1211,6 @@
                 value: true,
                 statusReason: "你把门板铺上了桥面",
                 set: {
-                  "item.door": false,
                   doorOutcome: "bridge",
                   trust: "+1",
                   rescues: "+1",
@@ -2039,14 +2038,14 @@
                 key: "A",
                 text: "把门板留在吴起",
                 value: false,
-                set: { "item.door": false, doorOutcome: "wuqi", "memory.door": true },
+                set: { doorOutcome: "wuqi", "memory.door": true },
                 cost: "你从此没有那块板了"
               },
               {
                 key: "B",
                 text: "带回于都",
                 value: true,
-                set: { "item.door": true, load: "+1", "memory.door": false },
+                set: { doorOutcome: "carried", load: "+1", "memory.door": false },
                 cost: "回家的路还很长"
               }
             ]

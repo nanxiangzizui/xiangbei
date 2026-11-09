@@ -156,7 +156,7 @@ check("S08", "serialize → JSON → normalize 往返", function () {
   XB.core.startChapter(state, "prologue");
   XB.core.advance(state);
   XB.core.advance(state);
-  XB.core.setFlag(state, "item.door", true);
+  XB.core.setFlag(state, "doorOutcome", "carried");
   state.codex.push("yudu");
   state.choices.push({
     chapter: "prologue",
@@ -328,8 +328,9 @@ check("S18", "49 条旗标与八项设置默认值", function () {
 
 check("S19", "setFlag 增量、夹取与拒绝", function () {
   var state = XB.core.defaults();
-  assertEqual(XB.core.setFlag(state, "item.door", true), true, "写布尔");
-  assertEqual(state.flags["item.door"], true, "item.door 值");
+  assertEqual(XB.core.setFlag(state, "doorOutcome", "carried"), true, "写门板去向");
+  assertEqual(state.flags["had.door"], true, "had.door 派生");
+  assertEqual(state.flags["item.door"], true, "item.door 派生");
   assertEqual(state.inventory.door, true, "inventory.door 镜像");
   assertEqual(XB.core.setFlag(state, "fire", "+10"), true, "增量");
   assertEqual(state.flags.fire, 60, "50+10");
@@ -342,8 +343,10 @@ check("S19", "setFlag 增量、夹取与拒绝", function () {
   var rejected = captureConsoleError(function () {
     assertEqual(XB.core.setFlag(state, "ending.done", true), false, "拒绝 ending.*");
     assertEqual(XB.core.setFlag(state, "card.x", true), false, "拒绝 card.*");
+    assertEqual(XB.core.setFlag(state, "item.door", false), false, "拒绝写派生 item.door");
   });
-  assertEqual(rejected.length, 2, "越权写入应报错两次");
+  assertEqual(state.flags["item.door"], true, "派生 item.door 未被改写");
+  assertEqual(rejected.length, 3, "越权写入应报错三次");
   assert(rejected[0].indexOf("ending.done") !== -1, "报错信息带路径");
   assertEqual(state.flags["ending.done"], undefined, "没写进去");
   assertEqual(XB.core.setFlag(state, "memory.mother", true), true, "记忆旗标可写");
@@ -356,7 +359,7 @@ check("S20", "when 可见性与跳过不可见节点", function () {
   // nextVisible 的 fromIndex 是“从这一下标开始找”，所以 p021 的后继从它的下标 +1 起算
   var afterP021 = XB.core.locate("prologue", "p021").index + 1;
   assertEqual(XB.core.nextVisible(state, chapter(), afterP021).id, "p022b", "p021 之后是 p022b");
-  XB.core.setFlag(state, "item.door", true);
+  XB.core.setFlag(state, "doorOutcome", "carried");
   assertEqual(XB.core.isVisible(state, nodeById("p022a")), true, "有门板走 a 支");
   assertEqual(XB.core.isVisible(state, nodeById("p022b")), false, "有门板不走 b 支");
   assertEqual(XB.core.nextVisible(state, chapter(), afterP021).id, "p022a", "p021 之后是 p022a");
@@ -456,7 +459,7 @@ check("S26", "默认旗标一路走到 p900，没有隐藏 end", function () {
   assert(guard < 200, "200 步内没走到 end");
   assertEqual(XB.core.currentNode(state).id, "p900", "终点");
   var state2 = XB.core.defaults();
-  XB.core.setFlag(state2, "item.door", true);
+  XB.core.setFlag(state2, "doorOutcome", "carried");
   XB.core.setFlag(state2, "choice.prologue.lookback", true);
   XB.core.startChapter(state2, "prologue");
   var guard2 = walkToEnd(state2);

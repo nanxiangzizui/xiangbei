@@ -122,7 +122,6 @@
 
   // 剧情只允许写这些旗标：ending/card/unlockedChapters 由引擎自己管。
   var FLAG_KEYS = [
-    "item.door",
     "item.pot",
     "item.medicine",
     "item.barley",
@@ -138,7 +137,6 @@
     "choice.zunyi.admit",
     "choice.jinsha.trips",
     "strain",
-    "had.door",
     "condition",
     "rescues",
     "help.used",
@@ -192,12 +190,13 @@
   };
   // fate.* 由三次救人危机写生死；strain 是救人消耗，had.door 记“序章带过门板”。
   var FLAG_PREFIXES = ["memory.", "choice.", "fate.", "quality."];
-  // 引擎派生布尔：只由 syncDerivedFlags 写，剧本只读。fate.all.dead 让吴起“四个人的名字”不用 OR。
+  // 引擎派生布尔：只由 syncDerivedFlags 写，剧本只读。
+  // 门板三态里 doorOutcome 是唯一权威；had.door / item.door 只是它派生的只读副本。
   var DERIVED_FLAGS = [
+    "had.door", "item.door",
     "fate.lin.dead", "fate.all.dead", "fate.seven5", "fate.badend", "strain.hurt", "strain.dying"
   ];
   var BOOLEAN_FLAGS = [
-    "had.door",
     "fate.feimao.dead",
     "fate.zaowang.dead",
     "fate.dongsheng.dead",
@@ -305,13 +304,8 @@
   }
 
   function doorCarried(state) {
-    var flags = state.flags;
-    return flags["had.door"] === true && (
-      flags["item.door"] === true ||
-      flags.doorOutcome === "carried" ||
-      flags.doorOutcome === "wuqi" ||
-      flags.doorOutcome === "others"
-    );
+    var outcome = state.flags.doorOutcome;
+    return outcome === "carried" || outcome === "wuqi" || outcome === "others";
   }
 
   // 门板 A/B/C 三条件并列：优秀；4 人存活且一人良好；3 人存活且两人良好（我可计入）。
@@ -423,11 +417,9 @@
     if (flags.condition === 0) flags["fate.player.dead"] = true;
     // 7(5) 只成立在“人死在草地时门板还在身上”。湘江桥头/泸定桥上的板子
     // 已经不在草地里，不能因为救满三人就被改写成“别人带到吴起”。
-    var doorOnBody = flags["item.door"] === true &&
-      flags.doorOutcome !== "bridge" && flags.doorOutcome !== "wuqi";
+    var doorOnBody = flags.doorOutcome === "carried";
     if (flags["fate.player.dead"] === true && flags["had.door"] === true && doorOnBody && flags.rescues === 3) {
       flags.doorOutcome = "others";
-      flags["item.door"] = false;
     }
     syncDerivedFlags(state);
     return {
@@ -447,45 +439,20 @@
     syncDerivedFlags(state);
   }
 
-  // 草地末门板去向：能带则 carried；已经在湘江/泸定留在桥上或吴起，保留去向；
-  // 门板已不在身上（v1.4 早期湘江 C 只写 item.door=false）补记 bridge；
-  // 其余不能带才落草地。死亡只对“门板还在身上”的情况走 7(5) others。
+  // 草地末门板去向只读 doorOutcome：桥板/吴起板保留；死了且板还在身上走 7(5) others；
+  // 活着且能带则 carried；其余落草地。item.door / had.door 由 syncDerivedFlags 重算。
   function settleDoor(state) {
     var flags = state.flags;
-    if (flags["had.door"] !== true) {
-      flags.doorOutcome = "none";
-      flags["item.door"] = false;
-      return "none";
-    }
-    // 桥板/吴起板已经不在草地里，不能因为后来的状态或死亡被改写成 grass/others。
-    if (flags.doorOutcome === "bridge" || flags.doorOutcome === "wuqi") {
-      flags["item.door"] = false;
-      return flags.doorOutcome;
-    }
-    // 湘江 C：门板横在桥头，item.door=false，但早期版本没写 doorOutcome。
-    // 门板已不在背上，草地没有可舍弃的东西；补成 bridge，避免再弹“必须舍弃门板”。
-    if (flags["item.door"] !== true && flags.doorOutcome === "none") {
-      flags.doorOutcome = "bridge";
-      return "bridge";
-    }
+    if (flags.doorOutcome === "none") return "none";
+    if (flags.doorOutcome === "bridge" || flags.doorOutcome === "wuqi") return flags.doorOutcome;
     if (flags["fate.player.dead"] === true) {
-      // 5/11 只成立在“人死时门板还在身上，三人把你抬出去”；
-      // 门板早留在桥上的，不能算别人带到吴起。
-      if (flags.rescues === 3 && (flags.doorOutcome === "others" || flags["item.door"] === true)) {
-        flags.doorOutcome = "others";
-      } else {
-        flags.doorOutcome = "grass";
-      }
-      flags["item.door"] = false;
-      return flags.doorOutcome;
+      if (flags.rescues === 3 && flags.doorOutcome === "carried") flags.doorOutcome = "others";
+      else if (flags.doorOutcome !== "others") flags.doorOutcome = "grass";
+    } else if (flags.doorOutcome !== "carried" || !doorCanCarry(state)) {
+      flags.doorOutcome = "grass";
     }
-    if (flags["item.door"] === true && doorCanCarry(state)) {
-      flags.doorOutcome = "carried";
-      return "carried";
-    }
-    flags.doorOutcome = "grass";
-    flags["item.door"] = false;
-    return "grass";
+    syncDerivedFlags(state);
+    return flags.doorOutcome;
   }
 
   // v1.1.1 及以前的档没有 item.* / take.* 布尔：只在“一个新增键都没有”的旧档上反推一次。
@@ -546,17 +513,34 @@
     });
   }
 
+  // 旧档没有 doorOutcome 时，只在这里从 item/had/memory/choice 反推一次；
+  // 反推后 item.door / had.door 一律由 syncDerivedFlags 重算，不再作为独立状态。
+  function inferDoorOutcomeFromLegacy(source, save, flags) {
+    if (flags.doorOutcome !== "none") return false;
+    var sourceHadDoor = source["had.door"] === true ||
+      source["item.door"] === true ||
+      source["choice.prologue.door"] === true ||
+      source["choice.luding.door"] === true;
+    if (!sourceHadDoor) return false;
+    if (source["item.door"] === true) flags.doorOutcome = "carried";
+    else if (source["memory.door"] === true) flags.doorOutcome = "wuqi";
+    else if (source["choice.luding.door"] === true) flags.doorOutcome = "bridge";
+    else if (choseXiangjiangDoorBridge(save)) flags.doorOutcome = "bridge";
+    // v1.4 早期湘江 C 只写 item.door=false：有 item.door 键、板已不在背上，却没有去向。
+    else if (hasOwn(source, "item.door")) flags.doorOutcome = "bridge";
+    // v1.3 没有 item.door 键；板默认还在背上，旧逻辑到草地才收口。
+    else flags.doorOutcome = "grass";
+    return true;
+  }
+
   function migrateLegacyFate(state, save) {
     var source = isPlainObject(save.flags) ? save.flags : {};
     var flags = state.flags;
     var legacyVersion = save.version < 2;
     var changed = null;
-    if (!hasOwn(source, "had.door")) {
-      flags["had.door"] = source["choice.prologue.door"] === true ||
-        flags["item.door"] === true ||
-        flags["choice.luding.door"] === true;
-      changed = "fate";
-    }
+    if (inferDoorOutcomeFromLegacy(source, save, flags)) changed = "fate";
+    flags["had.door"] = flags.doorOutcome !== "none";
+    flags["item.door"] = flags.doorOutcome === "carried";
     if (!hasOwn(source, "fate.feimao.dead")) {
       if (state.chapterId === "wuqi" || state.chapterId === "coda") {
         flags["fate.feimao.dead"] = true;
@@ -603,31 +587,18 @@
       flags["quality.dongsheng"] = flags["fate.dongsheng.dead"] === true ? 0 : 2;
       changed = "fate";
     }
-    if (legacyVersion || !hasOwn(source, "doorOutcome")) {
-      if (flags["item.door"] === true) flags.doorOutcome = "carried";
-      else if (flags["memory.door"] === true) flags.doorOutcome = "wuqi";
-      else if (flags["choice.luding.door"] === true) flags.doorOutcome = "bridge";
-      else if (flags["had.door"] === true) flags.doorOutcome = "grass";
-      else flags.doorOutcome = "none";
-      changed = "fate";
-    }
     if (legacyVersion) {
       flags["help.used"] = false;
       flags["memory.help"] = false;
     }
-    // 旧空页（7(5)）门板是“别人带到吴起”，不能落成草地；这条要压过上面的通用推断。
+    // 旧空页（7(5)）门板是“别人带到吴起”，不能落成草地；这条要压过通用推断。
     if (legacyVersion && flags["fate.player.dead"] === true && flags.rescues === 3 && flags["had.door"] === true) {
       flags.doorOutcome = "others";
-      flags["item.door"] = false;
     }
-    // v1.4 早期湘江 C 只写 item.door=false，没写 doorOutcome；草地结算把它误当“带到草地再舍弃”。
-    // doorOutcome 仍是 none 时不必看日志：湘江 C 是草地前唯一“丢板但不写去向”的路径。
-    // 已经结算成 grass/others 的档只认 x025a C 日志；A 也写 hold=true，不能单看旗标。
+    // 已经结算成 grass/others 的 v1.4 早期档：只认 x025a C 日志；A 也写 hold=true，不能单看旗标。
     var choseXiangjiangC = choseXiangjiangDoorBridge(save);
-    var lostDoorAtXiangjiang = flags["had.door"] === true && flags["item.door"] !== true &&
-      (flags.doorOutcome === "none" ||
-        (choseXiangjiangC && (flags.doorOutcome === "grass" || flags.doorOutcome === "others")));
-    if (lostDoorAtXiangjiang) {
+    if (choseXiangjiangC && flags["had.door"] === true &&
+        (flags.doorOutcome === "grass" || flags.doorOutcome === "others")) {
       flags.doorOutcome = "bridge";
       changed = changed || "door";
     }
@@ -939,20 +910,19 @@
   function routeOf(flags) {
     var f = flags || {};
     var rescues = Math.round(clamp(isFiniteNumber(f.rescues) ? f.rescues : 0, 0, 3));
-    var hadDoor = f["had.door"] === true;
+    var outcome = f.doorOutcome || "none";
     var dead = f["fate.player.dead"] === true;
     if (dead) {
       // 5/11 是“人死、门板由别人带到吴起”；bridge/wuqi 表示门板早已留在桥上或墙上。
-      return hadDoor && f.doorOutcome === "others" ? "door_others" : "bad_end";
+      return outcome === "others" ? "door_others" : "bad_end";
     }
-    if (!hadDoor) {
+    if (outcome === "none") {
       if (rescues === 0) return "no_door_zero";
       if (rescues === 1) return "no_door_one";
       if (rescues === 2) return "no_door_two";
       return f.condition === 4 ? "no_door_three_excellent" : "no_door_three";
     }
-    var carried = f["item.door"] === true || f.doorOutcome === "carried" ||
-      f.doorOutcome === "wuqi" || f.doorOutcome === "others";
+    var carried = outcome === "carried" || outcome === "wuqi" || outcome === "others";
     if (rescues <= 1) {
       return carried && f.condition === 4 ? "door_excellent" : "door_grass_one";
     }
@@ -1096,7 +1066,6 @@
       if (!isFiniteNumber(flags[key])) flags[key] = FLAG_DEFAULTS[key];
       else flags[key] = Math.round(clamp(flags[key], FLAG_LIMITS[key][0], FLAG_LIMITS[key][1]));
     });
-    flags["item.door"] = flags["item.door"] === true;
     flags["item.pot"] = flags["item.pot"] === true;
     ITEM_FLAGS.forEach(function (key) {
       flags[key] = flags[key] === true;
@@ -1112,9 +1081,6 @@
     backfillLegacyFlags(save, flags);
     syncDerivedFlags({ flags: flags });
     state.flags = flags;
-    // inventory.door/giftBarley 只是 flags 的镜像，避免两处状态打架。
-    state.inventory.door = flags["item.door"];
-    state.inventory.giftBarley = flags["inventory.giftBarley"] === true;
 
     var items = save.inventory && save.inventory.items;
     state.inventory.items = Array.isArray(items)
@@ -1271,6 +1237,9 @@
   // 派生只在这里写：condition/rescues 夹取，quality 与 fate 互镜，strain 仅保留兼容。
   function syncDerivedFlags(state) {
     var flags = state.flags;
+    // 门板只认 doorOutcome；had.door 记“带过板”，item.door 记“板还在身上”。
+    flags["had.door"] = flags.doorOutcome !== "none";
+    flags["item.door"] = flags.doorOutcome === "carried";
     flags.condition = Math.round(clamp(isFiniteNumber(flags.condition) ? flags.condition : 3, 0, 4));
     flags.rescues = Math.round(clamp(isFiniteNumber(flags.rescues) ? flags.rescues : 0, 0, 3));
     flags["help.used"] = flags["help.used"] === true;
@@ -1298,6 +1267,7 @@
     flags["strain.hurt"] = flags.rescues >= 2;
     flags["strain.dying"] = flags["fate.player.dead"] === true;
     if (state.inventory) {
+      state.inventory.door = flags["item.door"];
       state.inventory.giftBarley = flags["inventory.giftBarley"] === true;
     }
   }
@@ -1506,7 +1476,6 @@
     }
 
     state.flags[path] = next;
-    if (path === "item.door") state.inventory.door = next;
     if (path === "inventory.giftBarley") state.inventory.giftBarley = next === true;
     mirrorPackItem(state, path, next);
     syncDerivedFlags(state);
@@ -2925,6 +2894,7 @@
     "status-notice-list",
     "vn-measure",
     "vn-settings",
+    "settings-danger",
     "set-speed",
     "set-speed-value",
     "set-scale",
@@ -3013,6 +2983,8 @@
   var savesStorageWarned = false;
   var savePanelState = { open: false, mode: "list", selected: {}, previousFocus: null };
   var confirmState = { open: false, kind: "", slotId: null, previousFocus: null };
+  // 设置面板挂在 #pause 里；标题态借同一遮罩显示，关闭时按来源还原。
+  var settingsState = { open: false, from: "", previousFocus: null };
   var endingReview = { active: false, backup: null };
   var debugEnabled = false;
   var debugExtra = "";
@@ -4052,7 +4024,10 @@
 
   function confirmCopy(kind) {
     if (kind === "init") {
-      return { title: "是否初始化游戏？", body: "这意味着你的存档、剧情分支、成就和回顾记录会被全部清空" };
+      return {
+        title: "是否初始化游戏？",
+        body: "这意味着你的存档、剧情分支、成就和回顾记录会被全部清空，名册也会清空；音量、字号等设置保留。此操作不可撤销。"
+      };
     }
     if (kind === "new") return { title: "是否重新开始长征？", body: "" };
     if (kind === "continue") return { title: "是否继续未竟的长征？", body: "" };
@@ -4091,7 +4066,8 @@
     var kind = confirmState.kind;
     var slotId = confirmState.slotId;
     if (kind === "init") {
-      closeConfirm(false);
+      closeConfirm(true);
+      closeSettings(true);
       initializeGame();
       return;
     }
@@ -4217,6 +4193,8 @@
     writeSavesStore(savesStore);
     applySettings();
     render();
+    var first = els.titleMenu.querySelector("button");
+    if (first) first.focus({ preventScroll: true });
     if (failures) toast("初始化未完全成功：浏览器未允许清除全部记录");
     else toast("已初始化：存档、分支、成就、名册与回顾已清空");
   }
@@ -7607,6 +7585,7 @@
       duck = Math.min(duck, 0.45);
     }
     if (savePanelState.open || confirmState.open) duck = Math.min(duck, 0.45);
+    if (settingsState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
     XB.audio.setDuck(duck);
   }
@@ -7695,6 +7674,9 @@
   function openPause() {
     if (!state || state.scene !== "vn" || state.paused) return;
     state.paused = true;
+    settingsState.open = false;
+    settingsState.from = "";
+    settingsState.previousFocus = null;
     refreshAudioDuck();
     lastFocused = document.activeElement;
     cancelAuto();
@@ -7712,6 +7694,7 @@
 
   function closePause() {
     if (!state || !state.paused) return;
+    if (settingsState.open) closeSettings(true);
     state.paused = false;
     refreshAudioDuck();
     els.pause.hidden = true;
@@ -7730,18 +7713,44 @@
   }
 
   function openSettings() {
+    if (settingsState.open) return;
+    var from = state && state.scene === "title" ? "title" : "pause";
+    // 暂停态之外不凭空打开；标题态和暂停态共用 #pause 遮罩。
+    if (from === "pause" && (!state || !state.paused)) return;
+    settingsState.open = true;
+    settingsState.from = from;
+    settingsState.previousFocus = document.activeElement;
+    els.pause.hidden = false;
     els.pauseMenu.hidden = true;
     els.vnRoster.hidden = true;
+    els.settingsDanger.hidden = from !== "title";
     els.vnSettings.hidden = false;
+    els.vnSettings.scrollTop = 0;
     syncSettingsUI();
+    refreshAudioDuck();
     els.setSpeed.focus();
   }
 
-  function closeSettings() {
+  function closeSettings(silent) {
+    if (!settingsState.open) {
+      els.vnSettings.hidden = true;
+      return;
+    }
+    var from = settingsState.from;
+    var previous = settingsState.previousFocus;
+    settingsState.open = false;
+    settingsState.from = "";
+    settingsState.previousFocus = null;
     els.vnSettings.hidden = true;
     els.pauseMenu.hidden = false;
-    var first = els.pauseMenu.querySelector("button");
-    if (first) first.focus();
+    if (from === "title") els.pause.hidden = true;
+    refreshAudioDuck();
+    if (!silent && previous && previous.focus && previous !== document.body) {
+      previous.focus({ preventScroll: true });
+    } else if (!silent && from === "pause") {
+      var first = els.pauseMenu.querySelector("button");
+      if (first) first.focus();
+    }
   }
 
   // 花名册只读现有数据：点名前的名字一律“在册”，点名后才显示应/未应，避免提前剧透。
@@ -8001,7 +8010,7 @@
     var target = event.target;
     if (!target || !target.closest) return;
     if (branchState.open || achievementState.open) return;
-    if (savePanelState.open || confirmState.open || endingReview.active) return;
+    if (savePanelState.open || confirmState.open || endingReview.active || settingsState.open) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
     if (historyState.open) return;
     if (packState.open || doorState.open || dangerState.open || bagConfirmState.open) return;
@@ -8023,14 +8032,7 @@
     if (!actionElement) return;
     var actionName = actionElement.dataset.action;
     if (actionElement.getAttribute("aria-disabled") === "true" && actionName !== "skip" && actionName !== "gallery-card") return;
-    // 标题「向北」：点下先给加粗+重影反馈，再弹初始化确认。
-    if (actionName === "init-game") {
-      actionElement.classList.add("is-pressed");
-      window.setTimeout(function () {
-        actionElement.classList.remove("is-pressed");
-      }, 220);
-    }
-    handleAction(actionElement.dataset.action, actionElement);
+    handleAction(actionName, actionElement);
   }
 
   function onKeyDown(event) {
@@ -8052,6 +8054,16 @@
         event.preventDefault();
       } else if (event.key === "Escape") {
         closeConfirm();
+        event.preventDefault();
+      }
+      return;
+    }
+    if (settingsState.open) {
+      if (event.key === "Escape") {
+        closeSettings();
+        event.preventDefault();
+      } else if (event.key === "Tab") {
+        trapFocus(event, els.vnSettings);
         event.preventDefault();
       }
       return;

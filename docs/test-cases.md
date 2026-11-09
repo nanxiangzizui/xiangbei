@@ -176,7 +176,7 @@
 
 | 用例 | 级别 | 项目 | 步骤 | 预期 | 证据 | 结果 |
 |---|---|---|---|---|---|---|
-| T15-01 | P0 | 标题入口 | 冷启动；看菜单 | 只有“存档”（整行）+ 史实图鉴/名册/剧情分支/解锁成就；无开始/继续；“向北”是初始化按钮 | `step-15/title.png` | PASS（88/88） |
+| T15-01 | P0 | 标题入口 | 冷启动；看菜单 | 步骤十五口径：只有“存档”（整行）+ 史实图鉴/名册/剧情分支/解锁成就；无开始/继续；“向北”是初始化按钮（步骤十八起改为“开始 / 继续”+ 标题设置，见 T18-01/02） | `step-15/title.png` | PASS（88/88，步骤十八起历史口径） |
 | T15-02 | P0 | 空态 | 存档→空列表 | “还没有存档”；上次玩到/删除置灰；Esc 关闭回存档键 | `saves-empty.png` | PASS |
 | T15-03 | P0 | 开启新档 | 存档→开启新档→否；再来→是 | 否留在面板；是新建 1 档（chapterId=prologue、activeId=新档）并播序章标题卡 | `confirm-new.png`、`new-game-titlecard.png` | PASS |
 | T15-04 | P0 | 暂停保存 | 剧情→Esc→保存 | toast“已保存：…”档数不变、updatedAt 刷新 | `pause-save.png` | PASS |
@@ -186,7 +186,7 @@
 | T15-08 | P0 | 上次玩到 | 存档→上次玩到 | 有未完结档才可点；弹“是否继续未竟的长征？”；是读最近 updatedAt 的未完结档 | 主流程 | PASS |
 | T15-09 | P0 | 已完结回顾 | 点已完结行 | 进整页结局结算；“返回存档”；隐藏剧情分支/史实图鉴；不写档、不记名册、不改 updatedAt | `ending-review.png` | PASS |
 | T15-10 | P0 | 删除 | 删除存档→选行→取消；再来→确认→否；是 | 行变 checkbox、选中墨底朱砂条+✓；二次确认；否不删；是删选中并 toast | `delete-selected.png`、`after-delete.png` | PASS |
-| T15-11 | P0 | 初始化 | 点“向北”→否；再来→是 | 确认文案“这意味着你的存档、剧情分支、成就和回顾记录会被全部清空”；否保留；是清存档/分支/成就/名册/回顾，保留音量 0.4 与文字速度 45，回标题空态 | `confirm-init.png`、`after-init.png` | PASS |
+| T15-11 | P0 | 初始化 | 点“向北”→否；再来→是（步骤十八起改到设置→危险操作，见 T18-04） | 确认文案“这意味着你的存档、剧情分支、成就和回顾记录会被全部清空”；否保留；是清存档/分支/成就/名册/回顾，保留音量 0.4 与文字速度 45，回标题空态 | `confirm-init.png`、`after-init.png` | PASS（步骤十八起历史口径） |
 | T15-12 | P0 | 迁移/隐私/移动/file | 预置 v2 旧档；localStorage 抛错；844×390；file:// | 旧档变 1 档并删旧键；隐私提示“本局无法存档”仍能开局；移动面板不出界、热区≥44；file 全流程 88/88 | `migration/`、`privacy/`、`mobile/`、`file/` | PASS（8/8、4/4、9/9、88/88） |
 | T15-13 | P0 | 中途退出 | 新档后连点 6 句不保存；读档；读档后再推进并回标题 | 槽内 nodeId 仍 p001；重进回章首第一句；章末槽 nodeId 是下一章首节点；读档后推进/回标题都不改 nodeId | `saves-list.png`、主流程 | PASS（88/88） |
 | T15-14 | P0 | 手动保存与设置 | 推进后暂停保存→刷新读档；中途改音量 | 手动保存 nodeId=当前句，重进文本逐字一致；改设置只写全局 settings，槽 nodeId 与 updatedAt 不变 | `pause-save.png`、主流程 | PASS（88/88） |
@@ -236,6 +236,25 @@
 - 部署回归（2026-11-09，v1.7.1-dev）：两站线上冒烟各 9/9，验证 p024 空行囊弹窗逐字、默认焦点“是”、“否”回多选、“是”进出发前 0/4 格；0 console error / pageerror / 失败请求。提交 db481e3、GitHub Pages d0fe7e9、Netlify 6af141ac…；证据 docs/evidence/live-v1.7.1/，详见 docs/release-record.md §14。
 - 交互：弹窗打开时 duck 0.45；点遮罩不关闭；Esc=否；Enter 等同当前焦点键；关窗/离开 VN 场景会复位；未确认前不写 `choices`、不记成就，连点只结算一次。
 - 未覆盖（P1）：真机触摸、Chrome/Safari（沿用既有环境例外）；未重跑 20 分钟全程与 11 结局，只验证本段不改变后续分支。
+
+## 步骤十八：标题入口与门板唯一状态（T18-01…T18-08，2026-11-09）
+
+> 需求 m00001：①“向北”改回纯标题，首项“开始 / 继续”打开存档，初始化移到标题“设置 → 危险操作”并二次确认；②门板只写 `doorOutcome`，`had.door/item.door/inventory.door` 由 `syncDerivedFlags` 派生，旧档只反推一次。
+
+| 用例 | 级别 | 项目 | 步骤 | 预期 | 证据 | 结果 |
+|---|---|---|---|---|---|---|
+| T18-01 | P0 | 标题结构 | 冷启动看标题；检查 DOM | `h1.title-main` 只含“向北”文本，内部无 button；全页无旧 `data-action="init-game"` 标题入口 | `step-18/http/01-title.png` | PASS（61/61） |
+| T18-02 | P0 | 开始 / 继续 | 点首项；Esc 关闭 | 首项文案“开始 / 继续”；打开 `#saves-panel`（标题“存档”）；空态“还没有存档。”；Esc 回标题、焦点回首项 | `02-saves.png` | PASS |
+| T18-03 | P0 | 标题设置 | 点右上“设置”；Esc | `#pause` 作遮罩、`#pause-menu` 隐藏、`#vn-settings` 可见、危险操作可见；焦点在文字速度；Esc 收起遮罩、焦点回 `.title-settings` | `03-settings-title.png` | PASS |
+| T18-04 | P0 | 初始化二次确认 | 危险操作点“初始化游戏”→“否”；再点→“是” | 弹 `#save-confirm`，正文覆盖存档/分支/成就/回顾/名册与“不可撤销”；“否”回设置且焦点回初始化；“是”清档后回标题、设置与遮罩收起、焦点回首项 | `04-init-confirm.png`、`05-after-init.png` | PASS |
+| T18-05 | P0 | 暂停设置 | 进 VN → Esc → 设置；返回；Esc | 暂停设置可见，危险操作隐藏；返回暂停菜单且焦点回设置入口；Esc 回剧情 | `06-settings-pause.png` | PASS |
+| T18-06 | P0 | 门板六写点 | p021 A/B、x025a C、l019 A、w013 A/B 各走一次 | 每次只写 `doorOutcome`；`had.door = outcome!=="none"`、`item.door = outcome==="carried"`、`inventory.door = item.door`；p021 A fire/load、l019 A 救人计数正确 | `step-18/http/result.json` | PASS（24/24） |
+| T18-07 | P0 | 派生/收口/迁移 | `check-build` C40/C51、`smoke` S08/S19/S20/S26 | 剧情直接写 `item.door` 被拒；草地 `settleGrass/settleDoor` 只读 outcome；旧档 `doorOutcome=none` 时按 item/memory/choice 反推一次；桥板不被改成 others | 静态/单测 | PASS（50/50、47/47）；真人旧档回放 P1 |
+| T18-08 | P0 | 移动/file/报错 | 844×390 触摸；`file://` 全流程；观察控制台 | 设置入口 91×44.42 CSS、初始化 275.17×44.42 CSS、面板不出界；file 与 http 同为 61/61；全程 0 console error / 0 失败请求 | `step-18/mobile/`、`step-18/file/` | PASS（6/6、61/61） |
+
+- 合计：http 61/61、file 61/61、移动 6/6；0 console error / 0 失败请求。
+- 首轮移动 5/6：设置入口 36.83 CSS（低于 44），把 `#scene-title .title-settings` 的 min-height 提到 82 逻辑 px 后通过；另修 `.title-settings` 被 `.xb-btn` 覆盖导致定位到左上的问题。
+- 未覆盖（P1）：旧档真实文件逐版本浏览器回放、草地完整路线、20 分钟全程、11 条人物结局、Chrome/Safari/真机。
 
 ## 失败记录模板
 

@@ -26,7 +26,7 @@ const REQUIRED_IDS = [
   "vn-interact", "interact-kicker", "interact-name", "interact-status", "interact-progress",
   "interact-names", "interact-answer", "interact-live",
   "vn-title-card", "vn-title-chapter", "vn-title-sub", "vn-title-place", "vn-measure",
-  "vn-settings", "set-speed", "set-speed-value", "set-scale", "set-volume", "set-volume-value",
+  "vn-settings", "settings-danger", "set-speed", "set-speed-value", "set-scale", "set-volume", "set-volume-value",
   "set-music-volume", "set-music-volume-value", "set-env-volume", "set-env-volume-value",
   "set-muted", "set-motion", "set-skip",
   "vn-roster", "roster-list", "roster-foot",
@@ -626,7 +626,7 @@ function checkConditionWhitelist() {
   XB.core.setFlag(state, "trust", "-5");
   if (state.flags.trust !== 0) fail("C16", "trust 没夹到 0，实际 " + state.flags.trust);
   if (XB.core.setFlag(state, "ending.done", true) !== false) fail("C16", "没拦住 ending.* 写入");
-  notes.push("C16 OK when 只用登记旗标；item.door 同步镜像；fire/trust 夹取；ending 拒写");
+  notes.push("C16 OK when 只用登记旗标；doorOutcome 派生 item.door；fire/trust 夹取；ending 拒写");
 }
 
 // C17：七张图鉴、存档字段冻结、end.next 合法、剧情内联
@@ -1284,13 +1284,13 @@ function checkEndingRoutes() {
     if (namesLen !== undefined && ending.names.length !== namesLen) fail("C39", label + " 点名应为 " + namesLen + " 名");
     return ending;
   }
-  expectRoute("7(1) 门板·一直优秀", { "had.door": true, "item.door": true, rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "1", 1);
-  expectRoute("7(2) 门板留草地·救1", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "2", 2);
-  expectRoute("7(2) 门板留桥上·救1", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "2", 2);
-  expectRoute("7(3) 门板到吴起·救2", { "had.door": true, "item.door": true, rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "3", 3);
-  expectRoute("7(4) 门板留草地·救2", { "had.door": true, "item.door": false, doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "4", 4);
-  expectRoute("7(4) 门板留桥上·救2", { "had.door": true, "item.door": false, doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "4", 4);
-  var seven5 = expectRoute("7(5) 空页", { "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "5", 5);
+  expectRoute("7(1) 门板·一直优秀", { doorOutcome: "carried", rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "1", 1);
+  expectRoute("7(2) 门板留草地·救1", { doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "2", 2);
+  expectRoute("7(2) 门板留桥上·救1", { doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "2", 2);
+  expectRoute("7(3) 门板到吴起·救2", { doorOutcome: "carried", rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "3", 3);
+  expectRoute("7(4) 门板留草地·救2", { doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "4", 4);
+  expectRoute("7(4) 门板留桥上·救2", { doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "4", 4);
+  var seven5 = expectRoute("7(5) 空页", { doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "5", 5);
   if (seven5.fate.player !== "dead" || seven5.fate.dongsheng !== "dead") fail("C39", "7(5) fate 快照不对");
   var sacrifice = seven5.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
   if (!sacrifice || sacrifice.lit !== true) fail("C39", "7(5) 牺牲卡应亮");
@@ -1367,11 +1367,10 @@ function checkFateMechanics() {
 
   // 湘江“回头接应老周”：带青稞才从清单扣，没带只落湿绑腿；代价不在选项上显示。
   var xyBarley = XB.core.defaults();
-  xyBarley.flags["item.door"] = true;
-  xyBarley.flags["had.door"] = true;
+  xyBarley.flags.doorOutcome = "carried";
   xyBarley.flags["item.medicine"] = true;
   xyBarley.flags["item.barley"] = true;
-  xyBarley.inventory.door = true;
+  XB.core.syncDerivedFlags(xyBarley);
   xyBarley.inventory.items = ["roster", "pencil", "medicine", "barley"];
   if (!XB.core.startChapter(xyBarley, "xiangjiang", "x025a")) {
     fail("C40", "定位不到 x025a");
@@ -1386,10 +1385,9 @@ function checkFateMechanics() {
   }
 
   var xyEmpty = XB.core.defaults();
-  xyEmpty.flags["item.door"] = true;
-  xyEmpty.flags["had.door"] = true;
+  xyEmpty.flags.doorOutcome = "carried";
   xyEmpty.flags["item.medicine"] = true;
-  xyEmpty.inventory.door = true;
+  XB.core.syncDerivedFlags(xyEmpty);
   xyEmpty.inventory.items = ["roster", "pencil", "medicine"];
   if (!XB.core.startChapter(xyEmpty, "xiangjiang", "x025a")) {
     fail("C40", "定位不到 x025a（无青稞）");
@@ -1444,7 +1442,8 @@ function checkFateMechanics() {
   if (XB.core.packUsage(pack) !== 0) fail("C40", "空行囊应为 0 半格");
   four.forEach(function (option) { if (!XB.core.canAddMultiOption(pack, option, four.filter(function (item) { return item !== option; }))) fail("C40", "四件仍应能放下：" + option.id); });
   if (XB.core.canAddMultiOption(pack, optionById.raincloth, four)) fail("C40", "四件后雨布应超 8 半格");
-  pack.flags["item.door"] = true;
+  pack.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(pack);
   if (!XB.core.canAddMultiOption(pack, optionById.shoes, [optionById.medicine, optionById.barley])) fail("C40", "带板 4+2+2=8 应还能放鞋");
   if (XB.core.canAddMultiOption(pack, optionById.homepot, [optionById.medicine, optionById.barley])) fail("C40", "带板加铁锅应超 8 半格");
 
@@ -1468,7 +1467,8 @@ function checkFateMechanics() {
 
   // 有门板：救满第三人时若已跌到差，三人当场把人架起来（差→勉强），草地再 -1 才轮到警告。
   var doorAid = XB.core.defaults();
-  doorAid.flags["had.door"] = true;
+  doorAid.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(doorAid);
   doorAid.flags.condition = 2;
   doorAid.flags.rescues = 2;
   XB.core.setFlag(doorAid, "rescues", "+1");
@@ -1494,21 +1494,21 @@ function checkFateMechanics() {
   XB.core.resolveGrassWarning(refuse);
   if (refuse.flags["fate.player.dead"] !== true) fail("C40", "拒绝补给应判死");
   var refuse7 = XB.core.defaults();
-  refuse7.flags["had.door"] = true;
-  refuse7.flags["item.door"] = true;
+  refuse7.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(refuse7);
   refuse7.flags.condition = 1;
   refuse7.flags.rescues = 3;
   XB.core.resolveGrassWarning(refuse7);
   if (XB.core.settleDoor(refuse7) !== "others") fail("C40", "拒绝补给且救满三人应走空页");
 
   var door = XB.core.defaults();
-  door.flags["had.door"] = true;
-  door.flags["item.door"] = true;
+  door.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(door);
   door.flags.condition = 4;
   if (XB.core.settleDoor(door) !== "carried") fail("C40", "优秀且活着应把门板带到吴起");
   var grassDoor = XB.core.defaults();
-  grassDoor.flags["had.door"] = true;
-  grassDoor.flags["item.door"] = true;
+  grassDoor.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(grassDoor);
   grassDoor.flags.rescues = 1;
   grassDoor.flags.condition = 2;
   if (XB.core.settleDoor(grassDoor) !== "grass") fail("C40", "救 1 人且状态不够应把门板留草地");
@@ -1519,8 +1519,6 @@ function checkFateMechanics() {
   var x025aC = x025a && x025a.options.filter(function (option) { return option.key === "C"; })[0];
   if (!x025aC || !x025aC.set || x025aC.set.doorOutcome !== "bridge") fail("C40", "x025a C 应写 doorOutcome=bridge");
   var xiangjiangBridge = XB.core.defaults();
-  xiangjiangBridge.flags["had.door"] = true;
-  xiangjiangBridge.flags["item.door"] = false;
   xiangjiangBridge.flags.doorOutcome = "bridge";
   xiangjiangBridge.flags.condition = 2;
   xiangjiangBridge.flags.rescues = 1;
@@ -1543,8 +1541,6 @@ function checkFateMechanics() {
 
   // 桥板 + 我死在草地：门板不在吴起，不能算 5/11，也不能被 settleGrass 改写。
   var bridgeDead = XB.core.defaults();
-  bridgeDead.flags["had.door"] = true;
-  bridgeDead.flags["item.door"] = false;
   bridgeDead.flags.doorOutcome = "bridge";
   bridgeDead.flags.condition = 0;
   bridgeDead.flags.rescues = 3;
@@ -1554,17 +1550,21 @@ function checkFateMechanics() {
   if (XB.core.settleDoor(bridgeDead) !== "bridge") fail("C40", "桥板+死应保留 bridge");
   if (XB.core.buildEnding(bridgeDead).route !== "bad_end") fail("C40", "桥板+死应判 11/11");
 
-  // v1.4 早期湘江 C 漏写 doorOutcome：门板已不在身上，草地补 bridge。
-  var rawLost = XB.core.defaults();
-  rawLost.flags["had.door"] = true;
-  rawLost.flags["item.door"] = false;
-  rawLost.flags.doorOutcome = "none";
-  if (XB.core.settleDoor(rawLost) !== "bridge") fail("C40", "旧湘江 C 丢板应补成 bridge");
+  // v1.4 早期湘江 C 漏写 doorOutcome：读档迁移时从 item.door=false 补成 bridge。
+  var rawLostSave = XB.core.serialize(XB.core.defaults());
+  rawLostSave.scene = "vn";
+  rawLostSave.chapterId = "grass";
+  rawLostSave.nodeId = "g001";
+  rawLostSave.flags = { "had.door": true, "item.door": false, doorOutcome: "none" };
+  var rawLost = XB.core.normalize(rawLostSave);
+  if (rawLost.issue) fail("C40", "旧湘江 C 丢板读档失败：" + rawLost.issue);
+  else if (rawLost.state.flags.doorOutcome !== "bridge") fail("C40", "旧湘江 C 丢板应补成 bridge");
+  else if (XB.core.settleDoor(rawLost.state) !== "bridge") fail("C40", "旧湘江 C 丢板结算应保持 bridge");
 
   // 7(5) 回归：门板还在身上、救满三人、死在草地，仍是 others。
   var rawLostDead = XB.core.defaults();
-  rawLostDead.flags["had.door"] = true;
-  rawLostDead.flags["item.door"] = true;
+  rawLostDead.flags.doorOutcome = "carried";
+  XB.core.syncDerivedFlags(rawLostDead);
   rawLostDead.flags.condition = 0;
   rawLostDead.flags.rescues = 3;
   XB.core.settleGrass(rawLostDead);
@@ -2003,25 +2003,33 @@ function checkSaveSlots() {
   notes.push("C43 OK 存档列表 xiangbei.saves.v1 / 单档 normalize / 20 档 512KB / 迁移后删旧键 / 同档覆盖");
 }
 
-// C44：标题只留「存档」入口；「向北」两字是初始化按钮
+// C44：标题是纯标题；首项「开始 / 继续」开存档面板；初始化只在设置的危险操作里
 function checkTitleEntries() {
   var html = readProject("index.html");
-  if (html.indexOf('class="title-main__button" data-action="init-game"') === -1) {
-    fail("C44", "标题「向北」不是初始化按钮");
+  if (html.indexOf('<h1 class="title-main">向北</h1>') === -1) fail("C44", "标题不是纯标题");
+  if (html.indexOf('class="title-main__button"') !== -1) fail("C44", "标题仍带初始化按钮");
+  if (html.indexOf('data-action="saves">开始 / 继续</button>') === -1) {
+    fail("C44", "标题首项不是「开始 / 继续」");
   }
-  if (html.indexOf('data-action="saves"') === -1) fail("C44", "标题菜单缺存档入口");
+  if (html.indexOf('class="title-settings xb-btn xb-btn--ghost" data-action="open-settings"') === -1) {
+    fail("C44", "标题缺设置入口");
+  }
+  var dangerAt = html.indexOf('id="settings-danger"');
+  var danger = dangerAt === -1 ? "" : html.slice(dangerAt, html.indexOf("</div>", dangerAt));
+  if (danger.indexOf('data-action="init-game"') === -1) fail("C44", "设置危险操作缺初始化");
   if (html.indexOf('data-action="start"') !== -1) fail("C44", "旧的开始按钮还在");
   if (html.indexOf('data-action="continue"') !== -1) fail("C44", "旧的继续按钮还在");
   var engine = readProject("engine.js");
-  if (engine.indexOf('case "saves":') === -1 || engine.indexOf('case "init-game":') === -1) {
-    fail("C44", "handleAction 缺 saves/init-game");
+  if (engine.indexOf('case "saves":') === -1 ||
+      engine.indexOf('case "open-settings":') === -1 ||
+      engine.indexOf('case "init-game":') === -1) {
+    fail("C44", "handleAction 缺 saves/open-settings/init-game");
   }
-  if (engine.indexOf('if (actionName === "init-game")') === -1) fail("C44", "缺初始化按钮的按下反馈");
-  if (engine.indexOf('classList.add("is-pressed")') === -1) fail("C44", "缺 is-pressed 加粗重影反馈");
+  if (engine.indexOf("settingsState") === -1) fail("C44", "标题设置没有独立返回路径");
   var css = readProject("style.css");
-  if (css.indexOf(".title-main__button.is-pressed") === -1) fail("C44", "style.css 缺 .is-pressed");
-  if (css.indexOf("text-shadow") === -1) fail("C44", "缺标题重影");
-  notes.push("C44 OK 标题唯一入口「存档」/ 向北=初始化按钮 / 按下加粗重影 / 旧开始与继续已移除");
+  if (css.indexOf(".title-settings") === -1) fail("C44", "style.css 缺 .title-settings");
+  if (css.indexOf(".xb-settings__danger") === -1) fail("C44", "style.css 缺 .xb-settings__danger");
+  notes.push("C44 OK 标题纯标题 / 首项开始·继续 / 设置入口 / 危险操作初始化");
 }
 
 // C45：暂停菜单「保存」= 手动覆盖当前档
@@ -2236,6 +2244,29 @@ function checkBagConfirm() {
   notes.push("C50 OK 行囊未满先确认：是=结算继续、否=退回多选不动已选、82 逻辑热区");
 }
 
+// C51：门板唯一权威 doorOutcome——剧情只写它，item/had 由 syncDerivedFlags 派生
+function checkDoorAuthority() {
+  var story = readProject("story.js");
+  ["\"item.door\":", "\"had.door\":"].forEach(function (copy) {
+    if (story.indexOf(copy) !== -1) fail("C51", "story.js 仍在写门板副本：" + copy);
+  });
+  if (story.indexOf('doorOutcome: "carried"') === -1 ||
+      story.indexOf('doorOutcome: "bridge"') === -1 ||
+      story.indexOf('doorOutcome: "wuqi"') === -1 ||
+      story.indexOf('doorOutcome: "none"') === -1) {
+    fail("C51", "story.js 缺门板去向写点");
+  }
+  var engine = readProject("engine.js");
+  if (!/flags\["had\.door"\] = flags\.doorOutcome !== "none";/.test(engine) ||
+      !/flags\["item\.door"\] = flags\.doorOutcome === "carried";/.test(engine)) {
+    fail("C51", "syncDerivedFlags 没有从 doorOutcome 派生 had/item");
+  }
+  if (engine.indexOf('if (path === "item.door") state.inventory.door = next;') !== -1) {
+    fail("C51", "setFlag 仍在单独镜像 item.door");
+  }
+  notes.push("C51 OK 门板唯一权威 doorOutcome / 剧情零副本 / had·item·inventory 派生");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -2284,6 +2315,7 @@ checkInitIsolation();
 checkSaveCadence();
 checkHistoryPanel();
 checkBagConfirm();
+checkDoorAuthority();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

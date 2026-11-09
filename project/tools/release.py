@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build, verify and hash the static release for 《向北》 v1.7.1-dev.
+"""Build, verify and hash the static release for 《向北》 v1.7.2-dev.
 
 Usage:
   python project/tools/release.py stage
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "project"
 DIST = ROOT / "dist"
-VERSION = "1.7.1-dev"
+VERSION = "1.7.2-dev"
 SITE = DIST / "site"
 PKG = DIST / f"xiangbei-v{VERSION}"
 ZIP = DIST / f"xiangbei-v{VERSION}-offline.zip"
@@ -139,9 +139,9 @@ file:// 下 Edge 可存档；若浏览器禁用 localStorage，游戏会提示
 
 【存档】
 存档为列表 xiangbei.saves.v1（最多 20 档），只在章末或暂停“保存”时落盘。
-标题页“存档”可开启新档、继续上次、删除选中，或整页回顾已完结周目。
+标题页“开始 / 继续”可开启新档、继续上次、删除选中，或整页回顾已完结周目。
 旧档 xiangbei.save.v2 / v1 首次启动自动迁为第 1 档。
-清空：标题“向北”点按后确认初始化（同时清分支、成就、名册，保留设置）。
+清空：标题右上“设置”→“危险操作”→“初始化游戏”后确认（同时清分支、成就、名册，保留设置）。
 隐私模式可能无法存档，会有提示，仍可继续。
 
 【回顾 / 分支 / 成就】

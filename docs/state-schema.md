@@ -55,7 +55,7 @@
       "ending": null
     }
 
-`load` 是 `packUsage()` 的缓存（半格单位），不是玩家可写的负重；`items` 只存唯一 id，门板单列 `inventory.door`。
+`load` 是 `packUsage()` 的缓存（半格单位），不是玩家可写的负重；`items` 只存唯一 id，门板单列 `inventory.door`（由 `doorOutcome` 派生，见 §3.5）。
 
 ### 1.2 结局场景
 
@@ -110,7 +110,7 @@
 - `scene`：title/map/vn/ending；多选、结算、物资面板、图鉴都是 vn 的子视图。
 - `chapterId`：八章 + 两个隐藏章 coda/badend；旧档未知章判坏档。
 - `nodeId`：当前节点 id（字符串，例 `"nodeId": "j012"`）；ending 必须为 null。载入后必须能在该章节点表里定位，否则判 `issue:"node"`。
-- `flags`：49 项（§3）；缺失补默认、数值夹取、`item.door` 与 `inventory.door` 镜像。
+- `flags`：49 项（§3）；缺失补默认、数值夹取；`had.door` / `item.door` 是 `doorOutcome` 的派生值，读档与 `setFlag` 后由 `syncDerivedFlags` 重算。
 - `inventory`：`{door, items, giftBarley}`；items 合法 id 只有 roster/pencil/medicine/barley/pot/raincloth/shoes。
 - `choices`：选择日志，最多 64 条；限时项超时按默认项结算并记 `timedOut: true`；结局落档前清空，避免 4096B。
 - `codex`：7 个已知 id，过滤去重。
@@ -122,7 +122,7 @@
 
 ### 3.1 基础 25 项（v1.2 基线）
 
-- 物资布尔：`item.door/pot/medicine/barley/homepot/raincloth/shoes`（7）。
+- 物资布尔：`item.pot/medicine/barley/homepot/raincloth/shoes`（6）；`item.door` 不在剧情白名单里，由 `doorOutcome` 派生。
 - 数值：`load` 0–99、`trust` 0–6、`fire` 0–100、`lights_lost` 0–22（4）。
 - 湘江：`choice.xiangjiang.abandoned`（list，只由弃物多选写）+ `take.xray/press/files/medkit/radio/silver`（7）。
 - 遵义：`choice.zunyi.missed` 0–1、`choice.zunyi.admit` 0–3（2）。
@@ -133,7 +133,7 @@
 
 | 键 | 默认 | 写点 | 用途 |
 |---|---|---|---|
-| `had.door` | false | p021 A/B | 序章是否带过门板；决定 `doorCarried` 与结局 7/8 系列 |
+| `had.door` | false | `syncDerivedFlags`（原 p021 A/B） | 是否带过门板；`doorOutcome !== "none"`，决定 `doorCarried` 与带板结局 |
 | `fate.feimao.dead` | false | l019/l019x | 飞毛腿生死 |
 | `fate.zaowang.dead` | false | g018x | 灶王生死 |
 | `fate.dongsheng.dead` | false | g026x | 冬生生死 |
@@ -159,7 +159,7 @@
 | `quality.feimao` | 3 | l001、l019/l019x | 飞毛腿状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，用药 2、铺桥 3 |
 | `quality.zaowang` | 3 | l001、g018x | 灶王状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，青稞 2、铁锅 3 |
 | `quality.dongsheng` | 3 | l001、g026x | 冬生状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，鞋或雨布 3 |
-| `doorOutcome` | "none" | 剧情/引擎 | none/carried/bridge/grass/wuqi/others；bridge = 湘江 x025a C 或泸定 l019 A，留在桥上 |
+| `doorOutcome` | "none" | 剧情/引擎（唯一权威） | none/carried/bridge/grass/wuqi/others；bridge = 湘江 x025a C 或泸定 l019 A，留在桥上；剧情只写这一项 |
 | `inventory.giftBarley` | false | g026x A/B | 冬生赠青稞，不占格；与普通青稞/药组合 |
 
 ### 3.4 v1.5.1 成就 1 项
@@ -170,11 +170,11 @@
 
 ### 3.5 派生与白名单
 
-- `DERIVED_FLAGS = [fate.lin.dead, fate.all.dead, fate.seven5, fate.badend, strain.hurt, strain.dying]`；只由 `syncDerivedFlags` 写。
+- `DERIVED_FLAGS = [had.door, item.door, fate.lin.dead, fate.all.dead, fate.seven5, fate.badend, strain.hurt, strain.dying]`；只由 `syncDerivedFlags` 写。
 - `condition` 由 `rescuePenalty`、`usePackItems`、`settleGrass`、三人帮助写；`help.used/memory.help` 由 `setFlag`（有板第三人）或 `settleGrass`（无板差状态）写，有板同时写 `memory.help_door`；`fate.player.dead` 由 `settleGrass/resolveGrassWarning` 写。
-- 剧本 `set` 只写：`item.*`、`load`、`trust`、`fire`、`lights_lost`、`rescues`、`quality.*`、三个危机 `fate.*.dead`、`had.door`、`doorOutcome`、`memory.*`、`choice.*`、`inventory.giftBarley`。
+- 剧本 `set` 只写：`item.pot/medicine/barley/homepot/raincloth/shoes`、`load`、`trust`、`fire`、`lights_lost`、`rescues`、`quality.*`、三个危机 `fate.*.dead`、`doorOutcome`、`memory.*`、`choice.*`、`inventory.giftBarley`。`had.door` / `item.door` 不可由剧情写，`setFlag` 会拒绝。
 - `ending.*`、`card.*`、`unlockedChapters` 只由引擎写；`choice.xiangjiang.abandoned` 只由弃物多选写。
-- `item.door` 写入时同步 `inventory.door`；`inventory.giftBarley` 写入时同步 flag。
+- `syncDerivedFlags` 由 `doorOutcome` 统一派生：`had.door = outcome !== "none"`、`item.door = outcome === "carried"`、`inventory.door = item.door`；旧档迁移是唯一从旧 `item.door/had.door/memory.door/choice.*` 反推 `doorOutcome` 的地方（§8）。`inventory.giftBarley` 写入时同步 flag。
 - `memory.luding_status` 是泸定入场一次性标记，不进 `FLAG_DEFAULTS`；第一次到 `l001` 把未死三人 `quality.*` 置 2 并落档，刷新不重复。
 - 节点可带 `status`（如 `{"quality.feimao":1}`）与 `statusReason`，选项也可带 `statusReason`；引擎在节点进入时写 `status` 并落档（choice 在选项出现前，line 在本句显示前）。只把 `condition/quality.*` 的真实变化写进内存队列 `statusEvents`（最多 32 条），弹窗读完即丢弃，原因不进存档。
 - `statusOnce` 是节点状态的一次性标记（如 g008b 的 `memory.grass_mutual`）：首次进入写 `status` 并落标记，刷新同一节点不再重复加状态。草地 g008 A 只扣青稞、trust+1；到 g008b 药膏/绷带回赠时才 `condition+1`，提示原因“你与他人互相救助”。
@@ -225,7 +225,7 @@
 
 1. 死：`had.door && doorOutcome==="others"` → 5/11 `door_others`；否则 11/11 `bad_end`（桥板/吴起板不算 5/11）。
 2. 无板：按 rescues 0/1/2/3 → 6/11–9/11；rescues=3 且 condition=4 → 10/11。
-3. 有板：`carried = item.door || doorOutcome ∈ {carried,wuqi,others}`；rescues≤1 → carried && condition=4 ? 1/11 : 2/11；rescues≥2 → carried ? 3/11 : 4/11。
+3. 有板：`carried = doorOutcome ∈ {carried,wuqi,others}`；rescues≤1 → carried && condition=4 ? 1/11 : 2/11；rescues≥2 → carried ? 3/11 : 4/11。
 4. 2/11、4/11 且 `doorOutcome==="bridge"`（湘江 C 或泸定 A）显示“桥板/门板留在桥上”，否则“门板/门板留在草地”。
 
 ## 6. 名册回廊
@@ -265,13 +265,13 @@
 ## 8. 迁移（v1.3 → v1.4）
 
 1. 读 v2；不存在/解析失败才读 v1；v1 迁移后写 v2，保留 v1。
-2. 所有旧档补 `had.door`：`choice.prologue.door || item.door || choice.luding.door`。
+2. 所有旧档先补 `doorOutcome`（仅当它为 `none`）：旧 `item.door===true`→carried；`memory.door`→wuqi；`choice.luding.door`→bridge；`choices` 里 x025a C→bridge；有 `item.door` 键但为 false（v1.4 早期湘江 C）→bridge；其余带过板（`had.door/item.door/choice.prologue.door/choice.luding.door`）→grass；从未带板→none。随后 `had.door = outcome !== "none"`、`item.door = outcome === "carried"`，不再单独补副本。
 3. 旧 `strain` 当“救过几人”：`rescues = clamp(strain,0,3)`；`condition = 3 - rescuePenalty(rescues, had.door)`；已过草地 `g027` 再 -1。
 4. `fate.player.dead`：旧 `strain.dying`、章 `coda` 或旧快照 `route==="kongye"`；同时 `condition=0`（仅 coda/kongye）。
 5. 吴起旧档：飞毛腿/灶王 dead、冬生活、`strain=1`；泸定 `l022` 后飞毛腿 dead、`strain=0`；草地 `g019` 后灶王 dead。
 6. `quality.*`：死者 0，生者 2（旧档没有更细状态）。
-7. `doorOutcome`：item.door→carried；memory.door→wuqi；choice.luding.door→bridge；had.door && !item.door→grass；否则 none。旧 5/11（player.dead+rescues3+had.door）→ others 且 item.door=false。
-8. 湘江 C 修复：`had.door && !item.door && doorOutcome==="none"` → bridge（v1.4 早期 x025a C 漏写去向）；已落 grass/others 的档只在 `choices` 仍有 `{nodeId:"x025a",option:"C"}` 时改 bridge（A 也写 hold=true，不能单看旗标）。已清空 choices 的结局快照不自动改。
+7. 旧 5/11（`player.dead && rescues===3 && had.door`）→ `doorOutcome="others"`；`item.door` 由 sync 派生为 false。
+8. 湘江 C 修复：已落 grass/others 的档只在 `choices` 仍有 `{nodeId:"x025a",option:"C"}` 时改 bridge（A 也写 hold=true，不能单看旗标）；该改写压过旧 5/11 的 others。已清空 choices 的结局快照不自动改。
 9. 旧 ending 快照：缺 route 补 `legacy/旧档/""`，不重算；缺 routeIndex 补 0；fate 缺 player 按旧 route 补；保留 names/answered/missed/stats/cards。
 10. 旧名册页保留；新页追加。
 11. 旧 ending 快照没有 `achievements` 不补；结局页显示“旧档未记录本局成就”。旧档已有 `memory.zhang:true` 的，本局收集按 j018-done 处理；旧档 skip 不补记。
@@ -280,7 +280,7 @@
 
 - `?debug=1` 右上显示 scene/chapter/node/flags 摘要/ending/save 字节与档数/audio/peak。
 - `?chapter=coda&node=c006`、`?chapter=badend&node=b006` 可直达；未知节点回地图。`?resume=1` 直接续最近未完结档（测试后门）；与 `?chapter=` 同用时保留 `activeId`，章末保存落回同一档。
-- `?reset=1` 只清存档列表（不清分支/成就/名册）；初始化用标题“向北”按钮。
+- `?reset=1` 只清存档列表（不清分支/成就/名册）；初始化走标题“设置 → 危险操作 → 初始化游戏”并二次确认。
 - 单测：`node project/tools/smoke.js`（49 旗标、pack 4/8、11 路线、迁移、分支 mapping、成就 48 条）；`check-build` 覆盖 C14/C18/C24/C26/C39/C40/C41/C42/C43/C44/C45/C46/C47/C48。
 - 浏览器：`_pw-step14.js` 覆盖 48 条映射、标题/暂停/结局三入口、锁定不泄露、单选/多选/记名 pick/skip、结局快照与重进合并、844×390 标题与暂停；http 55/55、file:// 55/55、移动专项 11/11，0 console error / 0 failed request。
 - 浏览器：`_pw-step11.js` 覆盖 11 结局、危机、物资面板、差警告、门板弹窗、旧档、刷新、移动、`file://`；`_pw-step12.js` 覆盖分支空态/暂停实时/结算落档/全部 11 路线/详情/键盘/缩放/坏档/隐私/移动。
@@ -316,7 +316,7 @@
 
 ### 10.3 界面与只读回顾
 
-- 标题菜单只剩“存档”一个入口；面板 `#saves-panel`（z=`--z-saves` 83）三段：列表、删除栏、提示。开启新档/上次玩到/删除存档三个按钮各 84 高。
+- 标题菜单主入口是“开始 / 继续”（`data-action="saves"`，整行），打开 `#saves-panel`（z=`--z-saves` 83）三段：列表、删除栏、提示；其余四项为图鉴/名册/分支/成就，右上另有“设置”。开启新档/上次玩到/删除存档三个按钮各 84 高。
 - 删除模式：行变 `role=checkbox`、`aria-checked`；选中 `background:var(--ink)` + 纸白字 + 左 6px 朱砂条 + 右侧 `✓`；确认后二次弹窗“确定要删除这些存档吗？”。
 - 二次确认统一用 `#save-confirm`（z=`--z-save-confirm` 89）：开新档/上次玩到/继续某档/删档/初始化五类文案见 `confirmCopy`，默认焦点在“否”。
 - 已完结档不读进主流程：`openEndingReview` 暂存当前 state，把快照塞进 `state` 并进 ending 场景；`renderEnding` 在 `endingReview.active` 时不重建结局、不记名册、不写档，隐藏“剧情分支/史实图鉴”，把“回到标题”改成“返回存档”；`closeEndingReview` 恢复原 state 与按钮。
@@ -324,9 +324,9 @@
 
 ### 10.4 初始化与重置
 
-- 标题“向北”两字是 button（`data-action="init-game"`）：按下加粗 + 重影 220ms，再弹“是否初始化游戏？这意味着你的存档、剧情分支、成就和回顾记录会被全部清空”。
+- 标题“向北”是纯文本 `h1`，不接收点击；初始化在标题“设置 → 危险操作 → 初始化游戏”（`#settings-init-game`，`data-action="init-game"`），再弹“是否初始化游戏？这意味着你的存档、剧情分支、成就和回顾记录会被全部清空，名册也会清空；音量、字号等设置保留。此操作不可撤销。”
 - 选“是”删 7 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.history.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清回顾/分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
-- `?reset=1` 清四个键：三个存档键与 `xiangbei.history.v1`，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“存档”。
+- `?reset=1` 清四个键：三个存档键与 `xiangbei.history.v1`，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“开始 / 继续”。
 
 ### 10.5 与分支/成就的关系
 
