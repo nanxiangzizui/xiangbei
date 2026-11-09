@@ -36,12 +36,12 @@ const REQUIRED_IDS = [
   "branch-map", "branch-title", "branch-count", "branch-chapters", "branch-live",
   "branch-endings-door", "branch-endings-nodoor", "branch-endings-bad", "branch-close",
   "branch-detail", "branch-detail-close", "branch-detail-kicker", "branch-detail-title",
-  "branch-detail-sub", "branch-detail-body", "ending-branch",
+  "branch-detail-sub", "branch-detail-body", "branch-detail-actions", "ending-branch",
   "achievement-panel", "achievement-title", "achievement-count", "achievement-tabs",
   "achievement-grid", "achievement-close", "achievement-detail", "achievement-detail-close",
   "achievement-detail-kicker", "achievement-detail-title", "achievement-detail-body",
-  "saves-panel", "saves-title", "saves-count", "saves-list", "saves-empty", "saves-close",
-  "save-new", "save-latest", "save-delete", "saves-delete-bar", "saves-delete-count",
+  "saves-panel", "saves-kicker", "saves-title", "saves-count", "saves-list", "saves-empty", "saves-close",
+  "saves-back", "save-new", "save-latest", "save-delete", "saves-delete-bar", "saves-delete-count",
   "saves-delete-confirm", "saves-delete-cancel", "saves-hint",
   "save-confirm", "save-confirm-title", "save-confirm-body", "save-confirm-yes", "save-confirm-no",
   "history-panel", "history-title", "history-body", "history-list", "history-empty", "history-close",
@@ -2130,7 +2130,7 @@ function checkSaveCadence() {
   if (settings.split("saveSettingsOnly(").length - 1 !== 8) fail("C48", "设置监听的 saveSettingsOnly 数量不是 8");
   if (engine.indexOf("中途退出回到本章开头") === -1) fail("C48", "存档面板没有说明中途退出回章首");
   const totalSaves = (engine.split("saveNow();").length - 1) + (engine.split("saveChapterProgress();").length - 1);
-  if (totalSaves !== 7) fail("C48", "落盘调用点应为 7 个（手动/结局/章末 4 出口/开新档），实际 " + totalSaves);
+  if (totalSaves !== 8) fail("C48", "落盘调用点应为 8 个（手动/结局/章末 4 出口/开新档/章节重玩），实际 " + totalSaves);
   if (engine.indexOf("AUTOSAVE_NOTICE_MS = 3500") === -1) fail("C48", "章末提示未固定 3.5 秒");
   if (engine.indexOf('els.autosaveNotice.textContent = "已自动存档"') === -1) fail("C48", "章末提示文案不是「已自动存档」");
   if (html.indexOf('id="autosave-notice"') === -1) fail("C48", "index.html 缺 #autosave-notice");
@@ -2267,6 +2267,50 @@ function checkDoorAuthority() {
   notes.push("C51 OK 门板唯一权威 doorOutcome / 剧情零副本 / had·item·inventory 派生");
 }
 
+// C52：章节重玩——独立底片键、两步存档面板、拷贝前情、入口与清理
+function checkChapterReplay() {
+  var engine = readProject("engine.js");
+  var html = readProject("index.html");
+  if (engine.indexOf('CHAPTERS_KEY = "xiangbei.chapters.v1"') === -1) {
+    fail("C52", "缺少独立章节底片键 xiangbei.chapters.v1");
+  }
+  if (!/MAX_CHAPTERS_BYTES = 2 \* 1024 \* 1024/.test(engine)) {
+    fail("C52", "章节底片上限应为 2MB");
+  }
+  if (!/chapterId: null,\s*targetId: null/.test(engine)) {
+    fail("C52", "savePanelState 缺少 chapterId/targetId");
+  }
+  ["chapter-target", "chapter-source"].forEach(function (mode) {
+    if (engine.indexOf('"' + mode + '"') === -1) fail("C52", "缺少面板模式 " + mode);
+  });
+  if (engine.indexOf("请选择一个存档开始") === -1) {
+    fail("C52", "缺少目标档提示「请选择一个存档开始」");
+  }
+  if (engine.indexOf("对于你选择的章节前的剧情走向，你希望走哪条路线？") === -1) {
+    fail("C52", "缺少路线来源提示");
+  }
+  if (engine.indexOf("chapterCopyPrefix(") === -1 || engine.indexOf("historyCopyPrefix(") === -1) {
+    fail("C52", "章节重玩没有同时拷贝底片与回顾");
+  }
+  if (engine.indexOf("chapterCapture(target.id, chapterId);") === -1) {
+    fail("C52", "章节重玩后没有写入目标章的底片");
+  }
+  if (engine.indexOf('chapterCapture(slot.id, "prologue");') === -1 ||
+      engine.indexOf("chapterCapture(savesStore.activeId, nextId);") === -1) {
+    fail("C52", "新档/章末没有采集底片");
+  }
+  if (engine.indexOf("removeItem(CHAPTERS_KEY)") === -1) {
+    fail("C52", "初始化/?reset 没有清理章节底片");
+  }
+  if (engine.indexOf("branch-start") === -1 || engine.indexOf("openChapterTarget") === -1) {
+    fail("C52", "章节详情缺少「从此开始」入口");
+  }
+  if (html.indexOf('id="saves-back"') === -1 || html.indexOf('id="branch-detail-actions"') === -1) {
+    fail("C52", "index.html 缺少章节重玩所需的返回键或详情动作区");
+  }
+  notes.push("C52 OK 章节重玩：独立底片 2MB / 两步面板 / 拷贝前情与回顾 / 新档与章末采集 / 初始化清理");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -2316,6 +2360,7 @@ checkSaveCadence();
 checkHistoryPanel();
 checkBagConfirm();
 checkDoorAuthority();
+checkChapterReplay();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

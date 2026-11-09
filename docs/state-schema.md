@@ -1,6 +1,6 @@
-# 《向北》存档与旗标（v1.6 · 存档列表，v1.6.0-dev）
+# 《向北》存档与旗标（v1.8 · 章节重玩，v1.8.0-dev）
 
-> 存档键：`xiangbei.saves.v1`（列表，一档一槽，见 §10）；单档仍是 v2 形状（`SAVE_VERSION=2`），逐槽走同一套 `normalize`。旧键 `xiangbei.save.v2` / `xiangbei.save.v1` 只读，首次启动（列表不存在时）迁移成第 1 档并删旧键；`?reset=1` 只清存档与回顾，初始化才清分支/成就/名册（§10.4）。剧情回顾另存 `xiangbei.history.v1`（§11），不占单档 11 键。
+> 存档键：`xiangbei.saves.v1`（列表，一档一槽，见 §10）；单档仍是 v2 形状（`SAVE_VERSION=2`），逐槽走同一套 `normalize`。旧键 `xiangbei.save.v2` / `xiangbei.save.v1` 只读，首次启动（列表不存在时）迁移成第 1 档并删旧键；`?reset=1` 只清存档、章节底片与回顾，初始化才清分支/成就/名册（§10.4）。剧情回顾另存 `xiangbei.history.v1`（§11），章节重玩底片另存 `xiangbei.chapters.v1`（§12），都不占单档 11 键。
 > 所有 `localStorage` 读写 try/catch；不可用时提示“本局无法存档”，不白屏。
 > 旗标清单与 `docs/script/*.md` 的 `set:` 一一对应；新增旗标先进本文件再进剧本。
 > v1.3.0-dev 的 34 旗标/四路线/3 格行囊已由 v1.4 取代；旧档迁移见 §8，旧字段 `strain` 只作兼容。
@@ -259,7 +259,8 @@
 - 非结局章末保存成功后，屏幕上方 `#autosave-notice` 显示 3.5 秒“已自动存档”；结局保存不显示，避免盖住结局页。提示只在本局显示，刷新不重放。
 - v1.5 及以前每 beat 存档；v1.6 起取消 beat 存档，避免中途退出读到半个章节，读档统一回到本章开头（手动保存除外）。
 - 结局落档前清空 `choices`：v1.3 实测完整日志 4267B > 4096B；清空后正常。
-- 存档 >4096B 仍按坏档处理；名册、分支、成就收纳独立键不占主档预算。
+- 存档 >4096B 仍按坏档处理；名册、分支、成就、剧情回顾与章节底片都是独立键，不占主档预算。
+- 章节底片 `xiangbei.chapters.v1` 独立上限 2MB（§12）；它保存七章各自“章首”的 11 键快照，不随逐句推进增长。
 - `ending.achievements` 最多 48 个短 id；结算清空 `choices` 后仍在 4096B 以内。重进已结算结局时 `choices` 已空，但 `flags.memory.zhang` 仍会产出 `j018-done`；`buildEnding` 必须把 `previous.achievements` 合并回来，否则快照从 22 条掉成 1 条。
 
 ## 8. 迁移（v1.3 → v1.4）
@@ -325,12 +326,13 @@
 ### 10.4 初始化与重置
 
 - 标题“向北”是纯文本 `h1`，不接收点击；初始化在标题“设置 → 危险操作 → 初始化游戏”（`#settings-init-game`，`data-action="init-game"`），再弹“是否初始化游戏？这意味着你的存档、剧情分支、成就和回顾记录会被全部清空，名册也会清空；音量、字号等设置保留。此操作不可撤销。”
-- 选“是”删 7 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.history.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清回顾/分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
-- `?reset=1` 清四个键：三个存档键与 `xiangbei.history.v1`，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“开始 / 继续”。
+- 选“是”删 8 个键：`xiangbei.saves.v1`、`xiangbei.save.v2`、`xiangbei.save.v1`、`xiangbei.history.v1`、`xiangbei.chapters.v1`、`xiangbei.branches.v1`、`xiangbei.achievements.v1`、`xiangbei.roster.v1`；清回顾/章节底片/分支/成就内存缓存与本局 run，保留 `store.settings`，并把空列表写回（设置刷新后仍在）。
+- `?reset=1` 清五个键：三个存档键、`xiangbei.history.v1` 与 `xiangbei.chapters.v1`，不动分支/成就/名册；`?resume=1[/&chapter=&node=]` 是测试后门，正式入口只有标题“开始 / 继续”。
 
 ### 10.5 与分支/成就的关系
 
 - 存档、分支、成就三套键互不读写：开多少档、删多少档都不改 `branches.v1` / `achievements.v1`；只有初始化才清空并回灰。
+- 章节底片跟着槽位走：删槽时删对应槽的底片，启动时 `chapterPrune` 清掉已不存在的槽；它不反向影响主存档或路线判定。
 - 名册 `roster.v1` 同样只由初始化清空；图鉴页“清档不会清掉它”的提示已删。
 
 ## 11. 剧情回顾（v1.7，2026-11-08）
@@ -380,3 +382,78 @@
 - 两栏 200px / 1px / 1fr（移动 150px / 1px / 1fr）；人名右对齐、正文纸白；选择行 `➤ + 文本` 用 `--history-choice:#F2C45C` 加粗 700；提示句弱化；章节变化插分隔标题；打开滚到底。
 - 正文固定 22px/1.9（移动 28px 逻辑），不跟 `--text-scale`，字号设置只影响游戏正文；`html`/`body`/`#stage` 及子元素 `user-select:none`（横屏提示也不例外），回顾层额外 `-webkit-user-drag:none`，无 `contenteditable`。
 - 打开时冻结游戏：`state.paused=true`、取消自动、暂停打字机与所有限时倒计时、音频 duck 0.45；关闭恢复选项/点名计时、自动/跳过和焦点。历史打开时数字键/空格不穿透到剧情。
+
+## 12. 章节重玩底片（v1.8，2026-11-09）
+
+### 12.1 为什么另存
+
+从特定章节重玩，需要把已完结存档“这一章开始前”的完整状态（旗标、行囊、选择日志、图鉴、门板去向、状态、名册相关旗标）搬到另一个存档。只重放 `state.choices` 不够：物资面板的 `usePackItems` 不写选择日志，金沙江 j018 记名也不写日志；两者都会改变后续判定。因此保存章首快照，而不是事后推演。
+
+章节底片独立键 `xiangbei.chapters.v1`，不写进单档 11 键，也不放进 `xiangbei.saves.v1` 的 512KB 列表上限。原因：`saveNow` 在章末、结局、手动保存时频繁运行；把七章快照塞进每档会让列表迅速膨胀。
+
+### 12.2 键与形状
+
+    {
+      "version": 1,
+      "updatedAt": 1762524000000,
+      "slots": {
+        "slot-abc123-xxxxx": {
+          "updatedAt": "2026-11-09T06:00:00.000Z",
+          "chapters": {
+            "prologue": {
+              "at": "2026-11-09T05:58:00.000Z",
+              "state": { "version": 2, "scene": "vn", "chapterId": "prologue", "nodeId": "p001", "...": "其余 11 键" }
+            },
+            "xiangjiang": {
+              "at": "2026-11-09T06:00:00.000Z",
+              "state": { "version": 2, "scene": "vn", "chapterId": "xiangjiang", "nodeId": "x001", "...": "其余 11 键" }
+            }
+          }
+        }
+      }
+    }
+
+- 只接受 `slot-` 开头的槽 id；只接受 `branchChapterIds()` 的七章（prologue/xiangjiang/zunyi/jinsha/luding/grass/wuqi），隐藏 coda/badend 不存。
+- 每个快照是 `serialize(state)` 的 11 键；额外强制 `scene="vn"`、`chapterId` 与键名一致、`nodeId` 存在、`ending=null`。不合法快照丢弃，不拖垮其它章。
+- `at` / 槽 `updatedAt` 为 ISO 字符串；顶层 `updatedAt` 为 epoch ms。整键上限 `MAX_CHAPTERS_BYTES=2MB`。
+
+### 12.3 写入点
+
+- 新档：`startNewGame` 建槽后立刻 `chapterCapture(slot.id, "prologue")`。
+- 章末：`finishChapter` 成功进入下一章并 `saveChapterProgress()` 后 `chapterCapture(activeId, nextId)`；地图/结局出口不新增章首。
+- 章节重玩：`applyChapterStart` 在目标档落定后 `chapterCapture(target.id, chapterId)`，保证这一档从目标章再次重玩时也有本章底片。
+- 只有这三个“真正章首”写；逐句、选项、物资使用、手动保存都不写。
+- 写失败（超 2MB、隐私模式、`file://` 限制）：保留内存态并只 toast 一次“本机无法保存章节记录，从章节重玩暂不可用”；主流程继续。坏 JSON/版本不符：备份 `xiangbei.chapters.v1.bad` 后回空并 toast。
+
+### 12.4 资格与两步选择
+
+一周目完成 = `savesStore.slots` 中至少有一个 `slotEnded(slot)`（`isFullEnding(slot.state.ending)`）。章节详情底部 `从此开始`：
+
+- 序章：禁用，理由“序章没有前情；直接开新档即可。”
+- 没有已完结档：禁用，理由“完成一周目后，可从这一章重新开始。”
+- 有已完结档但没有这一章的底片（功能上线前的老档）：禁用档位并写“已完结存档里还没有这一章的前情记录。再走一次完整周目后可用。”
+- 没有未完结档且已 20 档：禁用，理由“存档已满，请先删除一个存档。”
+
+两步都复用 `#saves-panel`，`savePanelState.mode` 为 `chapter-target` / `chapter-source`：
+
+1. 第一步标题逐字“请选择一个存档开始”，只列未完结槽（`!slotEnded`）；没有未完结档时给“开启新档”。新槽不在这一步创建，等第二步选定来源后再建，避免留下孤儿档。
+2. 第二步标题逐字“对于你选择的章节前的剧情走向，你希望走哪条路线？”，只列已完结槽（`slotEnded`）；只有 `chapterSnapshotState(slot.id, chapterId)` 存在的槽可选，其余 `aria-disabled=true` 且副行写“缺少这一章前情”。
+3. 第二步 Esc/返回回第一步并清掉已选目标；再 Esc 关面板，保留分支图。焦点回“从此开始”。
+
+### 12.5 拷贝语义
+
+`applyChapterStart(sourceSlot, chapterId)`：
+
+1. 取来源档这一章的章首快照，`normalize` 校验；不合法直接 toast，不改任何档。
+2. 用快照状态 `startChapter(copied, chapterId)` 定位本章第一句；把目标章加入 `unlockedChapters`；`ending=null`、`settings` 取当前全局设置。
+3. 目标：第一步选中的未完结槽则覆盖其 `state`；第一步选“开启新档”则新建槽并 `unshift`。目标档的 `activeId` 切到该槽；20 档上限仍由 `SAVE_SLOT_MAX` 守。
+4. `historyCopyPrefix(sourceId, targetId, chapterId)`：只把来源档本章之前的回顾条目拷到目标档，`checkpoint` 设为拷贝条数；目标档旧回顾不保留。
+5. `chapterCopyPrefix(sourceId, targetId, chapterId)`：把来源档 `index <= targetIndex` 的章首底片拷到目标槽；目标槽本章及以后的旧底片全部作废，避免旧后续状态混入。来源缺某些前章底片时只拷存在的；目标状态本身仍含完整前情。
+6. 先关旧暂停/结局回顾，再关存档面板与分支图，替换 `state`，写列表、应用设置、`showScene("vn")`、渲染、`chapterCapture`、`saveNow`。首句从目标章重新开始，不重播章前对话。
+7. 目标档从目标章继续走到结局时，走原 `finishChapter` 结局出口：`buildEnding`、成就、分支收纳、清 `choices`、`saveNow` 全部照常；目标档变为已完结，可成为下一次的“来源”。
+
+### 12.6 删档、清理与旧档
+
+- 删除槽、初始化、`?reset=1`、启动 `chapterPrune` 都会清理对应章节底片；章节底片不反向影响主存档、路线判定、成就或分支图。
+- 功能上线前已完结、当时没有底片的档：不会伪造前情，也不允许作为来源；会明确说明“再走一次完整周目后可用”。新完成的周目会从序章开始逐章留下底片，之后即可使用。
+- 不做任意节点回溯、不做分支存档树、不做跨档合并相同章节以外的状态；不做结局百分比。
