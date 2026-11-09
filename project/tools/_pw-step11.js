@@ -1021,17 +1021,54 @@ function stamp() {
     check("门板补给刷新 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
     check("门板补给刷新 门板 carried", /\bdoor\s+true/.test((await info()).raw), (await info()).raw);
 
-    // 3) 负例：只有 +1，补不到 4，不弹假窗口，走原门板舍弃；结局 2/11。
+    // 3) 累计正例：condition 2 只剩两件 +1，分两次补到优秀，仍可带门板到 1/11。
+    await openAt("grass", "g027", {
+      condition: 3, rescues: 1, "had.door": true, "item.door": true,
+      "item.shoes": true, "item.medicine": true, "item.barley": true, doorOutcome: "carried"
+    }, { door: true, items: ["roster", "pencil", "shoes", "medicine", "barley"] });
+    check("门板累计 起点", await waitNode("g027", 8000), (await info()).raw);
+    await nextLine();
+    check("门板累计 弹窗", await waitVisible("#pack-panel"), (await info()).raw);
+    check("门板累计 列布鞋和药+青稞",
+      (await page.locator('[data-pack-use="shoes"]').count()) === 1 &&
+      (await page.locator('[data-pack-use="barley+medicine"]').count()) === 1,
+      (await info()).raw);
+    check("门板累计 先用布鞋", await useRecipe("shoes"));
+    check("门板累计 布鞋后良好", (await page.locator("#vn-condition").innerText()).indexOf("良好") !== -1,
+      await page.locator("#vn-condition").innerText());
+    check("门板累计 还能再用药+青稞", (await page.locator('[data-pack-use="barley+medicine"]').count()) === 1);
+    check("门板累计 再用第二件", await useRecipe("barley+medicine"));
+    check("门板累计 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
+    check("门板累计 状态优秀", (await page.locator("#vn-condition").innerText()).indexOf("优秀") !== -1,
+      await page.locator("#vn-condition").innerText());
+    check("门板累计 门板 carried", /\bdoor\s+true/.test((await info()).raw), (await info()).raw);
+    check("门板累计 实走到 w041", await advanceUntil("w041", 140), (await info()).raw);
+    await closeCodex();
+    check("门板累计 到结局", await waitEnding(20000), (await info()).raw);
+    data = await endingData();
+    check("门板累计 1/11", data.route.indexOf("结局1/11（门至人散）") === 0, data.route);
+    check("门板累计 快照 route", data.ending && data.ending.route === "door_excellent", data.ending && data.ending.route);
+    await shot("door-supply-cumulative-1-11");
+
+    // 4) 负例：只有一件 +1，仍给一次补给机会；补不满则不弹假成功，走原门板舍弃；结局 2/11。
     await openAt("grass", "g027", {
       condition: 3, rescues: 1, "had.door": true, "item.door": true, "item.shoes": true, doorOutcome: "carried"
     }, { door: true, items: ["roster", "pencil", "shoes"] });
     check("门板负例 起点", await waitNode("g027", 8000), (await info()).raw);
     await nextLine();
-    check("门板负例 不弹补给窗", !(await visible("#pack-panel")) && (await waitVisible("#door-modal")), (await info()).raw);
-    check("门板负例 门板弹窗", (await page.locator("#door-modal").innerText()).indexOf("门板") !== -1);
+    check("门板负例 开累计窗", await waitVisible("#pack-panel"), (await info()).raw);
+    check("门板负例 只列布鞋", (await page.locator('[data-pack-use="shoes"]').count()) === 1 &&
+      (await page.locator(".xb-pack__recipe").count()) === 1, (await info()).raw);
+    check("门板负例 用布鞋", await useRecipe("shoes"));
+    check("门板负例 补不满仍良好", (await page.locator("#vn-condition").innerText()).indexOf("良好") !== -1 &&
+      (await page.locator("#pack-list").innerText()).indexOf("没有能用的物资了") !== -1,
+      await page.locator("#vn-condition").innerText());
+    await hit(page.locator("#pack-close"));
+    check("门板负例 门板弹窗", await waitVisible("#door-modal"), (await info()).raw);
+    check("门板负例 门板弹窗文案", (await page.locator("#door-modal").innerText()).indexOf("门板") !== -1);
     await hit(page.locator("#door-discard"));
     check("门板负例 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
-    check("门板负例 落草地", (await page.locator("#vn-condition").innerText()).indexOf("勉强") !== -1 &&
+    check("门板负例 落草地", (await page.locator("#vn-condition").innerText()).indexOf("良好") !== -1 &&
       !/\bdoor\s+true/.test((await info()).raw), (await info()).raw);
     await openAt("wuqi", "w041", {
       condition: 2, rescues: 1, "had.door": true, "item.door": false, "grass.settled": true,
