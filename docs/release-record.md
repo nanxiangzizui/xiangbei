@@ -249,10 +249,10 @@
 - **未做**：公网完整流程、四关、移动完整流程、96/96 全用例未在 Netlify 重跑；这些结果仍来自本地发布包。完整流程/公网四关不能写成“已通过”。
 - **维护**：Netlify 站点由用户账号持有；后续更新需用 Netlify 账号/CLI 重新上传 `dist/site`。GitHub Pages 备站仍为 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，部署提交 `88771d3`）。
 
-## 13. v1.7.0-dev 本地打包（2026-11-08，未部署）
+## 13. v1.7.0-dev 打包与部署（2026-11-08 打包；2026-11-09 部署 GitHub Pages）
 
-- **触发**：用户 2026-11-08 要求“把当前项目工程打包，打 tag 并提交仓库”；本次只打本地包与本地提交，不部署、不改线上。
-- **基线**：分支 `v1.4-dev`，步骤十六「剧情回顾」完成后；源码提交与 tag 见 §13.3。
+- **触发**：用户 2026-11-08 要求“把当前项目工程打包，打 tag 并提交仓库”；当天只打本地包与本地提交、不部署。2026-11-08 用户核查手动上传并选择只推分支+tag，2026-11-09 再要求“先更新到线上”，遂把 `dist/site` 部署到 GitHub Pages（§13.2）。
+- **基线**：分支 `v1.4-dev`，步骤十六「剧情回顾」完成后；源码提交与 tag 见 §13.1，线上部署见 §13.2。
 - **版本**：`project/tools/release.py` 的 `VERSION = "1.7.0-dev"`；离线包 README 改写为现行玩法（四段选择 + 三次危机、行囊 4 格/状态 0–4、11 条人物结局、存档列表 `xiangbei.saves.v1`、剧情分支/成就/回顾三个独立键），删除 v1.1.1 的“四个小游戏 / xiangbei.save.v1”描述。
 - **交付物**：
 
@@ -267,6 +267,22 @@
 
 - **门禁**：`check-build` 48/48、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` OK（站点与包逐文件一致、ZIP 条目与白名单一致、无外链、PDF 1 页含 ToUnicode）。
 - **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：http 与 file:// 共 21 项全绿，0 console error / pageerror / failed request。覆盖标题菜单（存档 / 史实图鉴 / 名册 / 剧情分支 / 解锁成就）、存档面板空态、开新档“是/否”确认、进入序章并推进 6 句、右上“回顾”入口与章节条目、暂停菜单、`xiangbei.saves.v1` 与 `xiangbei.history.v1` 落键、`file://` 字体与标题。证据 `docs/evidence/package-v1.7.0/`（gitignored）。
-- **未做**：部署（Netlify / GitHub Pages 仍是 v1.1.1 四关版）；20 分钟真人计时、11 条结局代表路线、Chrome/Safari/真机、844×390 打包冒烟、隐私模式均未在打包产物上重跑；设计说明 PDF 未按 v1.7 重制。
+- **未做**：Netlify 主站部署（仍 v1.1.1 四关版；本机无凭据）；20 分钟真人计时、11 条结局代表路线、Chrome/Safari/真机、844×390 打包冒烟、隐私模式均未在打包产物上重跑；设计说明 PDF 未按 v1.7 重制。
 - **仓库范围**：`.gitignore` 新增 `resource/`（134 MB 素材源库）、`.netlify/`、`docs/script.bak-expand/`、`project/story.js.bak-expand`、`project/tools/_pw-debug-*.js`；`dist/` 与 `*.zip` 原本即不入库。
-- **回滚**：删除 `dist/xiangbei-v1.7.0-dev*` 与 `dist/site` 即可重建；不影响已上线站点。
+- **回滚**：本地包删除 `dist/xiangbei-v1.7.0-dev*` 与 `dist/site` 即可重建；线上把 `main` 指回 `d54cd61`（v1.1.1 旧站提交）即可，不影响 `v1.4-dev` 分支。
+### 13.1 源码提交、tag 与推送（2026-11-08）
+
+- **本地提交**：`ef91f8e` "feat: 剧情回顾与 v1.7.0-dev 本地打包（步骤十六）"，父 `dfb1e5e`（v1.6.0-dev）；tag `step-16-done`（对象 `c5da9f5`）与 `v1.7.0-dev`（对象 `1a518b5`）均指向 `ef91f8e`。
+- **远端**：`origin` = https://github.com/nanxiangzizui/xiangbei.git ；`origin/v1.4-dev` = `ef91f8e`（已设上游），19 个 tag 全部推送。推送要加 `-c http.version=HTTP/1.1`，默认 HTTP/2 会 `error: RPC failed; HTTP 504`。
+- **推送前核查**：用户 2026-11-08 手动上传的 `main` 是单提交快照 `d54cd61`（226 文件 = 本地 152 文件 + 根目录 74 个 v1.1.1 旧站点文件，无任何 tag/分支）；`project/` 下仅 `engine.js`、`style.css` 的 blob 与本地不同，原因是 CRLF 原样上传（`git hash-object --no-filters` 结果与远端一致），内容无差。
+
+### 13.2 部署到 GitHub Pages（2026-11-09）
+
+- **部署提交**：`376a175` "deploy: v1.7.0-dev 站点（剧情回顾 / 存档列表 / 分支 / 成就 / 11 结局）"，父 `d54cd61`；本地分支 `deploy-gh-pages-v1.7`。生成方式：临时 index `git read-tree d54cd61` → 删 73 个旧站点路径 → 把 `dist/site` 72 个文件逐个 `hash-object -w` + `update-index` → `git write-tree --missing-ok`（旧树部分 blob 本地缺失，不加会报 `invalid object ... for '.nojekyll'`）→ `git commit-tree`。
+- **diff 仅 5 处**：M `engine.js`、M `index.html`、M `story.js`、M `style.css`、D `minigames.js`；`art.js`、`CREDITS.txt`、`design-note.pdf`、`assets/**` 与旧站同 blob，未变。
+- **推送**：`d54cd61..376a175` fast-forward 到 `main`，`origin/main` = `376a175`。
+- **公网验证**：`index.html` 27,025 B、无 `minigames` 引用、3 个 script（art/story/engine）；`engine.js` 306,630 B、`style.css` 102,983 B（线上为 LF，本地 CRLF 315,055 / 107,592，内容一致）；`story.js` 155,452 B、`art.js` 56,065 B、`CREDITS.txt` 9,667 B、`design-note.pdf` 303,713 B 与本地一致；`minigames.js` → 404；字体与底图 200。
+- **线上冒烟**（`dist/_smoke-live.js`，playwright-core + Edge headless，1280×720，证据 `docs/evidence/live-v1.7.0/`，gitignored）：19/20 通过。唯一失败是自设的“负载耗时 < 20s”（实测 `loadMs=24,226`，属网络，不是应用错误）。通过项：标题菜单 5 项（saves/codex/roster-gallery/branch/achievements）、存档空态“还没有存档”、开新档确认、进入 VN、推进 6 句（首句“1934年10月17日，于都河上起雾。”）、回顾入口 + 面板 5 条目 + × 关闭、Esc 暂停 11 个 data-action、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、canvas 就位、字体 2 个、无 minigames 引用；0 console error / 0 pageerror / 0 failed request。
+- **Netlify 未更新**：仍是 v1.1.1（14,000 B、含 minigames.js）；`.netlify/state.json` 只有 siteId，无 netlify CLI、无 `NETLIFY_AUTH_TOKEN`，需用户账号/后台重新上传 `dist/site`。
+- **未在公网重跑**：完整流程、11 结局路线、844×390 移动、隐私模式、Chrome/Safari/真机。
+

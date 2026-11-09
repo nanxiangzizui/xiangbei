@@ -1,24 +1,24 @@
 # 向北
 
 > 一块门板，两万五千里。
-> 16 岁红军文书，从于都走到吴起；七段路、三次救人危机、11 个人物结局（v1.4.0-dev 本地已实现；线上 v1.1.1 仍是四个小游戏版），七张史实图鉴，一次点名。
+> 16 岁红军文书，从于都走到吴起；七段路、三次救人危机、11 个人物结局（v1.7.0-dev 已部署到 GitHub Pages；Netlify 主站仍 v1.1.1 四关版），七张史实图鉴，一次点名。
 
-《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 多选取舍 + 状态/物资（v1.4.0-dev 本地已实现；线上 v1.1.1 仍包含四个小游戏）；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
+《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 多选取舍 + 状态/物资（v1.7.0-dev 已部署到 GitHub Pages；Netlify 仍 v1.1.1 四关版）；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
 
 **虚构人物，非史料人物。** 满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构；真实人物只进“史实注”，不进剧情对白。历史结局不可改：湘江必败、遵义必开、泸定必夺。
 
-> **v1.4.0-dev 已完成（2026-11-07，分支 `v1.4-dev`，未打包/未部署）**：行囊改 4 格（8 个半格），新增状态 0–4、三次救人危机和门板三条件；结局改为带门板 5 种 + 无门板 5 种 + 坏结局，共 11 条。林先生只在我死时死；没有全活，也不把牺牲做成分数。存档升到 `xiangbei.save.v2` 并保留 v1.3 旧档迁移。`main` 仍为 v1.3 / tag `step-10-done`；执行卡见 `step/step-11-状态物资与门板.md`，实测见 `docs/evidence/step-11-*`。
+> **v1.4.0-dev 已完成（2026-11-07，分支 `v1.4-dev`；现随 v1.7.0-dev 打包并部署 GitHub Pages）**：行囊改 4 格（8 个半格），新增状态 0–4、三次救人危机和门板三条件；结局改为带门板 5 种 + 无门板 5 种 + 坏结局，共 11 条。林先生只在我死时死；没有全活，也不把牺牲做成分数。存档升到 `xiangbei.save.v2` 并保留 v1.3 旧档迁移。`main` 仍为 v1.3 / tag `step-10-done`；执行卡见 `step/step-11-状态物资与门板.md`，实测见 `docs/evidence/step-11-*`。
 >
-> **v1.2.0-dev 历史（2026-11-06）**：删除四关小游戏，改为行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名；v1.4 在其上重写了物资与结局。线上仍是 v1.1.1 四关版，`dist/` 未重打包。
+> **v1.2.0-dev 历史（2026-11-06）**：删除四关小游戏，改为行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名；v1.4 在其上重写了物资与结局；GitHub Pages 已于 2026-11-09 更新到 v1.7.0-dev，Netlify 主站仍为 v1.1.1。
 
 ## 交付物
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.1.1 已上线**（Netlify，2026-11-05；用户认领 `xiangbei` 站点；静态直传 `dist/site`）；标题 2.0s 出占位图，开始→序章正常，0 console error / 0 404；完整流程未在公网重跑 |
-| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | v1.1.1 已上线（GitHub Pages，2026-11-05；仓库 `nanxiangzizui/xiangbei`，main / root；部署提交 `88771d3`）；关键文件 HTTP 200 + SHA256 7/7 一致 |
-| 发布站点 | `dist/site/` | v1.1.1 已生成并验证；73 个文件，31,356,254 B；与 Netlify 站点同包（`index.html` 多 326 B Netlify 注入注释） |
-| 离线 ZIP | `dist/xiangbei-v1.1.1-offline.zip` | v1.1.1 已生成并验证；75 个条目，30,818,357 B；根目录 `xiangbei-v1.1.1/` |
+| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.1.1 已上线**（Netlify，2026-11-05；用户认领 `xiangbei` 站点；静态直传 `dist/site`）；**仍是四关旧版，待用账号/CLI 重传 `dist/site` 更新到 v1.7.0-dev** |
+| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | **v1.7.0-dev 已上线**（GitHub Pages，2026-11-09，部署提交 `376a175`；`index.html` 27,025 B、无 minigames）；线上冒烟 19/20（唯一失败是网络加载 24.2s 超自设 20s 阈值），0 console error / 0 失败请求 |
+| 发布站点 | `dist/site/` | v1.7.0-dev 已生成并验证；72 个文件，31,600,743 B；与 GitHub Pages 站点同包 |
+| 离线 ZIP | `dist/xiangbei-v1.7.0-dev-offline.zip` | v1.7.0-dev 已生成并验证；74 个条目，30,871,186 B；SHA256 `9F548CEE…A6DB2`；根目录 `xiangbei-v1.7.0-dev/` |
 | 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
 | 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,667 B |
@@ -46,9 +46,9 @@ python -m http.server 8080
 
 ### 线上地址与重新上传
 
-**线上（主）**：https://xiangbei.netlify.app/ （Netlify，2026-11-05 静态直传 `dist/site`；Netlify 会在 `index.html` 注入约 326 B 说明注释，其余文件与 `dist/site` 同包）。
+**线上（主）**：https://xiangbei.netlify.app/ （Netlify，2026-11-05 静态直传 `dist/site`；Netlify 会在 `index.html` 注入约 326 B 说明注释，其余文件与 `dist/site` 同包）。**当前仍为 v1.1.1 四关版**：本机没有 Netlify 凭据（无 CLI、无 `NETLIFY_AUTH_TOKEN`），需用账号在后台/CLI 重传 `dist/site` 才能更新到 v1.7.0-dev。
 
-**线上（备）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.1.1 部署提交 `88771d3`）。
+**线上（备，现为最新版）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.7.0-dev 部署提交 `376a175`，2026-11-09；旧 v1.1.1 部署提交 `88771d3`）。
 
 重新上传：Netlify 主站需在 Netlify 后台/CLI 用账号重新上传 `dist/site`；GitHub Pages 备站仍把 `dist/site/` 与 `.nojekyll` 更新到 `main` 自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
@@ -63,7 +63,7 @@ python -m http.server 8080
 | 花名册 | 暂停 → 花名册 | 同上 |
 | 图鉴 | 标题 / 暂停 / 结局入口 | 同上 |
 
-选择段落（v1.4.0-dev 已实现，本地可玩；未打包/未部署）：
+选择段落（v1.7.0-dev 已打包并部署 GitHub Pages）：
 
 - **行囊**：4 格 = 8 个半格。药/青稞各 0.5 格，布鞋 1 格，铁锅/雨布各 2 格，门板占 2 格且不能当物资使用；五件里按格数取舍，不带门板最多四件。
 - **弃物**：湘江边六样东西里带三样上船，门板另算；带什么写进后续台词。
@@ -74,7 +74,7 @@ python -m http.server 8080
 - **状态与物资**：左上角常驻“状态 良好/勉强/差”；“物资”面板显示 4 格用量与可用配方，限时选择期间不能开。状态“差”时草地结算会强制开面板；走到 0 就是坏结局。
 - **门板/记名**：门板要同时满足体力、存活人数与被救者状态三条中的一条，才能在吴起留下；否则草地会让玩家亲手舍弃。
 
-v1.1.1 线上仍为四个小游戏（门板/弃物/渡船/攀索），均单手可完成；旧入口只作历史回归，不再作为 v1.4.0-dev 验收项。手机请横屏；竖屏会提示“请横屏”，并提示用系统浏览器打开。
+v1.1.1 的四个小游戏（门板/弃物/渡船/攀索）只保留在 Netlify 旧站；GitHub Pages 已无小游戏入口，旧入口只作历史回归。手机请横屏；竖屏会提示“请横屏”，并提示用系统浏览器打开。
 
 ## 七段、三次危机、11 结局、七图鉴、五卡
 
@@ -236,15 +236,17 @@ dist/                       交付产物（默认不提交）
 制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
 完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
 
-## 线上自检（2026-11-05，v1.1.1）
+## 线上自检（2026-11-05 v1.1.1；2026-11-09 v1.7.0-dev）
 
 > Netlify 主站（`https://xiangbei.netlify.app/`）做了标题/序章浏览器检查：标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；GitHub 备站做关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
+
+> **2026-11-09 v1.7.0-dev（GitHub Pages）**：`dist/_smoke-live.js` 用 Edge headless 1280×720 跑 19/20；唯一失败项是自设的“负载耗时 < 20s”（实测 24,226 ms，属网络，不是应用错误）。标题菜单 5 项、存档空态、开新档、序章 6 句、剧情回顾 5 条、暂停 11 项、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、字体 2 个、无 minigames 引用均通过；0 console error / 0 pageerror / 0 失败请求。截图见 `docs/evidence/live-v1.7.0/`（gitignored）。
 
 - [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
 - [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [x] 本地 v1.4.0-dev：4 格物资、状态、三次危机、11 结局与名册回廊；证据见 `docs/evidence/step-11-*`。
-- [ ] 公网仍是 v1.1.1：线上检查四关入口（`?minigame=door|abandon|boat|climb`，历史）与七张图鉴；v1.4 部署后再改为检查状态/物资面板与 11 结局。
+- [ ] Netlify 仍是 v1.1.1：四关入口只在该站；GitHub Pages 已换 v1.7.0-dev，待复检状态/物资面板与 11 结局入口。
 - [x] 手机竖屏显示“请把手机横过来”与“在浏览器打开”；横屏 844×390 已本地测。
 - [x] Netlify 标题/序章：0 console error / 0 404；无外部请求。
 - [ ] 完整流程中 0 error / 0 404；硬刷新不缓存旧 JS（公网完整流程未跑）。
