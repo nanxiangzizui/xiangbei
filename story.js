@@ -117,6 +117,8 @@
             min: 0,
             max: 5,
             confirmLabel: "系好行囊",
+            // 四格没装满就点确认，先弹「行囊尚未装满」；文案与按钮在 index.html 的 #bag-confirm-modal
+            confirmWhenNotFull: true,
             inventoryBase: ["roster", "pencil"],
             options: [
               {
@@ -532,7 +534,7 @@
                 key: "C",
                 text: "把门板横在桥头挡一下",
                 value: true,
-                set: { "choice.xiangjiang.hold": true, "item.door": false },
+                set: { "choice.xiangjiang.hold": true, "item.door": false, doorOutcome: "bridge" },
                 cost: "门板留在了浮桥，三号担架少一块垫板"
               }
             ]
@@ -664,13 +666,13 @@
           { id: "z107", type: "line", speaker: "旁白", text: "飞毛腿把脚伸进盆里，烫得吸了一口气。" },
           { id: "z108", type: "line", speaker: "飞毛腿", text: "你这水，能褪猪毛。" },
           { id: "z109", type: "line", speaker: "灶王", text: "褪你的正好。" },
-          { id: "z110", type: "line", speaker: "旁白", text: "我解下门板，肩膀上一道红印，磨破了皮。" },
-          { id: "z111", type: "line", speaker: "飞毛腿", text: "我说替你背，你不让。" },
-          { id: "z112", type: "line", speaker: "满崽", text: "你跑得快，背着它跑不快。" },
-          { id: "z113", type: "line", speaker: "飞毛腿", text: "我慢一点就是了。" },
-          { id: "z114", type: "line", speaker: "旁白", text: "他伸手按了按我的肩。我疼得缩了一下。" },
-          { id: "z115", type: "line", speaker: "飞毛腿", text: "你看。明天我背。" },
-          { id: "z116", type: "line", speaker: "满崽", text: "明天再说。" },
+          { id: "z110", type: "line", speaker: "旁白", text: "我解下门板，肩膀上一道红印，磨破了皮。", when: "item.door" },
+          { id: "z111", type: "line", speaker: "飞毛腿", text: "我说替你背，你不让。", when: "item.door" },
+          { id: "z112", type: "line", speaker: "满崽", text: "你跑得快，背着它跑不快。", when: "item.door" },
+          { id: "z113", type: "line", speaker: "飞毛腿", text: "我慢一点就是了。", when: "item.door" },
+          { id: "z114", type: "line", speaker: "旁白", text: "他伸手按了按我的肩。我疼得缩了一下。", when: "item.door" },
+          { id: "z115", type: "line", speaker: "飞毛腿", text: "你看。明天我背。", when: "item.door" },
+          { id: "z116", type: "line", speaker: "满崽", text: "明天再说。", when: "item.door" },
           { id: "z117", type: "line", speaker: "旁白", text: "林先生坐在灯下补冬生的鞋。鞋底磨穿了，她用旧布一层一层叠。" },
           { id: "z118", type: "line", speaker: "冬生", text: "先生，补厚了，我跑不动。" },
           { id: "z119", type: "line", speaker: "林先生", text: "不用你跑。你吹号。" },
@@ -1770,7 +1772,14 @@
             type: "line",
             speaker: "旁白",
             text: "我把小锅背上。锅沿磕着门板，一路响。",
-            when: "fate.zaowang.dead && item.pot"
+            when: "fate.zaowang.dead && item.pot && item.door"
+          },
+          {
+            id: "g022c",
+            type: "line",
+            speaker: "旁白",
+            text: "我把小锅背上。锅沿硌着背，一路响。",
+            when: "fate.zaowang.dead && item.pot && !item.door"
           },
           {
             id: "g022b",
@@ -2510,7 +2519,7 @@
         door_excellent: { hint: "门板到了最后，队伍也到了。" },
         door_grass_one: { hint: "有一块木板，留在了半路。" },
         door_carry_two: { hint: "门板到了吴起，你也到了；不是每个人都到了。" },
-        door_grass_many: { hint: "门板留在了草地，名字留在了名册上。" },
+        door_grass_many: { hint: "门板没有到吴起，名字留在了名册上。" },
         door_others: { hint: "有人替你走完了最后一段。" },
         no_door_zero: { hint: "你空着手，走到了吴起。" },
         no_door_one: { hint: "空着手，也救下了一个人。" },

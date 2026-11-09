@@ -421,7 +421,11 @@
       flags["memory.help"] = true;
     }
     if (flags.condition === 0) flags["fate.player.dead"] = true;
-    if (flags["fate.player.dead"] === true && flags["had.door"] === true && flags.rescues === 3) {
+    // 7(5) 只成立在“人死在草地时门板还在身上”。湘江桥头/泸定桥上的板子
+    // 已经不在草地里，不能因为救满三人就被改写成“别人带到吴起”。
+    var doorOnBody = flags["item.door"] === true &&
+      flags.doorOutcome !== "bridge" && flags.doorOutcome !== "wuqi";
+    if (flags["fate.player.dead"] === true && flags["had.door"] === true && doorOnBody && flags.rescues === 3) {
       flags.doorOutcome = "others";
       flags["item.door"] = false;
     }
@@ -443,7 +447,9 @@
     syncDerivedFlags(state);
   }
 
-  // 草地末门板去向：能带则 carried；不能带且不是桥板/吴起已留，落草地。
+  // 草地末门板去向：能带则 carried；已经在湘江/泸定留在桥上或吴起，保留去向；
+  // 门板已不在身上（v1.4 早期湘江 C 只写 item.door=false）补记 bridge；
+  // 其余不能带才落草地。死亡只对“门板还在身上”的情况走 7(5) others。
   function settleDoor(state) {
     var flags = state.flags;
     if (flags["had.door"] !== true) {
@@ -451,8 +457,21 @@
       flags["item.door"] = false;
       return "none";
     }
+    // 桥板/吴起板已经不在草地里，不能因为后来的状态或死亡被改写成 grass/others。
+    if (flags.doorOutcome === "bridge" || flags.doorOutcome === "wuqi") {
+      flags["item.door"] = false;
+      return flags.doorOutcome;
+    }
+    // 湘江 C：门板横在桥头，item.door=false，但早期版本没写 doorOutcome。
+    // 门板已不在背上，草地没有可舍弃的东西；补成 bridge，避免再弹“必须舍弃门板”。
+    if (flags["item.door"] !== true && flags.doorOutcome === "none") {
+      flags.doorOutcome = "bridge";
+      return "bridge";
+    }
     if (flags["fate.player.dead"] === true) {
-      if (flags.rescues === 3) {
+      // 5/11 只成立在“人死时门板还在身上，三人把你抬出去”；
+      // 门板早留在桥上的，不能算别人带到吴起。
+      if (flags.rescues === 3 && (flags.doorOutcome === "others" || flags["item.door"] === true)) {
         flags.doorOutcome = "others";
       } else {
         flags.doorOutcome = "grass";
@@ -463,10 +482,6 @@
     if (flags["item.door"] === true && doorCanCarry(state)) {
       flags.doorOutcome = "carried";
       return "carried";
-    }
-    if (flags.doorOutcome === "bridge" || flags.doorOutcome === "wuqi") {
-      flags["item.door"] = false;
-      return flags.doorOutcome;
     }
     flags.doorOutcome = "grass";
     flags["item.door"] = false;
@@ -522,6 +537,15 @@
 
   // v1.3→v1.4 迁移：旧档的 strain 实际是“救过几人”，不是剩余体力；rescues 直接取它。
   // 生死按“停在哪儿”补，不反推具体选择；旧 ending 快照只补 legacy，不重算。
+  // 湘江 x025a 的 A 也写 choice.xiangjiang.hold=true，只有“节点 + C”能区分门板横桥头。
+  function choseXiangjiangDoorBridge(save) {
+    var choices = save && save.choices;
+    if (!Array.isArray(choices)) return false;
+    return choices.some(function (entry) {
+      return isPlainObject(entry) && entry.nodeId === "x025a" && entry.option === "C";
+    });
+  }
+
   function migrateLegacyFate(state, save) {
     var source = isPlainObject(save.flags) ? save.flags : {};
     var flags = state.flags;
@@ -595,6 +619,17 @@
     if (legacyVersion && flags["fate.player.dead"] === true && flags.rescues === 3 && flags["had.door"] === true) {
       flags.doorOutcome = "others";
       flags["item.door"] = false;
+    }
+    // v1.4 早期湘江 C 只写 item.door=false，没写 doorOutcome；草地结算把它误当“带到草地再舍弃”。
+    // doorOutcome 仍是 none 时不必看日志：湘江 C 是草地前唯一“丢板但不写去向”的路径。
+    // 已经结算成 grass/others 的档只认 x025a C 日志；A 也写 hold=true，不能单看旗标。
+    var choseXiangjiangC = choseXiangjiangDoorBridge(save);
+    var lostDoorAtXiangjiang = flags["had.door"] === true && flags["item.door"] !== true &&
+      (flags.doorOutcome === "none" ||
+        (choseXiangjiangC && (flags.doorOutcome === "grass" || flags.doorOutcome === "others")));
+    if (lostDoorAtXiangjiang) {
+      flags.doorOutcome = "bridge";
+      changed = changed || "door";
     }
     // 返回非空值会触发一次即时落档与“已补记人物命运”提示；否则旧档要等到下一句才写入。
     return changed;
@@ -907,7 +942,8 @@
     var hadDoor = f["had.door"] === true;
     var dead = f["fate.player.dead"] === true;
     if (dead) {
-      return hadDoor && rescues === 3 ? "door_others" : "bad_end";
+      // 5/11 是“人死、门板由别人带到吴起”；bridge/wuqi 表示门板早已留在桥上或墙上。
+      return hadDoor && f.doorOutcome === "others" ? "door_others" : "bad_end";
     }
     if (!hadDoor) {
       if (rescues === 0) return "no_door_zero";
@@ -1245,9 +1281,14 @@
       if (flags["fate." + id + ".dead"] === true) flags[key] = 0;
     });
     flags["fate.lin.dead"] = flags["fate.player.dead"] === true;
+    // 7(5) 只在门板还在草地上（身上，或已结算成 others）时成立；
+    // 湘江桥头/泸定桥上的板子不在草地，死了也只能走坏结局。
+    var seven5Door = flags.doorOutcome === "others" ||
+      (flags["item.door"] === true && flags.doorOutcome !== "bridge" && flags.doorOutcome !== "wuqi");
     flags["fate.seven5"] = flags["fate.player.dead"] === true &&
       flags["had.door"] === true &&
-      flags.rescues === 3;
+      flags.rescues === 3 &&
+      seven5Door;
     flags["fate.badend"] = flags["fate.player.dead"] === true && flags["fate.seven5"] !== true;
     flags["fate.all.dead"] = flags["fate.feimao.dead"] === true &&
       flags["fate.zaowang.dead"] === true &&
@@ -2956,7 +2997,12 @@
     "door-discard",
     "danger-modal",
     "danger-accept",
-    "danger-refuse"
+    "danger-refuse",
+    "bag-confirm-modal",
+    "bag-confirm-title",
+    "bag-confirm-body",
+    "bag-confirm-yes",
+    "bag-confirm-no"
   ];
 
   var state = null;
@@ -2981,6 +3027,8 @@
   var packState = { open: false, mode: "browse", onClose: null, previousFocus: null };
   var doorState = { open: false, previousFocus: null };
   var dangerState = { open: false, previousFocus: null };
+  // 行囊未满的二次确认：只盖在多选面板上，不写档，也不进回顾
+  var bagConfirmState = { open: false, previousFocus: null };
   // 回顾层只读、按槽隔离；内存副本保证隐私模式下本局仍能翻看。
   var historyStore = { version: 1, runs: {} };
   var historyState = { open: false, previousFocus: null };
@@ -3740,7 +3788,7 @@
     if (!state || state.scene !== "vn" || historyState.open) return;
     if (state.paused || titleCardState.open) return;
     if (savePanelState.open || confirmState.open || endingReview.active) return;
-    if (packState.open || doorState.open || dangerState.open) return;
+    if (packState.open || doorState.open || dangerState.open || bagConfirmState.open) return;
     if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open) return;
     historyFlush();
     renderHistoryPanel();
@@ -4370,6 +4418,7 @@
       stopInteract();
       clearStatusNotice();
       if (packState.open) closePackPanel(true);
+      if (bagConfirmState.open) closeBagConfirm(true);
       if (doorState.open) {
         doorState.open = false;
         els.doorModal.hidden = true;
@@ -4691,7 +4740,7 @@
   function advanceInput() {
     if (!state || state.scene !== "vn" || state.paused) return;
     if (titleCardState.open || codexState.open) return;
-    if (dangerState.open || packState.open || doorState.open) return;
+    if (dangerState.open || packState.open || doorState.open || bagConfirmState.open) return;
     if (performance.now() < inputLockUntil) return;
     var node = currentNode(state);
     if (!node || node.type !== "line") return;
@@ -4873,6 +4922,18 @@
     return XB.core.effectiveMultiMax(state, node);
   }
 
+  // 行囊按半格计：已装的（含门板）加本次勾选的。8 个半格 = 4 格，满 4 格才算装满。
+  function bagUnits(node) {
+    var selected = multiRun.selected.reduce(function (sum, id) {
+      return sum + XB.core.optionUnits(multiOptionById(node, id) || {});
+    }, 0);
+    return XB.core.packUsage(state) + selected;
+  }
+
+  function bagIsFull(node) {
+    return bagUnits(node) >= XB.core.packCapacity(state);
+  }
+
   function renderMultiChoice(node) {
     historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "multi" });
     els.vnMultichoice.hidden = false;
@@ -4946,10 +5007,7 @@
     });
 
     var count = multiRun.selected.length;
-    var selectedUnits = multiRun.selected.reduce(function (sum, id) {
-      return sum + XB.core.optionUnits(multiOptionById(node, id) || {});
-    }, 0);
-    var usedSlots = (XB.core.packUsage(state) + selectedUnits) / 2;
+    var usedSlots = bagUnits(node) / 2;
     var slotText = (usedSlots % 1 === 0 ? String(usedSlots) : usedSlots.toFixed(1)) + "/4 格";
     if (multiRun.locked) {
       els.vnMultiStatus.textContent = "记下了。";
@@ -4989,12 +5047,22 @@
 
   function resolveMultiChoice() {
     var node = multiRun.node;
-    if (!node || multiRun.locked) return;
+    if (!node || multiRun.locked || bagConfirmState.open) return;
     var min = isFiniteNumber(node.min) ? node.min : 0;
     if (multiRun.selected.length < min) {
       toast("还要再选 " + (min - multiRun.selected.length) + " 样");
       return;
     }
+    // 四格没装满先问一句；「是」才落档，「否」退回多选，已选的物资原样留着。
+    if (node.confirmWhenNotFull && !bagIsFull(node)) {
+      openBagConfirm();
+      return;
+    }
+    commitMultiChoice(node);
+  }
+
+  function commitMultiChoice(node) {
+    if (!node || multiRun.locked) return;
     var result = XB.core.applyMultiChoice(state, node, multiRun.selected);
     if (!result) {
       toast("这一步没有记下来，请再选一次");
@@ -5025,10 +5093,46 @@
   }
 
   function hideMultiPanel() {
+    closeBagConfirm(true);
     els.vnMultichoice.hidden = true;
     multiRun.node = null;
     multiRun.selected = [];
     multiRun.locked = false;
+  }
+
+  function openBagConfirm() {
+    if (bagConfirmState.open) return;
+    bagConfirmState.open = true;
+    bagConfirmState.previousFocus = document.activeElement;
+    els.bagConfirmModal.hidden = false;
+    // 默认落在「是」：点确认本来就是要走，弹窗只是提醒
+    els.bagConfirmYes.focus();
+    refreshAudioDuck();
+  }
+
+  function closeBagConfirm(keepFocus) {
+    if (!bagConfirmState.open) return;
+    bagConfirmState.open = false;
+    els.bagConfirmModal.hidden = true;
+    var previous = bagConfirmState.previousFocus;
+    bagConfirmState.previousFocus = null;
+    if (!keepFocus && previous && previous.focus && previous !== document.body) previous.focus();
+    refreshAudioDuck();
+  }
+
+  // 「否」：关掉提示，多选原样留着，焦点回确认键，玩家可以接着补选。
+  function cancelBagConfirm() {
+    if (!bagConfirmState.open) return;
+    closeBagConfirm(true);
+    if (els.vnMultiConfirm && !els.vnMultiConfirm.disabled) els.vnMultiConfirm.focus();
+  }
+
+  function acceptBagConfirm() {
+    if (!bagConfirmState.open) return;
+    var node = multiRun.node;
+    closeBagConfirm(true);
+    if (!node || multiRun.locked) return;
+    commitMultiChoice(node);
   }
 
   /* ---------------- 选择结算 ---------------- */
@@ -7499,7 +7603,9 @@
   function refreshAudioDuck() {
     var duck = 1;
     if (codexState.open || galleryState.open || rosterGalleryState.open || branchState.open || achievementState.open || historyState.open) duck = Math.min(duck, 0.45);
-    if (packState.open || doorState.open || dangerState.open) duck = Math.min(duck, 0.45);
+    if (packState.open || doorState.open || dangerState.open || bagConfirmState.open) {
+      duck = Math.min(duck, 0.45);
+    }
     if (savePanelState.open || confirmState.open) duck = Math.min(duck, 0.45);
     if (state && state.paused) duck = Math.min(duck, 0.3);
     XB.audio.setDuck(duck);
@@ -7878,6 +7984,13 @@
     els.savesPanel.addEventListener("click", function (event) {
       if (event.target === els.savesPanel) closeSaves();
     });
+    // 点遮罩/窗身不该把焦点丢到 body：mousedown 默认行为才移动焦点，非按钮处一律拦下。
+    // 提示窗也不因点遮罩关闭，免得误触抹掉“尚未装满”。
+    els.bagConfirmModal.addEventListener("mousedown", function (event) {
+      if (event.target !== els.bagConfirmYes && event.target !== els.bagConfirmNo) {
+        event.preventDefault();
+      }
+    });
     // 标题卡不单独绑 pointerdown：document 上的 onPointerDown 已经负责关它并 return，
     // 两处都绑会让同一次点击关完卡片后继续把 p001 的第一页“补全”，第一句等于没打。
   }
@@ -7891,7 +8004,7 @@
     if (savePanelState.open || confirmState.open || endingReview.active) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
     if (historyState.open) return;
-    if (packState.open || doorState.open || dangerState.open) return;
+    if (packState.open || doorState.open || dangerState.open || bagConfirmState.open) return;
     if (titleCardState.open) {
       closeTitleCard();
       return;
@@ -7966,6 +8079,22 @@
     if (dangerState.open) {
       if (event.key === "Tab") {
         trapFocus(event, els.dangerModal);
+        event.preventDefault();
+      }
+      return;
+    }
+    // 行囊未满的提示：Tab 锁在两个键里，Esc 等同「否」（退回选物资）
+    if (bagConfirmState.open) {
+      if (event.key === "Tab") {
+        // 兜底：焦点若已落在窗外（程序失焦等），先收回「是/否」再交给原生 Tab 或 trapFocus
+        if (!els.bagConfirmModal.contains(document.activeElement)) {
+          (event.shiftKey ? els.bagConfirmNo : els.bagConfirmYes).focus();
+          event.preventDefault();
+        } else {
+          trapFocus(event, els.bagConfirmModal);
+        }
+      } else if (event.key === "Escape") {
+        cancelBagConfirm();
         event.preventDefault();
       }
       return;
@@ -8249,6 +8378,12 @@
       case "danger-refuse":
         refuseDanger();
         break;
+      case "bag-confirm-yes":
+        acceptBagConfirm();
+        break;
+      case "bag-confirm-no":
+        cancelBagConfirm();
+        break;
       case "interact-answer":
         if (interactRun.mode === "rollcall") answerRollcall();
         else skipNamepick(false);
@@ -8363,7 +8498,8 @@
 
   function canShowStatusNotice() {
     if (!state || state.scene !== "vn") return false;
-    if (titleCardState.open || packState.open || dangerState.open || doorState.open) return false;
+    if (titleCardState.open || packState.open || dangerState.open || doorState.open ||
+        bagConfirmState.open) return false;
     if (codexState.open || achievementState.open) return false;
     if (els.pause && !els.pause.hidden) return false;
     return true;
