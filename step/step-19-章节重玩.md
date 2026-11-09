@@ -1,6 +1,6 @@
 # 步骤十九：章节重玩（v1.8.0-dev 增量）
 
-> 2026-11-09 · 分支 v1.4-dev · 已实现、已通过浏览器验证 · 未打包、未部署 · 证据 docs/evidence/step-19-*
+> 2026-11-09 · 分支 v1.4-dev · 已实现、已通过浏览器验证、已打包并部署（GitHub Pages 与 Netlify）· 证据 docs/evidence/step-19-*
 > 需求来源：用户 m00001；技术约束：无额外约束。
 
 ## 1. 目标与范围
@@ -86,8 +86,10 @@
 | 真实一周目 | 14/14，217s：新档走完七章 → 泸定「从此开始」→ 开新档 → 章前旗标/底片拷贝，`ending=null` |
 | 移动 844×390 | 5/5：入口与两步行热区≥44 CSS px |
 | 步骤十八回归 | 34/34 |
+| 打包冒烟（`dist/site` / 解压 ZIP） | 各 21/21 |
+| 两站线上冒烟（GitHub Pages / Netlify） | 各 19/19 |
 
-证据：`docs/evidence/step-19-basic`、`step-19-new`、`step-19-back`、`step-19-mobile`、`step-19-ending`、`step-19-all-http`、`step-19-all-file`、`step-19-full`、`step-18-regression`。
+证据：`docs/evidence/step-19-basic`、`step-19-new`、`step-19-back`、`step-19-mobile`、`step-19-ending`、`step-19-all-http`、`step-19-all-file`、`step-19-full`、`step-18-regression`、`package-v1.8.0`、`package-v1.8.0-zip`、`live-v1.8.0`。
 
 ## 9. 已知口径与未覆盖
 
@@ -95,4 +97,11 @@
 - 暂停菜单发起章节重玩的路径没有专项浏览器用例；代码复用同一 `openChapterTarget`，但未单独计时/截图（P1）。
 - 移动端只验证两步行与入口热区，没有在 844×390 跑完整结局（P1）。
 - Chrome/Safari/真机、20 分钟全程、11 条结局各一次仍沿用既有 P1/P0 例外。
-- 本轮未打包、未部署；线上仍为 v1.7.2-dev。
+- 本轮已打包并部署 v1.8.0-dev；两站线上均为 v1.8.0-dev。
+
+## 10. 打包与部署（2026-11-09）
+
+- `release.py` 升到 `1.8.0-dev`，离线 README 增加【章节重玩】；`dist/site` 72 文件 / 31,630,776 B，离线包 73 文件 / 31,634,192 B，ZIP 74 条目 / 30,878,464 B（SHA256 `AA34D3AFF00BC0DE17DA9C69DB8E9C30A91C80D6EE6E16DA674FC9381428B215`），`SHA256SUMS` 147 行，`verify` OK。
+- GitHub Pages：部署提交 `65beb46`（父 `a120af0`；仅 engine/index/style 变），推送到 `main`；https://nanxiangzizui.github.io/xiangbei/ 。
+- Netlify：deploy `6af17135…`（73 文件，3 个新 blob，build 15.2s）；https://xiangbei.netlify.app/ 。
+- 打包冒烟 `dist/site` 21/21、解压 ZIP 21/21；两站线上各 19/19（两步面板逐字、旧档置灰、复制前情进湘江），0 console error / pageerror / 失败请求。

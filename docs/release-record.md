@@ -378,3 +378,43 @@
 - **README 同步**：顶部交付物、运行目录、操作表、线上自检与版本号已从 v1.7.0-dev 更新到 v1.7.2-dev；历史 v1.7.0 冒烟保留并标注“历史”。
 - **未重跑**：20 分钟完整流程、11 条人物结局、844×390 移动、隐私模式、Chrome/Safari/真机；本次线上只验证标题/设置/初始化和关键文件，不把两站写成“完整流程通过”。
 - **回滚**：GitHub Pages 把 `main` 指回 `d0fe7e9`；Netlify 后台 Publish 旧 deploy `6af141ac81fe0a4b93f17be0`（v1.7.1-dev）。均不影响 `v1.4-dev`。
+
+## 16. v1.8.0-dev 打包与部署（2026-11-09）
+
+- **触发**：用户 m00839「帮我打包，部署线上」。把步骤十九「一周目后从指定章节重玩」打包，覆盖 GitHub Pages 与 Netlify 线上版本。
+- **基线**：分支 `v1.4-dev`；实现提交 `a4314e2`「feat: 一周目后从指定章节重玩（v1.8.0-dev）」，10 files changed / 1,480 insertions / 37 deletions；tag `step-19-done` 与 `v1.8.0-dev` 均指向该提交。打包时只改 `project/tools/release.py` 的 `VERSION` 与离线 README，运行时代码未再改。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,630,776 B |
+| 离线包目录 | `dist/xiangbei-v1.8.0-dev/` | 73 文件 / 31,634,192 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.8.0-dev-offline.zip` | 74 条目 / 30,878,464 B / SHA256 `AA34D3AFF00BC0DE17DA9C69DB8E9C30A91C80D6EE6E16DA674FC9381428B215` |
+| 设计说明 | `dist/design-note.pdf` | 303,713 B（沿用旧 PDF，未按 v1.8 重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 9,667 B |
+
+- **门禁**：`check-build` **51/51**（含 C52 章节重玩契约）、`smoke` **47/47**、`check-script` 9 文件 OK、`release.py verify` OK。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：`dist/site` 的 http 与 `file://` 共 **21/21**；解压 ZIP 根目录再跑 **21/21**（标题菜单、存档空态、开新档“是/否”、序章 6 句、回顾入口与条目、暂停菜单、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、`file://` 字体）；0 console error / pageerror / failed request。证据 `docs/evidence/package-v1.8.0/` 与 `docs/evidence/package-v1.8.0-zip/`（gitignored）。
+
+### 16.1 部署到 GitHub Pages
+
+- **部署提交**：`65beb46facdc937dca4c34289bd796b380fb7aeb`「deploy: v1.8.0-dev 站点（一周目后章节重玩）」，父 `a120af0`。
+- **生成方式**：临时 index `dist/.deploy-index-180` → `git read-tree origin/main` → 按旧包 `dist/xiangbei-v1.7.2-dev`（去掉 README.txt）删除 72 个旧站点路径，保留 project/docs 等源文件 → 对 `dist/site` 每个文件 `git hash-object -w --no-filters` + `update-index` → 保留 `.nojekyll` → `write-tree --missing-ok` → `commit-tree -p a120af0`。
+- **树与 diff**：相对父提交仅 M `engine.js`、M `index.html`、M `style.css`（3 files / 573 insertions / 20 deletions）；story.js、art.js 与全部素材同 blob，无新增文件。
+- **推送**：`a120af0..65beb46` fast-forward 到 `main`，`origin/main` = `65beb46`；本地 `main` 同步指向该提交。
+- **哈希核对**：公网下载 index.html 28,581 B、engine.js 341,225 B、style.css 109,421 B、story.js 155,930 B、CREDITS.txt 9,667 B；SHA256 五项均与 `dist/site` 逐字节一致。
+
+### 16.2 部署到 Netlify
+
+- **部署**：`npx --yes netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.8.0-dev 章节重玩"`（本机凭据在用户目录，不入仓库）。
+- **deploy id**：`6af171353636d4cd78694df6`，Unique URL https://6af171353636d4cd78694df6--xiangbei.netlify.app ，生产 https://xiangbei.netlify.app ；CLI 报 73 文件、3 个新 blob、build 15.2s。
+- **哈希核对**：engine.js 341,225 B、style.css 109,421 B、story.js 155,930 B、CREDITS.txt 9,667 B 与本地逐字节 SHA256 一致；index.html 28,907 B（本地 28,581 B，Netlify 注入 326 B 托管注释）。
+
+### 16.3 线上冒烟与未覆盖
+
+- **脚本**：`dist/_smoke-live-180.js`（本地、gitignored；playwright-core + Edge headless，1280×720）。每站先 `?reset=1&v=180` 看标题，再注入一份已完结源档、一份未完结目标档和旧版缺章前记录档；从剧情分支湘江章卡点「从此开始」。
+- **检查点**：首项「开始 / 继续」；分支图与章卡「从此开始」；第 1 步标题逐字「请选择一个存档开始」，只列未完结目标档；第 2 步标题逐字「对于你选择的章节前的剧情走向，你希望走哪条路线？」，只列已完结档，旧档缺章前记录置灰；选中目标档成为当前档，前情旗标/物资/章节底片复制，chapterId=xiangjiang 且 ending=null；线上 engine.js 含章节重玩代码。
+- **结果**：GitHub Pages **19/19**、Netlify **19/19**；0 console error / pageerror / failed request。证据 `docs/evidence/live-v1.8.0/`（result.json + 两站截图，gitignored）。
+- **未重跑**：20 分钟真人完整流程、11 条人物结局、844×390 移动完整结局、隐私模式、Chrome/Safari/真机；本次线上只验证章节重玩入口与拷贝，不把两站写成“完整流程通过”。
+- **回滚**：GitHub Pages 把 `main` 指回 `a120af0`；Netlify 后台 Publish 旧 deploy `6af15f30eb860f2c58fc6369`（v1.7.2-dev）。均不影响 `v1.4-dev`。

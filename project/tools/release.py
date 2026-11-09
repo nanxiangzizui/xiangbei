@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build, verify and hash the static release for 《向北》 v1.7.2-dev.
+"""Build, verify and hash the static release for 《向北》 v1.8.0-dev.
 
 Usage:
   python project/tools/release.py stage
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "project"
 DIST = ROOT / "dist"
-VERSION = "1.7.2-dev"
+VERSION = "1.8.0-dev"
 SITE = DIST / "site"
 PKG = DIST / f"xiangbei-v{VERSION}"
 ZIP = DIST / f"xiangbei-v{VERSION}-offline.zip"
@@ -143,6 +143,12 @@ file:// 下 Edge 可存档；若浏览器禁用 localStorage，游戏会提示
 旧档 xiangbei.save.v2 / v1 首次启动自动迁为第 1 档。
 清空：标题右上“设置”→“危险操作”→“初始化游戏”后确认（同时清分支、成就、名册，保留设置）。
 隐私模式可能无法存档，会有提示，仍可继续。
+
+【章节重玩】
+完成一周目后，剧情分支里的章卡详情会多出“从此开始”（序章除外）。
+先选一个未完结存档或开新档，再选一个有该章前情记录的已完结存档；
+游戏会把那一章之前的状态与剧情回顾复制到目标档，从该章开头继续。
+旧版本留下的已完结存档没有章节记录，需要再走一次完整周目后才能用于此处。
 
 【回顾 / 分支 / 成就】
 游戏内右上“回顾”按章回看本周目已读台词与选择，读档后截到存档点；
