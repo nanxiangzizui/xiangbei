@@ -283,6 +283,7 @@
           <h3 id="branch-detail-title" class="xb-branch-detail__title"></h3>
           <p id="branch-detail-sub" class="xb-branch-detail__sub"></p>
           <div id="branch-detail-body" class="xb-branch-detail__body" tabindex="0"></div>
+          <div id="branch-detail-actions" class="xb-branch-detail__actions" hidden></div>
         </div>
       </div>
     </div>
@@ -402,7 +403,7 @@
       <div class="xb-saves__panel">
         <button type="button" id="saves-close" class="xb-modal__close" data-action="saves-close" aria-label="关闭存档">×</button>
         <header class="xb-saves__head">
-          <p class="xb-saves__kicker">一块门板，两万五千里</p>
+          <p id="saves-kicker" class="xb-saves__kicker">一块门板，两万五千里</p>
           <h2 id="saves-title" class="xb-saves__title">存档</h2>
           <p id="saves-count" class="xb-saves__count"></p>
         </header>
@@ -410,6 +411,7 @@
           <button type="button" id="save-new" class="xb-btn xb-btn--primary" data-action="save-new">开启新档</button>
           <button type="button" id="save-latest" class="xb-btn" data-action="save-latest">上次玩到</button>
           <button type="button" id="save-delete" class="xb-btn" data-action="save-delete">删除存档</button>
+          <button type="button" id="saves-back" class="xb-btn" data-action="saves-back" hidden>返回</button>
         </div>
         <div class="xb-saves__list-wrap">
           <div id="saves-list" class="xb-saves__list" role="group" aria-label="存档列表"></div>

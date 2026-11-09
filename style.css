@@ -3839,6 +3839,39 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   padding-right: 8px;
 }
 
+/* 章节详情底部：一周目后才可用；不可用时保留按钮并说明原因，不藏起来。 */
+.xb-branch-detail__actions {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: var(--border) solid var(--ink-a12);
+}
+
+.xb-branch-start {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.xb-branch-start__button {
+  flex: 0 0 auto;
+  min-width: 180px;
+  min-height: 64px;
+  font-size: 18px;
+}
+
+.xb-branch-start__button.is-unavailable {
+  opacity: 0.55;
+}
+
+.xb-branch-start__hint {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
 .xb-branch-node {
   border-top: 1px dashed var(--ink-a30);
 }
@@ -4091,6 +4124,9 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-branch-detail__kicker { font-size: 14px; }
   .xb-branch-detail__title { font-size: 36px; }
   .xb-branch-detail__sub { font-size: 15px; }
+  .xb-branch-start { gap: 12px; }
+  .xb-branch-start__button { min-height: 82px; font-size: 22px; }
+  .xb-branch-start__hint { font-size: 18px; }
   .xb-branch-node__toggle { min-height: 96px; grid-template-columns: 42px minmax(0, 1fr) auto; }
   .xb-branch-node__index { font-size: 14px; }
   .xb-branch-node__title { font-size: 24px; }
@@ -4408,6 +4444,24 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   box-shadow: 6px 6px 0 var(--shadow);
 }
 
+.xb-saves.is-chapter {
+  z-index: var(--z-branch-detail);
+}
+
+.xb-saves__panel.is-chapter {
+  width: 980px;
+}
+
+.xb-saves__panel.is-chapter .xb-saves__title {
+  font-size: 30px;
+  line-height: 1.28;
+  letter-spacing: 2px;
+}
+
+.xb-saves__panel.is-chapter .xb-saves__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .xb-saves__head {
   display: flex;
   flex-direction: column;
@@ -4490,6 +4544,16 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   box-shadow:
     0 0 0 var(--focus-w) var(--focus-color),
     0 0 0 calc(var(--focus-w) + var(--focus-offset)) var(--focus-gap);
+}
+
+.xb-saves__row.is-unavailable {
+  border-style: dashed;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.xb-saves__row.is-unavailable:hover {
+  border-color: var(--ink-a20);
 }
 
 .xb-saves__row-main {
@@ -4599,6 +4663,8 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
     padding: 18px 28px 14px;
     gap: 10px;
   }
+  .xb-saves__panel.is-chapter { width: 1240px; }
+  .xb-saves__panel.is-chapter .xb-saves__title { font-size: 34px; }
   .xb-saves__kicker { font-size: 16px; letter-spacing: 3px; }
   .xb-saves__title { font-size: 42px; }
   .xb-saves__count { font-size: 20px; }

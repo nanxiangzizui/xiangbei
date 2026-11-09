@@ -2745,6 +2745,10 @@
   var HISTORY_KEY = "xiangbei.history.v1";
   var HISTORY_MAX_ENTRIES = 800;
   var HISTORY_MAX_RUNS = 24;
+  // 从章节重玩需要“本章开始前”的完整状态；物资使用不进 choices，不能靠重放推演。
+  // 单独一个键，避免每次 saveNow 都把七章快照塞进 512KB 的主存档列表。
+  var CHAPTERS_KEY = "xiangbei.chapters.v1";
+  var MAX_CHAPTERS_BYTES = 2 * 1024 * 1024;
   var PAGE_HEIGHT = 66;
   var INPUT_LOCK_MS = 100;
   var CHOICE_SETTLE_MS = 240;
@@ -2825,11 +2829,13 @@
     "ending-codex",
     "ending-branch",
     "saves-panel",
+    "saves-kicker",
     "saves-title",
     "saves-count",
     "saves-list",
     "saves-empty",
     "saves-close",
+    "saves-back",
     "save-new",
     "save-latest",
     "save-delete",
@@ -2943,6 +2949,7 @@
     "branch-detail-title",
     "branch-detail-sub",
     "branch-detail-body",
+    "branch-detail-actions",
     "achievement-panel",
     "achievement-title",
     "achievement-count",
@@ -2981,7 +2988,14 @@
   var savesStore = { version: 1, activeId: null, settings: null, slots: [] };
   var savesStorageOk = true;
   var savesStorageWarned = false;
-  var savePanelState = { open: false, mode: "list", selected: {}, previousFocus: null };
+  var savePanelState = {
+    open: false,
+    mode: "list",
+    selected: {},
+    previousFocus: null,
+    chapterId: null,
+    targetId: null
+  };
   var confirmState = { open: false, kind: "", slotId: null, previousFocus: null };
   // 设置面板挂在 #pause 里；标题态借同一遮罩显示，关闭时按来源还原。
   var settingsState = { open: false, from: "", previousFocus: null };
@@ -3007,6 +3021,10 @@
   var historyStorageOk = true;
   var historyStorageWarned = false;
   var historySaveTimer = 0;
+  // 章节起点快照：按存档槽隔离，只服务“从某一章重新开始”，不参与主档 11 键。
+  var chapterStore = { version: 1, updatedAt: 0, slots: {} };
+  var chapterStorageOk = true;
+  var chapterStorageWarned = false;
   var artResizeFrame = 0;
   var artResizeScale = 1;
   var inputLockUntil = 0;
@@ -3140,6 +3158,8 @@
     var loaded = loadSavesAtBoot();
     savesStore = loaded.store;
     historyStore = historyLoadAtBoot();
+    chapterStore = chapterLoadAtBoot();
+    chapterPrune();
     state = defaults();
     state.settings = cloneJson(savesStore.settings);
 
@@ -3395,6 +3415,180 @@
     }
   }
 
+  /* ---------------- 章节起点：从某一章重玩的状态底片 ---------------- */
+
+  function emptyChapterStore() {
+    return { version: 1, updatedAt: 0, slots: {} };
+  }
+
+  function normalizeChapterSnapshot(raw) {
+    if (!isPlainObject(raw) || typeof raw.at !== "string") return null;
+    var result = normalize(raw.state);
+    if (result.issue) return null;
+    var snapshot = result.state;
+    if (snapshot.scene !== "vn" || !snapshot.chapterId || !snapshot.nodeId) return null;
+    if (branchChapterIds().indexOf(snapshot.chapterId) === -1) return null;
+    return { at: raw.at, state: serialize(snapshot) };
+  }
+
+  function normalizeChapterSlot(raw) {
+    if (!isPlainObject(raw) || !isPlainObject(raw.chapters)) return null;
+    var chapters = {};
+    Object.keys(raw.chapters).forEach(function (chapterId) {
+      if (branchChapterIds().indexOf(chapterId) === -1) return;
+      var snapshot = normalizeChapterSnapshot(raw.chapters[chapterId]);
+      if (!snapshot || snapshot.state.chapterId !== chapterId) return;
+      chapters[chapterId] = snapshot;
+    });
+    if (!Object.keys(chapters).length) return null;
+    return {
+      updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : nowIso(),
+      chapters: chapters
+    };
+  }
+
+  function normalizeChapterStore(raw) {
+    if (!isPlainObject(raw) || raw.version !== 1 || !isPlainObject(raw.slots)) return null;
+    var store = emptyChapterStore();
+    store.updatedAt = isFiniteNumber(raw.updatedAt) ? Math.round(raw.updatedAt) : 0;
+    Object.keys(raw.slots).forEach(function (slotId) {
+      if (slotId.indexOf("slot-") !== 0) return;
+      var slot = normalizeChapterSlot(raw.slots[slotId]);
+      if (slot) store.slots[slotId] = slot;
+    });
+    return store;
+  }
+
+  function writeChapterStore(store) {
+    var json = "";
+    try {
+      json = JSON.stringify(store);
+    } catch (err) {
+      console.error("[XB] 章节记录无法序列化：" + err.message);
+      return false;
+    }
+    if (utf8Bytes(json) > MAX_CHAPTERS_BYTES) {
+      console.error("[XB] 章节记录超过上限 " + MAX_CHAPTERS_BYTES);
+      if (!chapterStorageWarned) {
+        chapterStorageWarned = true;
+        toast("章节记录空间不足，从章节重玩暂不可用");
+      }
+      return false;
+    }
+    try {
+      window.localStorage.setItem(CHAPTERS_KEY, json);
+      chapterStorageOk = true;
+      chapterStorageWarned = false;
+      return true;
+    } catch (err) {
+      console.error("[XB] 写入章节记录失败：" + err.message);
+      chapterStorageOk = false;
+      if (!chapterStorageWarned) {
+        chapterStorageWarned = true;
+        toast("本机无法保存章节记录，从章节重玩暂不可用");
+      }
+      return false;
+    }
+  }
+
+  function chapterLoadAtBoot() {
+    var read = readStorage(CHAPTERS_KEY);
+    if (!read.ok) {
+      chapterStorageOk = false;
+      return emptyChapterStore();
+    }
+    if (!read.raw) return emptyChapterStore();
+    var parsed = null;
+    try {
+      parsed = JSON.parse(read.raw);
+    } catch (err) {
+      console.error("[XB] 章节记录不是合法 JSON：" + err.message);
+      backupSave("bad", CHAPTERS_KEY);
+      toast("章节记录损坏，已备份");
+      return emptyChapterStore();
+    }
+    var store = normalizeChapterStore(parsed);
+    if (!store) {
+      console.error("[XB] 章节记录校验失败");
+      backupSave("bad", CHAPTERS_KEY);
+      toast("章节记录与当前版本不匹配，已备份");
+      return emptyChapterStore();
+    }
+    return store;
+  }
+
+  function chapterSnapshotState(slotId, chapterId) {
+    var slot = chapterStore.slots[slotId];
+    if (!slot || !slot.chapters[chapterId]) return null;
+    return cloneJson(slot.chapters[chapterId].state);
+  }
+
+  // 只在真正的章节起点调用：新档序章、章末进入下一章、章节重玩成功。
+  function chapterCapture(slotId, chapterId) {
+    if (!slotId || !state || branchChapterIds().indexOf(chapterId) === -1) return false;
+    if (!chapterById(chapterId)) return false;
+    var payload = serialize(state);
+    payload.scene = "vn";
+    payload.chapterId = chapterId;
+    payload.ending = null;
+    var at = nowIso();
+    var slot = chapterStore.slots[slotId] || { updatedAt: at, chapters: {} };
+    slot.chapters[chapterId] = { at: at, state: payload };
+    slot.updatedAt = at;
+    chapterStore.slots[slotId] = slot;
+    chapterStore.updatedAt = Date.now();
+    return writeChapterStore(chapterStore);
+  }
+
+  // 把来源档的前情快照整段搬到目标档；目标档本章及以后一律作废。
+  function chapterCopyPrefix(sourceId, targetId, chapterId) {
+    var order = branchChapterIds();
+    var targetIndex = order.indexOf(chapterId);
+    if (targetIndex === -1) return false;
+    var source = chapterStore.slots[sourceId];
+    var chapters = {};
+    if (source) {
+      order.forEach(function (id, index) {
+        if (index <= targetIndex && source.chapters[id]) {
+          chapters[id] = cloneJson(source.chapters[id]);
+        }
+      });
+    }
+    chapterStore.slots[targetId] = { updatedAt: nowIso(), chapters: chapters };
+    chapterStore.updatedAt = Date.now();
+    return writeChapterStore(chapterStore);
+  }
+
+  function chapterRemoveSlots(ids) {
+    var changed = false;
+    ids.forEach(function (id) {
+      if (chapterStore.slots[id]) {
+        delete chapterStore.slots[id];
+        changed = true;
+      }
+    });
+    if (changed) {
+      chapterStore.updatedAt = Date.now();
+      writeChapterStore(chapterStore);
+    }
+  }
+
+  // 主存档被删/被初始化后，章节底片跟着走，避免留下无法再到达的旧路线。
+  function chapterPrune() {
+    var live = {};
+    savesStore.slots.forEach(function (slot) { live[slot.id] = true; });
+    var changed = false;
+    Object.keys(chapterStore.slots).forEach(function (id) {
+      if (!live[id]) {
+        delete chapterStore.slots[id];
+        changed = true;
+      }
+    });
+    if (!changed) return;
+    chapterStore.updatedAt = Date.now();
+    writeChapterStore(chapterStore);
+  }
+
   /* ---------------- 剧情回顾：独立只读记录 ---------------- */
 
   function emptyHistoryStore() {
@@ -3611,6 +3805,28 @@
     historyWrite();
   }
 
+  // 从章节重玩：只把“本章之前”的回顾条目搬过来；本章重新走，不混入旧局台词。
+  function historyCopyPrefix(sourceId, targetId, chapterId) {
+    var order = branchChapterIds();
+    var targetIndex = order.indexOf(chapterId);
+    var entries = [];
+    var source = historyStore.runs[sourceId];
+    if (source && targetIndex > 0) {
+      source.entries.forEach(function (entry) {
+        var index = order.indexOf(entry.c);
+        if (index !== -1 && index < targetIndex) entries.push(cloneJson(entry));
+      });
+    }
+    delete historyStore.runs.session;
+    historyStore.runs[targetId] = {
+      entries: entries,
+      checkpoint: entries.length,
+      updatedAt: nowIso()
+    };
+    historyTrimRuns();
+    historyWrite();
+  }
+
   function historyResetAll() {
     if (historySaveTimer) {
       clearTimeout(historySaveTimer);
@@ -3800,19 +4016,23 @@
     historyFlush();
   }
 
-  // ?reset=1 与调试用：只清存档与回顾，不动分支/成就/名册（初始化在 initializeGame 里另清）。
+  // ?reset=1 与调试用：只清存档、章节底片与回顾，不动分支/成就/名册（初始化在 initializeGame 里另清）。
   function clearSave() {
     try {
       window.localStorage.removeItem(SAVES_KEY);
       window.localStorage.removeItem(SAVE_KEY);
       window.localStorage.removeItem(LEGACY_SAVE_KEY);
       window.localStorage.removeItem(HISTORY_KEY);
+      window.localStorage.removeItem(CHAPTERS_KEY);
     } catch (err) {
       console.error("[XB] 清除存档失败：" + err.message);
     }
     savesStore = emptySavesStore();
     savesStore.settings = normalizeStoreSettings(state ? state.settings : null);
     historyResetAll();
+    chapterStore = emptyChapterStore();
+    chapterStorageOk = true;
+    chapterStorageWarned = false;
   }
 
   // 只在章末、结局与手动「保存」时调用：中途对话不落盘，退出后回到本章开头。
@@ -3895,11 +4115,60 @@
     return (chapter ? chapter.title : "长征途中") + " · 上次保存 " + formatSaveClock(slot.updatedAt);
   }
 
+  function savePanelChapterMode() {
+    return savePanelState.mode === "chapter-target" || savePanelState.mode === "chapter-source";
+  }
+
+  function chapterReplaySourceSlots(chapterId) {
+    return savesStore.slots.filter(function (slot) {
+      return slotEnded(slot) && !!chapterSnapshotState(slot.id, chapterId);
+    });
+  }
+
+  function chapterReplayAvailability(chapterId) {
+    if (chapterId === "prologue") {
+      return { allowed: false, reason: "序章没有前情；直接开新档即可。", sources: 0 };
+    }
+    var completed = savesStore.slots.filter(slotEnded);
+    if (!completed.length) {
+      return { allowed: false, reason: "完成一周目后，可从这一章重新开始。", sources: 0 };
+    }
+    var sources = chapterReplaySourceSlots(chapterId).length;
+    if (!sources) {
+      return { allowed: false, reason: "已完结存档里还没有这一章的前情记录。再走一次完整周目后可用。", sources: 0 };
+    }
+    if (!latestUnfinishedSlot() && savesStore.slots.length >= SAVE_SLOT_MAX) {
+      return { allowed: false, reason: "存档已满，请先删除一个存档。", sources: sources };
+    }
+    return { allowed: true, reason: "", sources: sources };
+  }
+
+  function openChapterTarget(chapterId, trigger) {
+    var availability = chapterReplayAvailability(chapterId);
+    if (!availability.allowed) {
+      toast(availability.reason);
+      return;
+    }
+    savePanelState.open = true;
+    savePanelState.mode = "chapter-target";
+    savePanelState.selected = {};
+    savePanelState.chapterId = chapterId;
+    savePanelState.targetId = null;
+    savePanelState.previousFocus = trigger || document.activeElement;
+    renderSavePanel();
+    els.savesPanel.hidden = false;
+    XB.audio.cue("codex");
+    refreshAudioDuck();
+    els.savesClose.focus({ preventScroll: true });
+  }
+
   function openSaves() {
     if (!state || state.scene !== "title") return;
     savePanelState.open = true;
     savePanelState.mode = "list";
     savePanelState.selected = {};
+    savePanelState.chapterId = null;
+    savePanelState.targetId = null;
     savePanelState.previousFocus = document.activeElement;
     renderSavePanel();
     els.savesPanel.hidden = false;
@@ -3914,18 +4183,66 @@
     savePanelState.open = false;
     savePanelState.mode = "list";
     savePanelState.selected = {};
+    savePanelState.chapterId = null;
+    savePanelState.targetId = null;
     savePanelState.previousFocus = null;
     els.savesPanel.hidden = true;
+    els.savesPanel.classList.remove("is-chapter");
+    var panel = els.savesPanel.querySelector(".xb-saves__panel");
+    if (panel) panel.classList.remove("is-chapter");
     refreshAudioDuck();
     if (!silent && previous && previous.focus) previous.focus({ preventScroll: true });
   }
 
+  function chapterSaveBack() {
+    if (savePanelState.mode === "chapter-source") {
+      savePanelState.mode = "chapter-target";
+      savePanelState.targetId = null;
+      renderSavePanel();
+      els.savesClose.focus({ preventScroll: true });
+      return;
+    }
+    closeSaves();
+  }
+
+  function focusFirstChapterSource() {
+    var first = els.savesList.querySelector('.xb-saves__row[aria-disabled="false"]');
+    if (first) first.focus({ preventScroll: true });
+    else els.savesClose.focus({ preventScroll: true });
+  }
+
   function renderSavePanel() {
+    var mode = savePanelState.mode;
+    var chapterMode = savePanelChapterMode();
+    var chapter = savePanelState.chapterId ? chapterById(savePanelState.chapterId) : null;
     var slots = savesStore.slots;
-    var endedCount = slots.filter(slotEnded).length;
-    els.savesCount.textContent = slots.length
-      ? "已存 " + slots.length + " 档 · 其中 " + endedCount + " 档已完结"
-      : "还没有存档";
+    if (mode === "chapter-target") {
+      slots = slots.filter(function (slot) { return !slotEnded(slot); });
+    } else if (mode === "chapter-source") {
+      slots = slots.filter(slotEnded);
+    }
+    var readySources = mode === "chapter-source" ? chapterReplaySourceSlots(savePanelState.chapterId).length : 0;
+    var endedCount = savesStore.slots.filter(slotEnded).length;
+
+    els.savesPanel.classList.toggle("is-chapter", chapterMode);
+    var panel = els.savesPanel.querySelector(".xb-saves__panel");
+    if (panel) panel.classList.toggle("is-chapter", chapterMode);
+    if (mode === "chapter-target") {
+      els.savesKicker.textContent = "从此章开始 · 第 1 步 / 共 2 步";
+      els.savesTitle.textContent = "请选择一个存档开始";
+      els.savesCount.textContent = "章节：" + (chapter ? chapter.title : "") + " · 未完结 " + slots.length + " 档";
+    } else if (mode === "chapter-source") {
+      els.savesKicker.textContent = "从此章开始 · 第 2 步 / 共 2 步";
+      els.savesTitle.textContent = "对于你选择的章节前的剧情走向，你希望走哪条路线？";
+      els.savesCount.textContent = "章节：" + (chapter ? chapter.title : "") + " · 已完结 " + slots.length + " 档，其中 " + readySources + " 档可作前情";
+    } else {
+      els.savesKicker.textContent = "一块门板，两万五千里";
+      els.savesTitle.textContent = "存档";
+      els.savesCount.textContent = savesStore.slots.length
+        ? "已存 " + savesStore.slots.length + " 档 · 其中 " + endedCount + " 档已完结"
+        : "还没有存档";
+    }
+
     els.savesList.textContent = "";
     slots.forEach(function (slot) {
       var row = document.createElement("button");
@@ -3940,7 +4257,17 @@
       sub.className = "xb-saves__row-sub";
       sub.textContent = slotSubLabel(slot);
       row.append(main, sub);
-      if (savePanelState.mode === "delete") {
+
+      if (mode === "chapter-source") {
+        var ready = !!chapterSnapshotState(slot.id, savePanelState.chapterId);
+        row.setAttribute("aria-disabled", ready ? "false" : "true");
+        if (!ready) {
+          row.classList.add("is-unavailable");
+          sub.textContent += " · 缺少这一章前情";
+        }
+      }
+
+      if (mode === "delete") {
         var checked = savePanelState.selected[slot.id] === true;
         row.setAttribute("role", "checkbox");
         row.setAttribute("aria-checked", checked ? "true" : "false");
@@ -3949,21 +4276,46 @@
       }
       els.savesList.append(row);
     });
+
     els.savesEmpty.hidden = slots.length > 0;
+    if (mode === "chapter-target") {
+      els.savesEmpty.textContent = "没有未完结的存档。点「开启新档」，从这一章重新出发。";
+    } else if (mode === "chapter-source") {
+      els.savesEmpty.textContent = slots.length
+        ? "这些已完结存档都缺少这一章的前情记录。再走一次完整周目后可用。"
+        : "还没有已完结的存档。先走完一周目。";
+    } else {
+      els.savesEmpty.textContent = "还没有存档。点「开启新档」，从于都河出发。";
+    }
+
     var latest = latestUnfinishedSlot();
     els.saveLatest.setAttribute("aria-disabled", latest ? "false" : "true");
-    els.saveDelete.setAttribute("aria-disabled", slots.length ? "false" : "true");
-    els.saveNew.setAttribute("aria-disabled", slots.length >= SAVE_SLOT_MAX ? "true" : "false");
-    var deleting = savePanelState.mode === "delete";
-    els.savesDeleteBar.hidden = !deleting;
+    els.saveDelete.setAttribute("aria-disabled", savesStore.slots.length ? "false" : "true");
+    els.saveNew.setAttribute("aria-disabled", savesStore.slots.length >= SAVE_SLOT_MAX ? "true" : "false");
+    els.saveNew.hidden = mode === "chapter-source";
+    els.saveLatest.hidden = chapterMode;
+    els.saveDelete.hidden = chapterMode;
+    els.savesBack.hidden = !chapterMode;
+    if (chapterMode) {
+      els.savesBack.textContent = mode === "chapter-source" ? "返回上一步" : "返回章节";
+      els.savesBack.dataset.action = "saves-back";
+    }
+    els.savesDeleteBar.hidden = mode !== "delete";
     var selectedCount = Object.keys(savePanelState.selected).length;
     els.savesDeleteCount.textContent = "已选 " + selectedCount + " 个";
     els.savesDeleteConfirm.setAttribute("aria-disabled", selectedCount ? "false" : "true");
+
+    var disabledSources = mode === "chapter-source" ? slots.length - readySources : 0;
     els.savesHint.textContent = !savesStorageOk
       ? "本局无法存档（浏览器限制），进度只在本次有效。"
-      : deleting
-        ? "点选要删除的存档，再按「确认」。"
-        : "每过一章会自动保存；中途退出回到本章开头，想停在原处请点暂停「保存」。";
+      : mode === "chapter-target"
+        ? "只能选择未完结的存档；若没有，请开启新档。选定后进入第 2 步。"
+        : mode === "chapter-source"
+          ? "只拷贝所选章节之前的剧情线；本章及之后的进度会重新开始。" +
+            (disabledSources ? " 旧版本存档缺少章节记录，不能作为来源。" : "")
+          : mode === "delete"
+            ? "点选要删除的存档，再按「确认」。"
+            : "每过一章会自动保存；中途退出回到本章开头，想停在原处请点暂停「保存」。";
   }
 
   function chooseSaveSlot(id) {
@@ -3971,6 +4323,23 @@
     if (!slot || !savePanelState.open) return;
     if (savePanelState.mode === "delete") {
       toggleSaveSelection(id);
+      return;
+    }
+    if (savePanelState.mode === "chapter-target") {
+      if (slotEnded(slot)) return;
+      savePanelState.targetId = slot.id;
+      savePanelState.mode = "chapter-source";
+      renderSavePanel();
+      focusFirstChapterSource();
+      return;
+    }
+    if (savePanelState.mode === "chapter-source") {
+      if (!slotEnded(slot)) return;
+      if (!chapterSnapshotState(slot.id, savePanelState.chapterId)) {
+        toast("这个存档缺少这一章的前情记录");
+        return;
+      }
+      applyChapterStart(slot, savePanelState.chapterId);
       return;
     }
     if (slotEnded(slot)) {
@@ -4014,6 +4383,7 @@
     if (removedActive) savesStore.activeId = null;
     writeSavesStore(savesStore);
     historyDeleteRuns(ids);
+    chapterRemoveSlots(ids);
     savePanelState.mode = "list";
     savePanelState.selected = {};
     closeConfirm(true);
@@ -4118,6 +4488,79 @@
     toast("已载入 " + slotLabel(slot));
   }
 
+  // 从章节重玩：来源档的前情快照进目标档；目标档从本章第一句重新开始。
+  function applyChapterStart(sourceSlot, chapterId) {
+    var snapshot = chapterSnapshotState(sourceSlot.id, chapterId);
+    if (!snapshot) {
+      toast("这个存档缺少这一章的前情记录");
+      return;
+    }
+    var result = normalize(snapshot);
+    if (result.issue) {
+      toast("这一章的前情记录与当前版本不匹配");
+      return;
+    }
+    var chapter = chapterById(chapterId);
+    if (!chapter || !chapter.playable) {
+      toast("这一段还没接上");
+      return;
+    }
+    var copied = result.state;
+    copied.scene = "vn";
+    copied.ending = null;
+    copied.paused = false;
+    copied.settings = cloneJson(savesStore.settings);
+    if (!startChapter(copied, chapterId)) {
+      toast("这一段没能载入");
+      return;
+    }
+    if (copied.unlockedChapters.indexOf(chapterId) === -1) copied.unlockedChapters.push(chapterId);
+
+    var target = savePanelState.targetId ? slotById(savePanelState.targetId) : null;
+    if (!target && savesStore.slots.length >= SAVE_SLOT_MAX) {
+      toast("存档已满，请先删除一个存档");
+      return;
+    }
+    var payload = serialize(copied);
+    var at = nowIso();
+    var isNew = !target;
+    if (target) {
+      target.state = payload;
+      target.updatedAt = at;
+    } else {
+      target = createSlotRecord(payload);
+      savesStore.slots.unshift(target);
+    }
+    savesStore.activeId = target.id;
+    savesStore.settings = normalizeStoreSettings(copied.settings);
+
+    // 先把旧局的暂停/结局回顾收干净，再换 state；否则 closePause 会去碰新档。
+    if (state && state.paused) closePause();
+    if (endingReview.active) {
+      endingReview.active = false;
+      endingReview.backup = null;
+    }
+    closeSaves(true);
+    closeBranch();
+
+    historyCopyPrefix(sourceSlot.id, target.id, chapterId);
+    chapterCopyPrefix(sourceSlot.id, target.id, chapterId);
+
+    state = copied;
+    state.scene = "vn";
+    state.paused = false;
+    branchLastRun = null;
+    branchRecordedEnding = null;
+    branchState.run = null;
+    writeSavesStore(savesStore);
+    applySettings();
+    showScene("vn");
+    render();
+    chapterCapture(target.id, chapterId);
+    saveNow();
+    toast((isNew ? "已开新档" : "已覆盖这一档的后续进度") + "：从「" + chapter.title + "」重新开始");
+  }
+
   // 已完结存档：借结局页做只读回顾，不重建、不记名册、不覆盖存档。
   function openEndingReview(slot) {
     var result = normalize(slot.state);
@@ -4153,7 +4596,7 @@
 
   // 初始化：清存档、分支、成就、名册；音量/字号/速度等设置保留。
   function initializeGame() {
-    var keys = [SAVES_KEY, SAVE_KEY, LEGACY_SAVE_KEY, HISTORY_KEY, BRANCH_KEY, ACHIEVEMENT_KEY, ROSTER_KEY];
+    var keys = [SAVES_KEY, SAVE_KEY, LEGACY_SAVE_KEY, HISTORY_KEY, CHAPTERS_KEY, BRANCH_KEY, ACHIEVEMENT_KEY, ROSTER_KEY];
     var failures = 0;
     keys.forEach(function (key) {
       try {
@@ -4181,6 +4624,9 @@
     achievementState.store = null;
     achievementState.runIds = [];
     historyResetAll();
+    chapterStore = emptyChapterStore();
+    chapterStorageOk = failures === 0;
+    chapterStorageWarned = false;
     endingReview.active = false;
     endingReview.backup = null;
     state = defaults();
@@ -5684,6 +6130,7 @@
     if (startChapter(state, nextId)) {
       render();
       saveChapterProgress();
+      chapterCapture(savesStore.activeId, nextId);
       return;
     }
     state.nodeId = null;
@@ -6635,8 +7082,27 @@
     var id = branchState.detailId;
     els.branchDetailBody.textContent = "";
     els.branchDetailBody.scrollTop = 0;
+    els.branchDetailActions.textContent = "";
+    els.branchDetailActions.hidden = kind !== "chapter";
     if (kind === "chapter") renderBranchChapterDetail(id);
     else if (kind === "route") renderBranchRouteDetail(id);
+  }
+
+  function renderBranchChapterStart(chapterId) {
+    var availability = chapterReplayAvailability(chapterId);
+    var wrap = branchElement("div", "xb-branch-start");
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "xb-btn xb-btn--primary xb-branch-start__button";
+    button.dataset.action = "branch-start";
+    button.dataset.chapter = chapterId;
+    button.setAttribute("aria-disabled", availability.allowed ? "false" : "true");
+    if (!availability.allowed) button.classList.add("is-unavailable");
+    button.textContent = "从此开始";
+    var hint = branchElement("p", "xb-branch-start__hint",
+      availability.reason || "有 " + availability.sources + " 条已完结路线可作这一章的前情。");
+    wrap.append(button, hint);
+    els.branchDetailActions.append(wrap);
   }
 
   function renderBranchChapterDetail(chapterId) {
@@ -6681,6 +7147,7 @@
       row.append(toggle, body);
       els.branchDetailBody.append(row);
     });
+    renderBranchChapterStart(chapterId);
   }
 
   function renderBranchDecisionBody(container, decisionId, decision, status, choice, chapterId, run) {
@@ -7637,6 +8104,7 @@
     savesStore.activeId = slot.id;
     historyResetForSlot(slot.id);
     writeSavesStore(savesStore);
+    chapterCapture(slot.id, "prologue");
     closeSaves(true);
     applySettings();
     showScene("vn");
@@ -7991,7 +8459,9 @@
       if (event.target === els.achievementDetail) closeAchievementDetail();
     });
     els.savesPanel.addEventListener("click", function (event) {
-      if (event.target === els.savesPanel) closeSaves();
+      if (event.target !== els.savesPanel) return;
+      if (savePanelState.mode === "chapter-source") chapterSaveBack();
+      else closeSaves();
     });
     // 点遮罩/窗身不该把焦点丢到 body：mousedown 默认行为才移动焦点，非按钮处一律拦下。
     // 提示窗也不因点遮罩关闭，免得误触抹掉“尚未装满”。
@@ -8070,7 +8540,8 @@
     }
     if (savePanelState.open) {
       if (event.key === "Escape") {
-        closeSaves();
+        if (savePanelState.mode === "chapter-source") chapterSaveBack();
+        else closeSaves();
         event.preventDefault();
         return;
       }
@@ -8282,12 +8753,23 @@
       case "saves-close":
         closeSaves();
         break;
+      case "saves-back":
+        chapterSaveBack();
+        break;
       case "save-slot":
         chooseSaveSlot(target.dataset.id);
         break;
       case "save-new":
-        if (savesStore.slots.length >= SAVE_SLOT_MAX) toast("存档已满，请先删除旧存档");
-        else openConfirm("new");
+        if (savesStore.slots.length >= SAVE_SLOT_MAX) {
+          toast("存档已满，请先删除旧存档");
+        } else if (savePanelState.mode === "chapter-target") {
+          savePanelState.targetId = null;
+          savePanelState.mode = "chapter-source";
+          renderSavePanel();
+          focusFirstChapterSource();
+        } else {
+          openConfirm("new");
+        }
         break;
       case "save-latest":
         if (latestUnfinishedSlot()) openConfirm("continue");
@@ -8349,6 +8831,9 @@
         break;
       case "branch-chapter":
         openBranchDetail("chapter", target.dataset.chapter, target);
+        break;
+      case "branch-start":
+        openChapterTarget(target.dataset.chapter, target);
         break;
       case "branch-route":
         openBranchDetail("route", target.dataset.route, target);
