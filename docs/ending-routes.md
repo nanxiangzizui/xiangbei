@@ -171,7 +171,7 @@
 |---|---|---|
 | `none` | 出发没带板 | false |
 | `carried` | 当前背着 | true |
-| `bridge` | 泸定铺桥，留在桥上 | false |
+| `bridge` | 留在桥上：湘江 x025a C 横在桥头，或泸定 l019 A 铺桥 | false |
 | `grass` | 草地舍弃，留在草地 | false |
 | `wuqi` | 到吴起后留在墙边（w013 A） | false |
 | `others` | 5/11 我死，门板由别人带到吴起 | false |
@@ -188,9 +188,9 @@
 
 ### 5.3 草地判定
 
-- 5/11 例外：救 3 人、出发带门板、我死在草地 → 门板由他人带到吴起，`doorOutcome="others"`，不弹舍弃。
+- 5/11 例外：救 3 人、出发带门板、我死在草地，且门板仍在身上（或已结算成 `others`）→ 门板由他人带到吴起，`doorOutcome="others"`，不弹舍弃。湘江 C 已把门板留在浮桥的，不算 5/11，走坏结局。
 - 其余：若 `had.door && !doorCarried && doorOutcome!=="bridge"`，弹“必须舍弃门板”；点击后 `doorOutcome="grass"`、`item.door=false`，继续。
-- 已铺桥（bridge）不弹舍弃，结局标题用“桥板”。
+- 已留在桥上（`bridge`，湘江 C 或泸定 A）不弹舍弃，结局标题用“桥板”，lede 写“门板留在了桥上”。
 - 满足 A/B/C 则保留门板；不满足则舍弃。
 - 舍弃弹窗文案：“由于你体力透支，或帮手不足，无法将门板带到终点，你必须舍弃。”按钮“舍弃门板”。
 
@@ -204,20 +204,20 @@
 | 2 | `door_grass_one` | 2/11 | `had.door && !player.dead && !doorCarried && rescues<=1` | 门板 / 桥板 | 活 | 19 | 7 |
 | 3 | `door_carry_two` | 3/11 | `had.door && !player.dead && doorCarried && rescues>=2` | 门板 | 活 | 19 | 7 |
 | 4 | `door_grass_many` | 4/11 | `had.door && !player.dead && !doorCarried && rescues>=2` | 门板 / 桥板 | 活 | 19 | 7 |
-| 5 | `door_others` | 5/11 | `had.door && player.dead && rescues===3` | 空页 | 死 | 18 | 8 |
+| 5 | `door_others` | 5/11 | `had.door && player.dead && doorOutcome==="others"`（门板仍在草地，三人抬你出去） | 空页 | 死 | 18 | 8 |
 | 6 | `no_door_zero` | 6/11 | `!had.door && !player.dead && rescues===0` | 空手 | 活 | 19 | 7 |
 | 7 | `no_door_one` | 7/11 | `!had.door && !player.dead && rescues===1` | 空手 | 活 | 19 | 7 |
 | 8 | `no_door_two` | 8/11 | `!had.door && !player.dead && rescues===2` | 空手 | 活 | 19 | 7 |
 | 9 | `no_door_three` | 9/11 | `!had.door && !player.dead && rescues===3 && condition<4` | 空手 | 活 | 19 | 7 |
 | 10 | `no_door_three_excellent` | 10/11 | `!had.door && !player.dead && rescues===3 && condition===4` | 空手 | 活 | 19 | 7 |
-| 11 | `bad_end` | 坏结局 | `player.dead && !(had.door && rescues===3)` | 没有走出草地 | 死 | 18 | 0 |
+| 11 | `bad_end` | 坏结局 | `player.dead && !(had.door && doorOutcome==="others")` | 没有走出草地 | 死 | 18 | 0 |
 
 ### 6.1 边界收束
 
 - 1/11 的设计主例是“0 人获救 + 一直优秀”；实现按“带出 + 优秀 + 救≤1”收束。救 1 人且最终优秀也归 1/11，文案不写“0 人”，避免出现第 6 种门板路线。
 - 3/11 的设计主例是“救 2 人 + 带板 + 条件 C”；救 3 人但活着且满足 B 也归 3/11，文案不写“2 人”。
-- 2/11 与 4/11 都是“门板没带出”，按救人数分；不另设“门板留草地”的独立标题。`doorOutcome==="bridge"` 时标题“桥板”，否则标题“门板”，lede 写“门板留在了草地”。
-- 5/11 是唯一“我死、门板仍到吴起”的路线；`doorOutcome="others"`，8 名（含满崽），companyEnd 18，林先生 absent。
+- 2/11 与 4/11 都是“门板没带出”，按救人数分；不另设“门板留草地”的独立标题。`doorOutcome==="bridge"`（湘江 C 或泸定 A）时标题“桥板”，否则标题“门板”；bridge 的 lede 写“门板留在了桥上”，grass 的 lede 写“门板留在了草地”。
+- 5/11 是唯一“我死、门板仍到吴起”的路线；`doorOutcome="others"`，8 名（含满崽），companyEnd 18，林先生 absent。湘江 C 已把门板留在浮桥的，即使救 3 人死在草地，门板也不在吴起，走 11/11 坏结局。
 - 坏结局不走吴起点名：`names=[]`，companyEnd 18，ending 页显示“名册没有翻到吴起”；五卡仍渲染，按条件亮/灰。
 - 没有“全活”；没有“救 3 且带板且活着”。
 
@@ -237,7 +237,7 @@
 
 ### 6.3 5/11 与坏结局
 
-- 5/11：带板、救 3 人；有板救人惩罚 3→3→2→1，草地 -1→0，三人帮助在 0 无效。你死在草地，门板由别人带到吴起。
+- 5/11：带板、救 3 人，且门板仍在身上；有板救人惩罚 3→3→2→1，草地 -1→0，三人帮助在 0 无效。你死在草地，门板由别人带到吴起。若门板已在湘江 C 横在桥头（bridge），则走 11/11 坏结局，不能显示空页。
 - 坏结局：任何其他 `player.dead`；包括无板救 3 但状态被耗到 0、差状态拒绝物资、草地结束仍差且无恢复。
 - 林先生死亡原因只写“我死 → 她为了等我、找我，没等到收容队”；不写成“救 2 人必死”。
 - 5/11 coda 必须写林先生缺席：`c005a`“林先生没有来。她在草地找我们，没等到收容队。”

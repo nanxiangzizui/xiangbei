@@ -44,7 +44,8 @@ const REQUIRED_IDS = [
   "save-new", "save-latest", "save-delete", "saves-delete-bar", "saves-delete-count",
   "saves-delete-confirm", "saves-delete-cancel", "saves-hint",
   "save-confirm", "save-confirm-title", "save-confirm-body", "save-confirm-yes", "save-confirm-no",
-  "history-panel", "history-title", "history-body", "history-list", "history-empty", "history-close"
+  "history-panel", "history-title", "history-body", "history-list", "history-empty", "history-close",
+  "bag-confirm-modal", "bag-confirm-title", "bag-confirm-body", "bag-confirm-yes", "bag-confirm-no"
 ];
 
 const PREVIEW_UI = [
@@ -836,7 +837,7 @@ function checkChapterTable() {
     { id: "zunyi", prefix: "z", count: 118, next: "jinsha", title: true },
     { id: "jinsha", prefix: "j", count: 86, next: "luding", title: true },
     { id: "luding", prefix: "l", count: 120, next: "grass", title: true, first: "l100" },
-    { id: "grass", prefix: "g", count: 135, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
+    { id: "grass", prefix: "g", count: 136, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
     { id: "wuqi", prefix: "w", count: 78, next: "ending", title: false },
     { id: "coda", prefix: "c", count: 18, next: "ending", title: true, hidden: true, last: "c012" },
     { id: "badend", prefix: "b", count: 8, next: "ending", title: true, hidden: true, last: "b006", codex: false }
@@ -881,7 +882,7 @@ function checkChapterTable() {
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 九章 89/114/118/86/120/135/78/18/8 共 766 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 九章 89/114/118/86/120/136/78/18/8 共 767 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -946,6 +947,7 @@ function checkEndingData() {
   others.flags["had.door"] = true;
   others.flags.rescues = 3;
   others.flags.condition = 0;
+  others.flags.doorOutcome = "others";
   XB.core.syncDerivedFlags(others);
   var seven5 = XB.core.buildEnding(others);
   if (seven5.route !== "door_others") fail("C26", "有板救 3 且倒下应判 7(5)，实际 " + seven5.route);
@@ -1506,9 +1508,95 @@ function checkFateMechanics() {
   if (XB.core.settleDoor(door) !== "carried") fail("C40", "优秀且活着应把门板带到吴起");
   var grassDoor = XB.core.defaults();
   grassDoor.flags["had.door"] = true;
+  grassDoor.flags["item.door"] = true;
   grassDoor.flags.rescues = 1;
   grassDoor.flags.condition = 2;
   if (XB.core.settleDoor(grassDoor) !== "grass") fail("C40", "救 1 人且状态不够应把门板留草地");
+
+  // 湘江 x025a C：门板横在桥头，草地不再有“必须舍弃门板”。
+  var xiangjiangNodes = XB.story.chapters.filter(function (chapter) { return chapter.id === "xiangjiang"; })[0].nodes;
+  var x025a = xiangjiangNodes.filter(function (node) { return node.id === "x025a"; })[0];
+  var x025aC = x025a && x025a.options.filter(function (option) { return option.key === "C"; })[0];
+  if (!x025aC || !x025aC.set || x025aC.set.doorOutcome !== "bridge") fail("C40", "x025a C 应写 doorOutcome=bridge");
+  var xiangjiangBridge = XB.core.defaults();
+  xiangjiangBridge.flags["had.door"] = true;
+  xiangjiangBridge.flags["item.door"] = false;
+  xiangjiangBridge.flags.doorOutcome = "bridge";
+  xiangjiangBridge.flags.condition = 2;
+  xiangjiangBridge.flags.rescues = 1;
+  if (XB.core.settleDoor(xiangjiangBridge) !== "bridge") fail("C40", "湘江桥板草地结算不应落 grass");
+  if (xiangjiangBridge.flags["fate.seven5"] === true) fail("C40", "桥板不应标成 7(5)");
+
+  // 遵义门板对话只在门板还在身上时出现；湘江 C/泸定 A 后无板，z109 直接跳到 z117 补鞋。
+  var zunyiChapter = XB.core.chapterById("zunyi");
+  var z109Index = -1;
+  zunyiChapter.nodes.forEach(function (node, index) {
+    if (node.id === "z109") z109Index = index;
+  });
+  var noDoorState = XB.core.defaults();
+  var afterZ109 = z109Index >= 0 ? XB.core.nextVisible(noDoorState, zunyiChapter, z109Index + 1) : null;
+  if (!afterZ109 || afterZ109.id !== "z117") fail("C40", "无门板时遵义 z109 后应直接到 z117");
+  ["z110", "z111", "z112", "z113", "z114", "z115", "z116"].forEach(function (id) {
+    var node = zunyiChapter.nodes.filter(function (n) { return n.id === id; })[0];
+    if (!node || node.when !== "item.door") fail("C40", "遵义 " + id + " 应只在 item.door 时出现");
+  });
+
+  // 桥板 + 我死在草地：门板不在吴起，不能算 5/11，也不能被 settleGrass 改写。
+  var bridgeDead = XB.core.defaults();
+  bridgeDead.flags["had.door"] = true;
+  bridgeDead.flags["item.door"] = false;
+  bridgeDead.flags.doorOutcome = "bridge";
+  bridgeDead.flags.condition = 0;
+  bridgeDead.flags.rescues = 3;
+  XB.core.settleGrass(bridgeDead);
+  if (bridgeDead.flags["fate.seven5"] === true) fail("C40", "桥板+死不应标成 7(5)");
+  if (bridgeDead.flags["fate.badend"] !== true) fail("C40", "桥板+死应走坏结局");
+  if (XB.core.settleDoor(bridgeDead) !== "bridge") fail("C40", "桥板+死应保留 bridge");
+  if (XB.core.buildEnding(bridgeDead).route !== "bad_end") fail("C40", "桥板+死应判 11/11");
+
+  // v1.4 早期湘江 C 漏写 doorOutcome：门板已不在身上，草地补 bridge。
+  var rawLost = XB.core.defaults();
+  rawLost.flags["had.door"] = true;
+  rawLost.flags["item.door"] = false;
+  rawLost.flags.doorOutcome = "none";
+  if (XB.core.settleDoor(rawLost) !== "bridge") fail("C40", "旧湘江 C 丢板应补成 bridge");
+
+  // 7(5) 回归：门板还在身上、救满三人、死在草地，仍是 others。
+  var rawLostDead = XB.core.defaults();
+  rawLostDead.flags["had.door"] = true;
+  rawLostDead.flags["item.door"] = true;
+  rawLostDead.flags.condition = 0;
+  rawLostDead.flags.rescues = 3;
+  XB.core.settleGrass(rawLostDead);
+  if (rawLostDead.flags.doorOutcome !== "others") fail("C40", "门板在身上+死救满仍应走 5/11");
+  if (XB.core.settleDoor(rawLostDead) !== "others") fail("C40", "5/11 收口应保持 others");
+
+  function doorSave(chapterId, nodeId, flags, choices) {
+    var save = XB.core.serialize(XB.core.defaults());
+    save.scene = "vn";
+    save.chapterId = chapterId;
+    save.nodeId = nodeId;
+    save.flags = flags || {};
+    save.choices = choices || [];
+    return save;
+  }
+  var midXiangjiang = XB.core.normalize(doorSave("grass", "g001", {
+    "had.door": true, "item.door": false, "choice.xiangjiang.hold": true, doorOutcome: "none"
+  }));
+  if (midXiangjiang.issue) fail("C40", "湘江 C 中途档被判坏档");
+  else if (midXiangjiang.state.flags.doorOutcome !== "bridge") fail("C40", "湘江 C 中途档门板去向应为 bridge，实际 " + midXiangjiang.state.flags.doorOutcome);
+  var cTrace = [{ chapter: "xiangjiang", nodeId: "x025a", option: "C", text: "把门板横在桥头挡一下", timedOut: false }];
+  var settledC = XB.core.normalize(doorSave("grass", "g028b", {
+    "had.door": true, "item.door": false, "choice.xiangjiang.hold": true, "grass.settled": true, doorOutcome: "grass"
+  }, cTrace));
+  if (settledC.issue) fail("C40", "湘江 C 已结算档被判坏档");
+  else if (settledC.state.flags.doorOutcome !== "bridge") fail("C40", "带 x025a C 日志的 grass 档应修为 bridge，实际 " + settledC.state.flags.doorOutcome);
+  var aTrace = [{ chapter: "xiangjiang", nodeId: "x025a", option: "A", text: "回头接应老周", timedOut: false }];
+  var settledA = XB.core.normalize(doorSave("grass", "g028b", {
+    "had.door": true, "item.door": false, "choice.xiangjiang.hold": true, "grass.settled": true, doorOutcome: "grass"
+  }, aTrace));
+  if (settledA.issue) fail("C40", "湘江 A 已结算档被判坏档");
+  else if (settledA.state.flags.doorOutcome !== "grass") fail("C40", "湘江 A 的草地舍弃不应被修成 bridge，实际 " + settledA.state.flags.doorOutcome);
 
   function oldSave(chapterId, nodeId, flags) {
     var save = XB.core.serialize(XB.core.defaults());
@@ -2087,6 +2175,67 @@ function checkHistoryPanel() {
   notes.push("C49 OK 剧情回顾 xiangbei.history.v1 / 选择金色加粗 / 固定字号不可选 / X 关闭");
 }
 
+// C50：行囊未满二次确认——「是」才结算，「否」退回多选且不动已选
+function checkBagConfirm() {
+  var XB = loadGame();
+  var nodes = {};
+  XB.story.chapters.forEach(function (chapter) {
+    (chapter.nodes || []).forEach(function (node) { nodes[node.id] = node; });
+  });
+  var flagged = Object.keys(nodes).filter(function (id) { return nodes[id].confirmWhenNotFull; });
+  if (flagged.join(",") !== "p024") {
+    fail("C50", "confirmWhenNotFull 只应出现在 p024，实际：" + (flagged.join(",") || "无"));
+  }
+  var engine = readProject("engine.js");
+  [
+    "function bagUnits(",
+    "function bagIsFull(",
+    "XB.core.packUsage(state) + selected",
+    "node.confirmWhenNotFull && !bagIsFull(node)",
+    "function openBagConfirm(",
+    "function closeBagConfirm(",
+    "function acceptBagConfirm(",
+    "function cancelBagConfirm(",
+    "commitMultiChoice(node);",
+    "var bagConfirmState = { open: false, previousFocus: null };"
+  ].forEach(function (needle) {
+    if (engine.indexOf(needle) === -1) fail("C50", "engine.js 缺 " + needle);
+  });
+  // 未满时必须先弹窗：resolve 到 commit 之间不能直接 applyMultiChoice
+  var gateAt = engine.indexOf("function resolveMultiChoice(");
+  var commitAt = engine.indexOf("function commitMultiChoice(");
+  if (gateAt === -1 || commitAt === -1 || commitAt < gateAt) {
+    fail("C50", "resolveMultiChoice / commitMultiChoice 缺失或顺序错误");
+  } else {
+    var gate = engine.slice(gateAt, commitAt);
+    if (gate.indexOf("openBagConfirm()") === -1) fail("C50", "未满没有弹确认");
+    if (gate.indexOf("applyMultiChoice") !== -1) fail("C50", "未满仍在 resolve 里直接结算");
+  }
+  function bodyOf(needle) {
+    var at = engine.indexOf(needle);
+    if (at === -1) return "";
+    var next = engine.indexOf("\n  function ", at + needle.length);
+    return engine.slice(at, next === -1 ? engine.length : next);
+  }
+  var accept = bodyOf("function acceptBagConfirm(");
+  if (accept.indexOf("commitMultiChoice(") === -1) fail("C50", "「是」没有走结算");
+  var cancel = bodyOf("function cancelBagConfirm(");
+  if (cancel.indexOf("els.vnMultiConfirm") === -1) fail("C50", "「否」没有把焦点还给确认键");
+  if (cancel.indexOf("applyMultiChoice") !== -1) fail("C50", "「否」不应结算物资");
+  var html = readProject("index.html");
+  ["bag-confirm-modal", "bag-confirm-title", "bag-confirm-body", "bag-confirm-yes", "bag-confirm-no"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C50", "index.html 缺 #" + id);
+  });
+  if (html.indexOf("行囊尚未装满，长征路途艰险，确定要继续吗？") === -1) fail("C50", "提示文案不对");
+  if (html.indexOf('data-action="bag-confirm-yes">是<') === -1) fail("C50", "缺「是」按钮或文案");
+  if (html.indexOf('data-action="bag-confirm-no">否<') === -1) fail("C50", "缺「否」按钮或文案");
+  var css = readProject("style.css");
+  if (css.indexOf("#bag-confirm-modal .xb-danger__actions .xb-btn { min-height: 82px;") === -1) {
+    fail("C50", "手机热区没有抬到 82 逻辑 px");
+  }
+  notes.push("C50 OK 行囊未满先确认：是=结算继续、否=退回多选不动已选、82 逻辑热区");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -2134,6 +2283,7 @@ checkSavePanelCopy();
 checkInitIsolation();
 checkSaveCadence();
 checkHistoryPanel();
+checkBagConfirm();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

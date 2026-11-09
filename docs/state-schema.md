@@ -153,13 +153,13 @@
 | `memory.help` | false | `setFlag`（第三人）/`settleGrass` | 无板路线 `g028h` 的三人援助文本 |
 | `memory.help_door` | false | `setFlag`（第三人） | 有板路线当场援助，供 `g026h–g026m` 文本 |
 | `fate.player.dead` | false | 引擎 | 我是否死在草地；`condition=0` 或差状态未恢复 |
-| `fate.seven5` | false | `syncDerivedFlags` | 7(5)：`player.dead && had.door && rescues===3` |
+| `fate.seven5` | false | `syncDerivedFlags` | 7(5)：`player.dead && had.door && rescues===3 && (doorOutcome==="others" 或门板仍在身上)`；桥板/吴起板不算 |
 | `fate.badend` | false | `syncDerivedFlags` | 坏结局：`player.dead && !fate.seven5` |
 | `grass.settled` | false | `settleGrass` | 草地结算幂等，刷新不重复扣状态 |
 | `quality.feimao` | 3 | l001、l019/l019x | 飞毛腿状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，用药 2、铺桥 3 |
 | `quality.zaowang` | 3 | l001、g018x | 灶王状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，青稞 2、铁锅 3 |
 | `quality.dongsheng` | 3 | l001、g026x | 冬生状态：3 良好/2 勉强/1 差/0 牺牲；泸定入场统一 2，危机节点置 1，鞋或雨布 3 |
-| `doorOutcome` | "none" | 剧情/引擎 | none/carried/bridge/grass/wuqi/others |
+| `doorOutcome` | "none" | 剧情/引擎 | none/carried/bridge/grass/wuqi/others；bridge = 湘江 x025a C 或泸定 l019 A，留在桥上 |
 | `inventory.giftBarley` | false | g026x A/B | 冬生赠青稞，不占格；与普通青稞/药组合 |
 
 ### 3.4 v1.5.1 成就 1 项
@@ -223,10 +223,10 @@
 
 先算 `rescues`、`had.door`、`fate.player.dead`：
 
-1. 死：`had.door && rescues===3` → 5/11 `door_others`；否则 11/11 `bad_end`。
+1. 死：`had.door && doorOutcome==="others"` → 5/11 `door_others`；否则 11/11 `bad_end`（桥板/吴起板不算 5/11）。
 2. 无板：按 rescues 0/1/2/3 → 6/11–9/11；rescues=3 且 condition=4 → 10/11。
 3. 有板：`carried = item.door || doorOutcome ∈ {carried,wuqi,others}`；rescues≤1 → carried && condition=4 ? 1/11 : 2/11；rescues≥2 → carried ? 3/11 : 4/11。
-4. 2/11、4/11 且 `doorOutcome==="bridge"` 显示“桥板/门板留在桥上”，否则“门板/门板留在草地”。
+4. 2/11、4/11 且 `doorOutcome==="bridge"`（湘江 C 或泸定 A）显示“桥板/门板留在桥上”，否则“门板/门板留在草地”。
 
 ## 6. 名册回廊
 
@@ -271,9 +271,10 @@
 5. 吴起旧档：飞毛腿/灶王 dead、冬生活、`strain=1`；泸定 `l022` 后飞毛腿 dead、`strain=0`；草地 `g019` 后灶王 dead。
 6. `quality.*`：死者 0，生者 2（旧档没有更细状态）。
 7. `doorOutcome`：item.door→carried；memory.door→wuqi；choice.luding.door→bridge；had.door && !item.door→grass；否则 none。旧 5/11（player.dead+rescues3+had.door）→ others 且 item.door=false。
-8. 旧 ending 快照：缺 route 补 `legacy/旧档/""`，不重算；缺 routeIndex 补 0；fate 缺 player 按旧 route 补；保留 names/answered/missed/stats/cards。
-9. 旧名册页保留；新页追加。
-10. 旧 ending 快照没有 `achievements` 不补；结局页显示“旧档未记录本局成就”。旧档已有 `memory.zhang:true` 的，本局收集按 j018-done 处理；旧档 skip 不补记。
+8. 湘江 C 修复：`had.door && !item.door && doorOutcome==="none"` → bridge（v1.4 早期 x025a C 漏写去向）；已落 grass/others 的档只在 `choices` 仍有 `{nodeId:"x025a",option:"C"}` 时改 bridge（A 也写 hold=true，不能单看旗标）。已清空 choices 的结局快照不自动改。
+9. 旧 ending 快照：缺 route 补 `legacy/旧档/""`，不重算；缺 routeIndex 补 0；fate 缺 player 按旧 route 补；保留 names/answered/missed/stats/cards。
+10. 旧名册页保留；新页追加。
+11. 旧 ending 快照没有 `achievements` 不补；结局页显示“旧档未记录本局成就”。旧档已有 `memory.zhang:true` 的，本局收集按 j018-done 处理；旧档 skip 不补记。
 
 ## 9. 调试与验收
 

@@ -355,6 +355,18 @@
       </div>
     </div>
 
+    <!-- 行囊未满：点“系好行囊”但四格没装满时先确认；选“否”回到多选，已选的物资不动 -->
+    <div id="bag-confirm-modal" class="xb-door-modal" role="dialog" aria-modal="true" aria-labelledby="bag-confirm-title" aria-describedby="bag-confirm-body" hidden>
+      <div class="xb-door">
+        <h2 id="bag-confirm-title" class="xb-door__title">行囊</h2>
+        <p id="bag-confirm-body" class="xb-door__body">行囊尚未装满，长征路途艰险，确定要继续吗？</p>
+        <div class="xb-danger__actions">
+          <button type="button" id="bag-confirm-yes" class="xb-btn xb-btn--primary" data-action="bag-confirm-yes">是</button>
+          <button type="button" id="bag-confirm-no" class="xb-btn" data-action="bag-confirm-no">否</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 门板舍弃：只在草地结算、条件 A/B/C 全不满足时出现 -->
     <div id="door-modal" class="xb-door-modal" role="dialog" aria-modal="true" aria-labelledby="door-title" hidden>
       <div class="xb-door">

@@ -4019,6 +4019,8 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-door__title { font-size: 38px; }
   .xb-door__body { font-size: 26px; }
   .xb-door .xb-btn { min-height: 64px; font-size: 22px; }
+  /* 行囊未满的「是/否」是手机上必须点得准的出口，同样抬到 82 逻辑 ≈ 44.4 CSS px。 */
+  #bag-confirm-modal .xb-danger__actions .xb-btn { min-height: 82px; font-size: 22px; }
 
   /* 歧路图在 844×390 下：章节卡仍一排七张，但字号放大到约 11–13 CSS px；
      详情是一屏内可滚的纸卡，节点行 96 逻辑 ≈ 52 CSS px。 */

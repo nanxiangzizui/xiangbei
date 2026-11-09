@@ -120,7 +120,7 @@ X 光机｜三百斤，四个人抬。｜1 格
 >> 选项｜限时 20s｜默认 C｜记录到 choice.xiangjiang.hold｜hideCost
 A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜setIf: item.barley → item.barley=false, memory.xiangjiang.barley_lost=true；!item.barley → memory.xiangjiang.binding_lost=true｜cost: 你晚过江一个时辰
 B｜按命令先过江｜set: choice.xiangjiang.hold=false｜cost: 桥头最后一面，你看见的是他的背影
-C｜把门板横在桥头挡一下｜set: choice.xiangjiang.hold=true, item.door=false｜cost: 门板留在了浮桥，三号担架少一块垫板
+C｜把门板横在桥头挡一下｜set: choice.xiangjiang.hold=true, item.door=false, doorOutcome=bridge｜cost: 门板留在了浮桥，三号担架少一块垫板
 [[else]]
 >> 选项｜限时 20s｜默认 A｜记录到 choice.xiangjiang.hold｜hideCost
 A｜回头接应老周｜set: choice.xiangjiang.hold=true, fire=+5, load=+1｜setIf: item.barley → item.barley=false, memory.xiangjiang.barley_lost=true；!item.barley → memory.xiangjiang.binding_lost=true｜cost: 你晚过江一个时辰

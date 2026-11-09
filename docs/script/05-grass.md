@@ -161,8 +161,11 @@ B｜把小锅留给他｜set: item.pot=false｜cost: 到了陕北，你没有锅
 [[if:fate.zaowang.dead && !item.homepot]]
 【旁白】我把小锅留在了火堆边。背着它，我也走不出去。
 [[end]]
-[[if:fate.zaowang.dead && item.pot]]
+[[if:fate.zaowang.dead && item.pot && item.door]]
 【旁白】我把小锅背上。锅沿磕着门板，一路响。
+[[end]]
+[[if:fate.zaowang.dead && item.pot && !item.door]]
+【旁白】我把小锅背上。锅沿硌着背，一路响。
 [[end]]
 [[if:fate.zaowang.dead && !item.pot]]
 【旁白】我把小锅放在他手边。
