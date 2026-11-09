@@ -17,16 +17,17 @@
 
     <!-- 标题画面：ui-layout §2 -->
     <section id="scene-title" class="scene" aria-label="标题画面">
-      <h1 class="title-main"><button type="button" class="title-main__button" data-action="init-game" aria-label="向北 · 点击初始化游戏">向北</button></h1>
+      <h1 class="title-main">向北</h1>
       <span class="title-seal" aria-hidden="true">北</span>
       <p class="title-sub">一块门板，两万五千里</p>
       <div id="title-menu" class="title-menu" role="menu" aria-label="主菜单">
-        <button type="button" class="menu-button xb-btn xb-btn--primary menu-button--wide" role="menuitem" data-action="saves">存档</button>
+        <button type="button" class="menu-button xb-btn xb-btn--primary menu-button--wide" role="menuitem" data-action="saves">开始 / 继续</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="codex">史实图鉴</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="roster-gallery">名册</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="branch">剧情分支</button>
         <button type="button" class="menu-button xb-btn" role="menuitem" data-action="achievements">解锁成就</button>
       </div>
+      <button type="button" class="title-settings xb-btn xb-btn--ghost" data-action="open-settings" aria-haspopup="dialog">设置</button>
       <p class="title-version">试玩版 · 人物虚构，非史料人物</p>
       <a class="title-credits" href="./CREDITS.txt" target="_blank" rel="noopener">制作名单</a>
     </section>
@@ -212,6 +213,11 @@
         <div class="xb-settings__row">
           <span class="xb-settings__label">跳读已读</span>
           <button type="button" id="set-skip" class="xb-switch" role="switch" aria-checked="false" aria-label="跳读已读"></button>
+        </div>
+        <div id="settings-danger" class="xb-settings__danger">
+          <p class="xb-settings__danger-title">危险操作</p>
+          <p class="xb-settings__danger-hint">清空全部存档、剧情分支、成就、名册与剧情回顾；音量、字号等设置保留。此操作不可撤销。</p>
+          <button type="button" id="settings-init-game" class="xb-btn xb-btn--danger xb-settings__danger-button" data-action="init-game">初始化游戏</button>
         </div>
         <button type="button" class="pause-button" data-action="close-settings">返回</button>
       </div>

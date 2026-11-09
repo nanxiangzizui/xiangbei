@@ -417,12 +417,21 @@ a:focus-visible,
   gap: 10px;
 }
 
-/* 开始、继续、剧情分支各占整行；图鉴与名册并排，五个入口落在 844×390 的 44 CSS px 热区之上。 */
-.title-menu .menu-button[data-action="start"],
-.title-menu .menu-button[data-action="continue"],
+/* 「开始 / 继续」占整行；其余四个入口两两并排，落在 844×390 的 44 CSS px 热区之上。 */
 .title-menu .menu-button--wide {
   grid-column: 1 / -1;
   width: 450px;
+}
+
+/* 标题态设置入口：右上角独立按钮，不挤进 2×2 主菜单。
+   #scene-title 提高优先级，避免后面的 .xb-btn { position: relative } 覆盖绝对定位。 */
+#scene-title .title-settings {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  min-width: 168px;
+  min-height: 82px;
+  padding: 0 24px;
 }
 
 .title-menu .menu-button {
@@ -494,6 +503,7 @@ a:focus-visible,
 .title-seal,
 .title-sub,
 .title-menu,
+.title-settings,
 .title-version,
 .title-credits {
   z-index: 1;
@@ -1746,6 +1756,33 @@ a:focus-visible,
   gap: var(--space-4);
   min-height: 56px;
   font-size: var(--fs-note);
+}
+
+/* 危险操作只在标题态设置里出现；用分隔线与普通设置拉开距离。 */
+.xb-settings__danger {
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--border) dashed var(--ink-a30);
+}
+
+.xb-settings__danger-title {
+  margin: 0 0 6px;
+  font-size: var(--fs-note);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--cinnabar);
+}
+
+.xb-settings__danger-hint {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.xb-settings__danger-button {
+  width: 100%;
+  min-height: 82px;
 }
 
 .xb-settings__label {
@@ -4344,37 +4381,7 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   }
 }
 
-/* ---------- 存档：标题入口、列表、确认弹窗（v1.6） ---------- */
-.title-main__button {
-  margin: 0;
-  padding: 0;
-  font: inherit;
-  letter-spacing: inherit;
-  line-height: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-/* 点下与初始化确认期间：加粗 + 重影，给一次“按到了”的反馈 */
-.title-main__button:active,
-.title-main__button.is-pressed {
-  font-weight: 700;
-  text-shadow:
-    4px 4px 0 var(--ink-a30),
-    -1px 0 0 var(--ink),
-    1px 0 0 var(--ink);
-}
-
-.title-main__button:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 var(--focus-w) var(--focus-color),
-    0 0 0 calc(var(--focus-w) + var(--focus-offset)) var(--focus-gap);
-}
-
-.xb-saves {
+/* ---------- 存档：标题入口、列表、确认弹窗（v1.6） ---------- */.xb-saves {
   position: absolute;
   inset: 0;
   z-index: var(--z-saves);
