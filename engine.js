@@ -650,31 +650,85 @@
     "legacy"
   ];
   var ROUTE_DEFS = {
-    door_excellent: { index: 1, label: "1", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_excellent: {
+      index: 1,
+      label: "1",
+      title: "门至人散",
+      lede: "门板到了吴起，你也还站得住。可回头时，能和你一起应到的人，已经没剩几个。",
+      closing: "娘说，家在人身上。\n你背来了门，却没能把那个家完整地背回来。"
+    },
     door_grass_one: {
       index: 2,
       label: "2",
-      title: "门板",
-      lede: "门板留在了草地。你到了吴起。",
-      bridgeTitle: "桥板",
-      bridgeLede: "门板留在了桥上。你到了吴起。"
+      title: "门落无声",
+      lede: "门板留在了草地。你到了吴起，像把一部分自己留在了身后。",
+      bridgeLede: "门板留在了桥头。你到了吴起，后来的人从它撑住的地方走了过去。",
+      closing: "它替你挡过风，铺过路，当过床。\n最后，它替你留在了那里。"
     },
-    door_carry_two: { index: 3, label: "3", title: "门板", lede: "门板到了吴起。你也是。" },
+    door_carry_two: {
+      index: 3,
+      label: "3",
+      title: "门与归人",
+      lede: "门板到了吴起，你也到了。至少还有几个名字，能和你一起看见陕北的天。",
+      closing: "真正被背到终点的，不是那块板，\n是那些没有松开的人。"
+    },
     door_grass_many: {
       index: 4,
       label: "4",
-      title: "门板",
-      lede: "门板留在了草地。你到了吴起。",
-      bridgeTitle: "桥板",
-      bridgeLede: "门板留在了桥上。你到了吴起。"
+      title: "板留人渡",
+      lede: "门板留在了桥头。你带着活着的人继续向北，后来的人从它撑住的地方走了过去。",
+      grassLede: "门板留在了草地。你到了吴起，带着几个人，也带着它留下的那一点重量。",
+      closing: "有些东西留在原地，不是失去，\n是替后来的人把路撑住。"
     },
-    door_others: { index: 5, label: "5", title: "空页", lede: "名册上多了一个名字，又划掉了。" },
-    no_door_zero: { index: 6, label: "6", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_one: { index: 7, label: "7", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_two: { index: 8, label: "8", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_three: { index: 9, label: "9", title: "空手", lede: "你空着手，走到了吴起。" },
-    no_door_three_excellent: { index: 10, label: "10", title: "空手", lede: "你空着手，走到了吴起。" },
-    bad_end: { index: 11, label: "11", title: "没有走出草地", lede: "草地没有尽头。" },
+    door_others: {
+      index: 5,
+      label: "5",
+      title: "替你答到",
+      lede: "你没能走出草地。门板和你的名字，被人带到了吴起；点名时，有人替你应了一声。",
+      closing: "你没有到。\n但你没有从名册上消失。"
+    },
+    no_door_zero: {
+      index: 6,
+      label: "6",
+      title: "无人应到",
+      lede: "你空着手到了吴起。名册翻到最后，能自己应到的人，已经没有几个。",
+      closing: "你把自己带到了终点，\n却没能把身边的人一起带出这条路。"
+    },
+    no_door_one: {
+      index: 7,
+      label: "7",
+      title: "一人同北",
+      lede: "你空着手到了吴起。至少还有一个名字，在你身边应了一声。",
+      closing: "你丢掉了很多东西，\n最后还留下了一个人。"
+    },
+    no_door_two: {
+      index: 8,
+      label: "8",
+      title: "两人成行",
+      lede: "你空着手，把两个人带到了吴起。路没有变短，身后的脚步却不再只有你一个。",
+      closing: "你没有门板，\n却替两个人挡过一段路。"
+    },
+    no_door_three: {
+      index: 9,
+      label: "9",
+      title: "三人犹立",
+      lede: "三个人都到了，你也还站着。只是这一路的重量，已经把你们压得所剩不多。",
+      closing: "你们没有走得更轻松，\n只是一起走到了。"
+    },
+    no_door_three_excellent: {
+      index: 10,
+      label: "10",
+      title: "人至“家”至",
+      lede: "娘说，家在人身上。你空着手，却把三个人都带到了吴起。",
+      closing: "你没有背来门板，\n却成了别人活下来的那块板。"
+    },
+    bad_end: {
+      index: 11,
+      label: "11",
+      title: "草地无归",
+      lede: "你没能走出草地。名册停在你划到的那一页，有些名字和你一起留在了那里。",
+      closing: "路还在向北。\n你留在了原地。"
+    },
     legacy: { index: 0, label: "旧档", title: "旧档", lede: "" }
   };
   var LEGACY_ROUTES = ["sidao", "menban", "qiaoban", "kongye"];
@@ -743,7 +797,8 @@
     if (!isPlainObject(value)) return null;
     var allowed = [
       "stats", "names", "answered", "missed", "cards",
-      "route", "routeIndex", "routeLabel", "routeTitle", "routeLede",
+      "route", "routeIndex", "routeLabel", "routeTitle", "routeLede", "routeClosing",
+      "lastChoice", "chapterTitle",
       "fate", "condition", "rescues", "doorOutcome", "strain", "recorded",
       "achievements"
     ];
@@ -811,6 +866,18 @@
     if (value.routeLede !== undefined) {
       if (typeof value.routeLede !== "string") return null;
       clean.routeLede = value.routeLede;
+    }
+    if (value.routeClosing !== undefined) {
+      if (typeof value.routeClosing !== "string" || value.routeClosing.length > 300) return null;
+      clean.routeClosing = value.routeClosing;
+    }
+    if (value.lastChoice !== undefined) {
+      if (typeof value.lastChoice !== "string" || value.lastChoice.length > 80) return null;
+      clean.lastChoice = value.lastChoice;
+    }
+    if (value.chapterTitle !== undefined) {
+      if (typeof value.chapterTitle !== "string" || value.chapterTitle.length > 40) return null;
+      clean.chapterTitle = value.chapterTitle;
     }
     if (value.fate !== undefined) {
       if (!validEndingFate(value.fate)) return null;
@@ -929,6 +996,44 @@
     return carried ? "door_carry_two" : "door_grass_many";
   }
 
+  function lastChoiceLabel(choices) {
+    var list = Array.isArray(choices) ? choices : [];
+    for (var i = list.length - 1; i >= 0; i -= 1) {
+      var entry = list[i];
+      if (entry && typeof entry.text === "string" && entry.text) {
+        return (entry.timedOut === true ? "超时：" : "") + entry.text;
+      }
+    }
+    return "";
+  }
+
+  // 结局短描述按本局人物命运改写；主线只动措辞，不改路线判定。
+  function companionFateNames(flags) {
+    var f = flags || {};
+    var alive = [];
+    var dead = [];
+    [["feimao", "飞毛腿"], ["zaowang", "灶王"], ["dongsheng", "冬生"]].forEach(function (pair) {
+      if (f["fate." + pair[0] + ".dead"] === true) dead.push(pair[1]);
+      else alive.push(pair[1]);
+    });
+    return { alive: alive, dead: dead };
+  }
+
+  function routeLedeFor(route, flags, fallback) {
+    var f = flags || {};
+    var fate = companionFateNames(f);
+    var rescues = Math.round(clamp(isFiniteNumber(f.rescues) ? f.rescues : 0, 0, 3));
+    if (route === "door_excellent") {
+      if (rescues === 0) return "门板到了吴起，你也到了。只是你背来的是一扇门，不是一路的人。";
+      if (rescues === 1) {
+        var only = fate.alive.length === 1 ? fate.alive[0] : "一个人";
+        return "门板到了吴起，你也到了。活下来的只有" + only + "。其余的人，都留在了路上。";
+      }
+    }
+    // 3/11 与 7/11 的姓名交给结局页命运句；短描述保持“至少还有几个名字”，避免同一串姓名出现两次。
+    return fallback;
+  }
+
   // 五卡只算一次：finishChapter 调 buildEnding 落成快照，重进结局直接读快照。
   function buildEnding(state) {
     var storyEnding = (XB.story && XB.story.ending) || {};
@@ -939,11 +1044,15 @@
     var storyDef = ((storyEnding.routes) || {})[route] || {};
     var routeTitle = storyDef.title || baseDef.title || "";
     var routeLede = storyDef.lede || baseDef.lede || "";
-    // 7(2)/7(4) 的同一“没带出”，门板留在桥上时叫桥板，留草地时叫门板。
-    if ((route === "door_grass_one" || route === "door_grass_many") && flags.doorOutcome === "bridge") {
-      routeTitle = storyDef.bridgeTitle || baseDef.bridgeTitle || routeTitle;
+    // 门落无声/板留人渡共用同一条路线，门板在桥头还是草地，只换短描述。
+    if (route === "door_grass_one" && flags.doorOutcome === "bridge") {
       routeLede = storyDef.bridgeLede || baseDef.bridgeLede || routeLede;
     }
+    if (route === "door_grass_many" && flags.doorOutcome === "grass") {
+      routeLede = storyDef.grassLede || baseDef.grassLede || routeLede;
+    }
+    routeLede = routeLedeFor(route, flags, routeLede);
+    var routeClosing = storyDef.closing || baseDef.closing || "";
     var isBad = route === "bad_end";
     var fallback = defaultEndingNames(state);
     var names = isBad ? [] : (previous.names || fallback.names);
@@ -994,6 +1103,9 @@
       routeLabel: baseDef.label || "",
       routeTitle: routeTitle,
       routeLede: routeLede,
+      routeClosing: routeClosing,
+      lastChoice: lastChoiceLabel(state.choices),
+      chapterTitle: (chapterById(state.chapterId) || {}).title || "",
       fate: {
         feimao: flags["fate.feimao.dead"] === true ? "dead" : "alive",
         zaowang: flags["fate.zaowang.dead"] === true ? "dead" : "alive",
@@ -2738,7 +2850,7 @@
   var SAVES_KEY = "xiangbei.saves.v1";
   var SAVE_KEY = "xiangbei.save.v2";
   var LEGACY_SAVE_KEY = "xiangbei.save.v1";
-  var SAVE_SLOT_MAX = 20;
+  var SAVE_SLOT_MAX = 40;
   var MAX_SAVE_BYTES = 4096;
   var MAX_SAVES_BYTES = 512 * 1024;
   // 剧情回顾与主档分开存：只记节点引用，不复制台词；按存档槽隔离。
@@ -2752,7 +2864,7 @@
   var PAGE_HEIGHT = 66;
   var INPUT_LOCK_MS = 100;
   var CHOICE_SETTLE_MS = 240;
-  var TIMEOUT_SETTLE_MS = 300;
+  var TIMEOUT_SETTLE_MS = 2000;
   var AUTO_DELAY_MS = 1200;
   var SKIP_DELAY_MS = 120;
 
@@ -2813,10 +2925,14 @@
     "scene-map",
     "scene-vn",
     "scene-ending",
+    "ending-panel",
     "ending-title",
     "ending-date",
     "ending-lede",
     "ending-route",
+    "ending-summary",
+    "ending-fates",
+    "ending-closing",
     "ending-names",
     "ending-stats",
     "ending-cards",
@@ -2828,6 +2944,31 @@
     "ending-home",
     "ending-codex",
     "ending-branch",
+    "ending-share",
+    "ending-run-stats",
+    "share-card",
+    "share-card-panel",
+    "share-card-canvas",
+    "share-close",
+    "share-download",
+    "run-stats",
+    "run-stats-panel",
+    "run-stats-close",
+    "run-stats-route",
+    "run-stats-door",
+    "run-stats-condition",
+    "run-stats-rescues",
+    "run-stats-chapters",
+    "run-stats-fates",
+    "run-stats-names",
+    "run-stats-cards",
+    "run-stats-note",
+    "dev-toggle",
+    "dev-panel",
+    "dev-panel-box",
+    "dev-close",
+    "dev-chapters",
+    "dev-routes",
     "saves-panel",
     "saves-kicker",
     "saves-title",
@@ -2837,6 +2978,7 @@
     "saves-close",
     "saves-back",
     "save-new",
+    "save-default-source",
     "save-latest",
     "save-delete",
     "saves-delete-bar",
@@ -2857,6 +2999,8 @@
     "history-close",
     "pause",
     "pause-menu",
+    "pause-status-log",
+    "pause-status-log-list",
     "toast",
     "autosave-notice",
     "debug",
@@ -2876,7 +3020,9 @@
     "vn-name",
     "vn-text",
     "vn-next",
+    "vn-choice-head",
     "vn-choice-prompt",
+    "vn-choice-stakes",
     "vn-choices",
     "vn-multichoice",
     "vn-multi-prompt",
@@ -3000,6 +3146,10 @@
   // 设置面板挂在 #pause 里；标题态借同一遮罩显示，关闭时按来源还原。
   var settingsState = { open: false, from: "", previousFocus: null };
   var endingReview = { active: false, backup: null };
+  var shareCardState = { open: false, previousFocus: null };
+  var runStatsState = { open: false, previousFocus: null };
+  var devPanelState = { open: false, previousFocus: null };
+  var devMode = false;
   var debugEnabled = false;
   var debugExtra = "";
   var toastTimer = 0;
@@ -3007,6 +3157,7 @@
   var statusNoticeTimer = 0;
   var statusNoticeOpen = false;
   var statusQueue = [];
+  var statusRunLog = [];
   var stationsBuilt = false;
   var lastFocused = null;
   var artWarned = false;
@@ -3152,6 +3303,11 @@
 
     var params = readParams();
     debugEnabled = params.get("debug") === "1";
+    devMode = params.get("dev") === "1";
+    if (devMode) {
+      els.devToggle.hidden = false;
+      renderDevPanel();
+    }
     if (params.get("fonts") === "fallback") document.documentElement.classList.add("fonts-fallback");
     if (params.get("reset") === "1") clearSave();
 
@@ -4088,31 +4244,33 @@
     return value < 10 ? "0" + value : String(value);
   }
 
-  function formatSaveDate(iso) {
-    var date = new Date(iso);
-    if (!iso || isNaN(date.getTime())) return "时间不明";
-    return date.getFullYear() + "年" + pad2(date.getMonth() + 1) + "月" + pad2(date.getDate()) + "日";
-  }
-
   function formatSaveClock(iso) {
     var date = new Date(iso);
     if (!iso || isNaN(date.getTime())) return "时间不明";
     return pad2(date.getMonth() + 1) + "-" + pad2(date.getDate()) + " " + pad2(date.getHours()) + ":" + pad2(date.getMinutes());
   }
 
+  // 存档行先给“这是哪条结局/哪一章”，再给最后一步与时间；同一天的多个档也能一眼分开。
   function slotLabel(slot) {
-    return formatSaveDate(slot.createdAt) + "的存档" + (slotEnded(slot) ? "（已完结）" : "（未完结）");
+    if (slotEnded(slot)) {
+      var ending = slot.state.ending || {};
+      var numberLabel = ending.routeLabel || "";
+      var head = numberLabel === "旧档" ? "旧档结局" : (numberLabel ? "结局 " + numberLabel + "/11" : "结局");
+      return head + " · " + (ending.routeTitle || "未命名路线");
+    }
+    var chapter = chapterById(slot.state.chapterId);
+    return (chapter ? chapter.title : "长征途中") + " · 未完结";
   }
 
   function slotSubLabel(slot) {
-    if (slotEnded(slot)) {
-      var ending = slot.state.ending;
-      var numberLabel = ending.routeLabel || "";
-      var head = numberLabel === "旧档" ? "旧档结局" : "结局" + numberLabel + "/11";
-      return head + (ending.routeTitle ? " · " + ending.routeTitle : "") + " · 已完结";
-    }
+    var ending = slotEnded(slot) ? (slot.state.ending || {}) : null;
     var chapter = chapterById(slot.state.chapterId);
-    return (chapter ? chapter.title : "长征途中") + " · 上次保存 " + formatSaveClock(slot.updatedAt);
+    var chapterTitle = (ending && ending.chapterTitle) || (chapter ? chapter.title : "长征途中");
+    var lastChoice = ending ? (ending.lastChoice || "") : lastChoiceLabel(slot.state.choices);
+    var parts = [chapterTitle];
+    if (lastChoice) parts.push("最后：" + lastChoice);
+    parts.push(formatSaveClock(slot.updatedAt));
+    return parts.join(" · ");
   }
 
   function savePanelChapterMode() {
@@ -4216,6 +4374,9 @@
     var chapterMode = savePanelChapterMode();
     var chapter = savePanelState.chapterId ? chapterById(savePanelState.chapterId) : null;
     var slots = savesStore.slots;
+    var defaultSource = mode === "chapter-target"
+      ? chapterReplaySourceSlots(savePanelState.chapterId)[0] || null
+      : null;
     if (mode === "chapter-target") {
       slots = slots.filter(function (slot) { return !slotEnded(slot); });
     } else if (mode === "chapter-source") {
@@ -4293,6 +4454,12 @@
     els.saveDelete.setAttribute("aria-disabled", savesStore.slots.length ? "false" : "true");
     els.saveNew.setAttribute("aria-disabled", savesStore.slots.length >= SAVE_SLOT_MAX ? "true" : "false");
     els.saveNew.hidden = mode === "chapter-source";
+    els.saveDefaultSource.hidden = !defaultSource;
+    els.saveDefaultSource.setAttribute("aria-disabled",
+      defaultSource && savesStore.slots.length < SAVE_SLOT_MAX ? "false" : "true");
+    els.saveDefaultSource.title = defaultSource ? "前情：" + slotLabel(defaultSource) : "";
+    els.saveDefaultSource.setAttribute("aria-label",
+      defaultSource ? "用最近一周目开新档，前情：" + slotLabel(defaultSource) : "用最近一周目开新档");
     els.saveLatest.hidden = chapterMode;
     els.saveDelete.hidden = chapterMode;
     els.savesBack.hidden = !chapterMode;
@@ -4309,7 +4476,7 @@
     els.savesHint.textContent = !savesStorageOk
       ? "本局无法存档（浏览器限制），进度只在本次有效。"
       : mode === "chapter-target"
-        ? "只能选择未完结的存档；若没有，请开启新档。选定后进入第 2 步。"
+        ? "可选择未完结存档后再挑前情；也可直接用最近一周目开新档。"
         : mode === "chapter-source"
           ? "只拷贝所选章节之前的剧情线；本章及之后的进度会重新开始。" +
             (disabledSources ? " 旧版本存档缺少章节记录，不能作为来源。" : "")
@@ -4474,6 +4641,7 @@
     }
     endingReview.active = false;
     endingReview.backup = null;
+    resetStatusRunLog();
     state = result.state;
     state.settings = cloneJson(savesStore.settings);
     state.paused = false;
@@ -4506,6 +4674,7 @@
       return;
     }
     var copied = result.state;
+    resetStatusRunLog();
     copied.scene = "vn";
     copied.ending = null;
     copied.paused = false;
@@ -4579,6 +4748,8 @@
   }
 
   function closeEndingReview() {
+    if (shareCardState.open) closeShareCard();
+    if (runStatsState.open) closeRunStats();
     endingReview.active = false;
     state = endingReview.backup || defaults();
     endingReview.backup = null;
@@ -5197,8 +5368,12 @@
   function renderChoice(node) {
     historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "choice" });
     els.vnChoices.hidden = false;
+    els.vnChoiceHead.hidden = !node.prompt && !node.stakes;
     els.vnChoicePrompt.hidden = !node.prompt;
     els.vnChoicePrompt.textContent = node.prompt || "";
+    els.vnChoiceStakes.hidden = !node.stakes;
+    els.vnChoiceStakes.textContent = node.stakes || "";
+    els.vnChoiceHead.classList.remove("is-timeout");
     els.vnChoices.textContent = "";
     els.vnChoices.style.setProperty("--choice-progress", "1");
 
@@ -5298,9 +5473,12 @@
     XB.audio.cue(timedOut ? "choice-timeout" : "choice-select");
     markChoice(node, key, timedOut);
     if (timedOut) {
-      var timeoutText = "超时：已按默认选项结算 —— " + option.text;
-      if (option.cost && !node.hideCost) timeoutText += "（" + option.cost + "）";
-      toast(timeoutText);
+      // 超时不弹系统提示，改成剧情里的“迟疑”反馈：先让玩家看见自己没选，再结算。
+      els.vnChoiceHead.hidden = false;
+      els.vnChoiceHead.classList.add("is-timeout");
+      els.vnChoicePrompt.hidden = false;
+      els.vnChoicePrompt.textContent = node.timeoutText || "号声响了第二次。你还没决定，后面的人已经把你推向前。";
+      els.vnChoiceStakes.hidden = true;
     }
     debugExtra = "choice=" + key + (timedOut ? " 超时" : "");
     updateDebug();
@@ -5329,7 +5507,10 @@
   function hideChoicePanel() {
     cancelChoiceTimer();
     els.vnChoices.hidden = true;
+    els.vnChoiceHead.hidden = true;
+    els.vnChoiceHead.classList.remove("is-timeout");
     els.vnChoicePrompt.hidden = true;
+    els.vnChoiceStakes.hidden = true;
   }
 
   /* ---------------- 多选（行囊 / 弃物） ---------------- */
@@ -5728,6 +5909,452 @@
     els.vnResult.focus({ preventScroll: true });
   }
 
+  /* ---------------- 结局分享卡 / 本周目统计 ---------------- */
+
+  function endingRouteHeading(ending) {
+    if (!ending) return "";
+    var label = ending.routeLabel || "";
+    var title = ending.routeTitle || "";
+    if (!label) return title;
+    if (label === "旧档") return "旧档";
+    return "结局" + label + "/11" + (title ? "（" + title + "）" : "");
+  }
+
+  function endingDoorText(ending) {
+    if (!ending) return "—";
+    if (ending.doorOutcome === "carried") return "门板到了吴起";
+    if (ending.doorOutcome === "grass") return "门板留在草地";
+    if (ending.doorOutcome === "bridge") return "门板留在桥头";
+    if (ending.doorOutcome === "wuqi") return "门板留在吴起";
+    if (ending.doorOutcome === "others") return "门板由别人带出";
+    return "空手到吴起";
+  }
+
+  function endingStatusText(entry) {
+    if (entry.answeredBy === "dongsheng") return "冬生 代答";
+    if (entry.answeredBy === "you") return "你 代答";
+    return ENDING_STATUS_TEXT[entry.status] || entry.status;
+  }
+
+  function endingFateRows(ending) {
+    var fate = (ending && ending.fate) || {};
+    return [
+      { id: "feimao", name: "飞毛腿", alive: fate.feimao !== "dead" },
+      { id: "zaowang", name: "灶王", alive: fate.zaowang !== "dead" },
+      { id: "dongsheng", name: "冬生", alive: fate.dongsheng !== "dead" },
+      { id: "lin", name: "林先生", alive: fate.lin !== "dead" },
+      { id: "player", name: "你", alive: fate.player !== "dead" }
+    ];
+  }
+
+  // 结局页的一行人物账：谁到了 + 谁没到；门板去向已写在短描述，旧档没有短描述时才补进门板句。
+  function endingFateLine(ending) {
+    if (!ending) return "";
+    if (ending.route === "bad_end") return "你没有走到吴起。";
+    var fate = ending.fate || {};
+    var parts = [];
+    if (fate.player === "dead") parts.push("你没有走到吴起。");
+    var showDoor = ending.route === "legacy" || !ending.route;
+    if (showDoor) {
+      if (ending.doorOutcome === "carried") parts.push("门板到了吴起。");
+      else if (ending.doorOutcome === "grass") parts.push("门板留在了草地。");
+      else if (ending.doorOutcome === "bridge") parts.push("门板留在了桥头。");
+      else if (ending.doorOutcome === "wuqi") parts.push("门板留在了吴起。");
+      else if (ending.doorOutcome === "others") parts.push("门板由别人带到了吴起。");
+    }
+
+    var alive = [];
+    var dead = [];
+    [["feimao", "飞毛腿"], ["zaowang", "灶王"], ["dongsheng", "冬生"]].forEach(function (pair) {
+      if (fate[pair[0]] === "dead") dead.push(pair[1]);
+      else alive.push(pair[1]);
+    });
+    if (alive.length === 3) parts.push("飞毛腿、灶王、冬生都到了。");
+    else if (alive.length === 2) parts.push(alive[0] + "和" + alive[1] + "也到了。");
+    else if (alive.length === 1) parts.push(alive[0] + "也到了。");
+    else parts.push("飞毛腿、灶王、冬生一个也没到。");
+    if (dead.length && alive.length) parts.push(dead.join("、") + "没能走到吴起。");
+    if (fate.lin === "dead") parts.push("林先生也没能走到吴起。");
+    return parts.join("");
+  }
+
+  function openShareCard() {
+    if (!isFullEnding(state.ending)) {
+      toast("结局还没有结算完");
+      return;
+    }
+    if (shareCardState.open) return;
+    shareCardState.open = true;
+    shareCardState.previousFocus = document.activeElement;
+    drawShareCard();
+    els.shareCard.hidden = false;
+    els.shareClose.focus({ preventScroll: true });
+    // 内置字体是异步加载的：字体就绪后再画一次，避免分享卡落到系统宋体。
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () {
+        if (shareCardState.open) drawShareCard();
+      });
+    }
+  }
+
+  function closeShareCard() {
+    if (!shareCardState.open) return;
+    shareCardState.open = false;
+    els.shareCard.hidden = true;
+    if (shareCardState.previousFocus && document.contains(shareCardState.previousFocus)) {
+      shareCardState.previousFocus.focus({ preventScroll: true });
+    }
+    shareCardState.previousFocus = null;
+  }
+
+  function drawShareCard() {
+    var canvas = els.shareCardCanvas;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      toast("本机无法生成分享卡");
+      return;
+    }
+    var ending = state.ending;
+    var storyEnding = (XB.story && XB.story.ending) || {};
+    var W = 1080;
+    var H = 1440;
+    canvas.width = W;
+    canvas.height = H;
+
+    ctx.fillStyle = "#E8E1D0";
+    ctx.fillRect(0, 0, W, H);
+    var seed = 20261109;
+    function random() {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    }
+    for (var i = 0; i < 900; i += 1) {
+      ctx.fillStyle = "rgba(26, 23, 20, 0.035)";
+      ctx.fillRect(random() * W, random() * H, 1 + random() * 1.5, 1);
+    }
+
+    ctx.strokeStyle = "#1A1714";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(40, 40, W - 80, H - 80);
+    ctx.fillStyle = "#A8322D";
+    ctx.fillRect(40, 40, W - 80, 10);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#1A1714";
+    ctx.font = '400 106px "XB Smiley", "XB Zhuque", serif';
+    ctx.fillText("向北", 88, 190);
+    ctx.fillStyle = "#5C564D";
+    ctx.font = '400 30px "XB Zhuque", serif';
+    ctx.fillText("一块门板，两万五千里", 92, 238);
+
+    ctx.strokeStyle = "rgba(26, 23, 20, 0.22)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(88, 276);
+    ctx.lineTo(992, 276);
+    ctx.stroke();
+
+    var routeHeading = endingRouteHeading(ending);
+    var routeLede = ending.routeLede || storyEnding.lede || "";
+    ctx.fillStyle = "#A8322D";
+    ctx.font = '400 36px "XB Zhuque", serif';
+    ctx.fillText(routeHeading, 92, 336);
+    ctx.fillStyle = "#1A1714";
+    ctx.font = '400 32px "XB Zhuque", serif';
+    drawWrappedText(ctx, routeLede, 92, 390, 896, 44, 2);
+
+    ctx.fillStyle = "#1A1714";
+    ctx.font = '400 27px "XB Zhuque", serif';
+    ctx.fillText("门板：" + endingDoorText(ending), 92, 500);
+    var fateText = endingFateRows(ending).map(function (row) {
+      return row.name + (row.alive ? "到" : "未到");
+    }).join("　");
+    ctx.fillText("同伴：" + fateText, 92, 548);
+    ctx.fillText("状态：" + conditionLabel(ending.condition) + "　救 " + ending.rescues + " 人", 92, 596);
+
+    var byId = {};
+    (ending.cards || []).forEach(function (card) {
+      byId[card.id] = card;
+    });
+    var defs = storyEnding.cards || [];
+    var gap = 24;
+    var cardW = (896 - gap) / 2;
+    var cardH = 200;
+    var top = 646;
+    defs.forEach(function (def, index) {
+      var snapshot = byId[def.id];
+      if (!snapshot) return;
+      var col = index % 2;
+      var row = Math.floor(index / 2);
+      var x = 92 + col * (cardW + gap);
+      var y = top + row * (cardH + 20);
+      ctx.fillStyle = snapshot.lit ? "#F1EBDD" : "#E8E1D0";
+      ctx.fillRect(x, y, cardW, cardH);
+      ctx.strokeStyle = snapshot.lit ? "#A8322D" : "rgba(26, 23, 20, 0.28)";
+      ctx.lineWidth = snapshot.lit ? 3 : 2;
+      if (!snapshot.lit) ctx.setLineDash([8, 8]);
+      ctx.strokeRect(x, y, cardW, cardH);
+      ctx.setLineDash([]);
+      ctx.fillStyle = snapshot.lit ? "#A8322D" : "#5C564D";
+      ctx.font = '400 20px "XB Zhuque", serif';
+      ctx.fillText("0" + (index + 1), x + 22, y + 34);
+      ctx.fillStyle = "#1A1714";
+      ctx.font = '400 27px "XB Zhuque", serif';
+      ctx.fillText(def.title, x + 22, y + 78);
+      ctx.fillStyle = snapshot.lit ? "#1A1714" : "#5C564D";
+      ctx.font = '400 21px "XB Zhuque", serif';
+      drawWrappedText(ctx, snapshot.lit ? snapshot.line : "这一条还没有亮。", x + 22, y + 116, cardW - 44, 30, 2);
+    });
+
+    ctx.fillStyle = "#5C564D";
+    ctx.font = '400 20px "XB Zhuque", serif';
+    ctx.fillText("《向北》· " + routeHeading + " · 本周目分享卡", 92, 1330);
+    ctx.font = '400 17px "XB Zhuque", serif';
+    ctx.fillText("人物与连队虚构，非史料人物；历史终点不分支。", 92, 1368);
+  }
+
+  function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+    var content = String(text || "");
+    var lines = [];
+    var line = "";
+    for (var i = 0; i < content.length; i += 1) {
+      var next = line + content.charAt(i);
+      if (ctx.measureText(next).width > maxWidth && line) {
+        lines.push(line);
+        line = content.charAt(i);
+      } else {
+        line = next;
+      }
+    }
+    if (line) lines.push(line);
+    if (maxLines && lines.length > maxLines) {
+      lines = lines.slice(0, maxLines);
+      lines[lines.length - 1] += "…";
+    }
+    lines.forEach(function (row, index) {
+      ctx.fillText(row, x, y + index * lineHeight);
+    });
+    return y + lines.length * lineHeight;
+  }
+
+  function downloadShareCard() {
+    if (!shareCardState.open) return;
+    var canvas = els.shareCardCanvas;
+    var number = (state.ending && state.ending.routeLabel) || "结局";
+    var filename = "向北-结局" + number + ".png";
+    function saveUrl(url) {
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+    }
+    if (canvas.toBlob) {
+      canvas.toBlob(function (blob) {
+        if (!blob) {
+          saveUrl(canvas.toDataURL("image/png"));
+          toast("分享卡已生成");
+          return;
+        }
+        var url = URL.createObjectURL(blob);
+        saveUrl(url);
+        window.setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 1200);
+        toast("分享卡已生成");
+      }, "image/png");
+    } else {
+      saveUrl(canvas.toDataURL("image/png"));
+      toast("分享卡已生成");
+    }
+  }
+
+  function renderRunStats() {
+    var ending = state.ending;
+    var storyEnding = (XB.story && XB.story.ending) || {};
+    if (!ending) return;
+    els.runStatsRoute.textContent = endingRouteHeading(ending) + (ending.routeLede ? " · " + ending.routeLede : "");
+    els.runStatsDoor.textContent = endingDoorText(ending);
+    els.runStatsCondition.textContent = conditionLabel(ending.condition);
+    els.runStatsRescues.textContent = "救了 " + ending.rescues + " 人";
+
+    els.runStatsChapters.textContent = "";
+    branchChapterIds().forEach(function (id) {
+      var chapter = chapterById(id);
+      if (!chapter) return;
+      var chip = document.createElement("span");
+      chip.className = "xb-runstats__chip" + (state.unlockedChapters.indexOf(id) !== -1 ? " is-visited" : "");
+      chip.textContent = chapter.short || chapter.title;
+      els.runStatsChapters.append(chip);
+    });
+
+    els.runStatsFates.textContent = "";
+    endingFateRows(ending).forEach(function (row) {
+      var chip = document.createElement("span");
+      chip.className = "xb-runstats__chip " + (row.alive ? "is-alive" : "is-dead");
+      chip.textContent = row.name + (row.alive ? " · 到" : " · 未到");
+      els.runStatsFates.append(chip);
+    });
+
+    els.runStatsNames.textContent = "";
+    (ending.names || []).forEach(function (entry) {
+      var item = document.createElement("li");
+      item.className = "is-" + entry.status;
+      item.textContent = entry.name + " · " + endingStatusText(entry);
+      els.runStatsNames.append(item);
+    });
+
+    els.runStatsCards.textContent = "";
+    var byId = {};
+    (ending.cards || []).forEach(function (card) {
+      byId[card.id] = card;
+    });
+    (storyEnding.cards || []).forEach(function (def) {
+      var snapshot = byId[def.id];
+      if (!snapshot) return;
+      var chip = document.createElement("span");
+      chip.className = "xb-runstats__chip " + (snapshot.lit ? "is-lit" : "is-unlit");
+      chip.textContent = def.title + (snapshot.lit ? " · " + snapshot.line : " · 未亮");
+      els.runStatsCards.append(chip);
+    });
+
+    els.runStatsNote.textContent = "只记这一周目的门板、同伴、点名与五卡；不做完成度百分比，也不把牺牲当分数。";
+  }
+
+  function openRunStats() {
+    if (!isFullEnding(state.ending)) {
+      toast("结局还没有结算完");
+      return;
+    }
+    if (runStatsState.open) return;
+    runStatsState.open = true;
+    runStatsState.previousFocus = document.activeElement;
+    renderRunStats();
+    els.runStats.hidden = false;
+    els.runStatsClose.focus({ preventScroll: true });
+  }
+
+  function closeRunStats() {
+    if (!runStatsState.open) return;
+    runStatsState.open = false;
+    els.runStats.hidden = true;
+    if (runStatsState.previousFocus && document.contains(runStatsState.previousFocus)) {
+      runStatsState.previousFocus.focus({ preventScroll: true });
+    }
+    runStatsState.previousFocus = null;
+  }
+
+  var DEV_ROUTE_PRESETS = [
+    { id: "door_excellent", label: "1 门至人散", doorOutcome: "carried", condition: 4, rescues: 0, dead: ["feimao", "zaowang", "dongsheng"] },
+    { id: "door_grass_one", label: "2 门落无声", doorOutcome: "grass", condition: 3, rescues: 0, dead: ["feimao", "zaowang", "dongsheng"] },
+    { id: "door_carry_two", label: "3 门与归人", doorOutcome: "carried", condition: 3, rescues: 2, dead: ["feimao"] },
+    { id: "door_grass_many", label: "4 板留人渡", doorOutcome: "grass", condition: 3, rescues: 2, dead: ["feimao"] },
+    { id: "door_others", label: "5 替你答到", doorOutcome: "others", condition: 0, rescues: 3, playerDead: true, dead: [] },
+    { id: "no_door_zero", label: "6 无人应到", doorOutcome: "none", condition: 3, rescues: 0, dead: ["feimao", "zaowang", "dongsheng"] },
+    { id: "no_door_one", label: "7 一人同北", doorOutcome: "none", condition: 3, rescues: 1, dead: ["feimao", "zaowang"] },
+    { id: "no_door_two", label: "8 两人成行", doorOutcome: "none", condition: 3, rescues: 2, dead: ["feimao"] },
+    { id: "no_door_three", label: "9 三人犹立", doorOutcome: "none", condition: 3, rescues: 3, dead: [] },
+    { id: "no_door_three_excellent", label: "10 人至“家”至", doorOutcome: "none", condition: 4, rescues: 3, dead: [] },
+    { id: "bad_end", label: "11 草地无归", doorOutcome: "none", condition: 0, rescues: 0, playerDead: true, dead: ["feimao", "zaowang", "dongsheng"] }
+  ];
+
+  function renderDevPanel() {
+    if (els.devChapters.childElementCount) return;
+    ((XB.story && XB.story.chapters) || []).filter(function (chapter) {
+      return chapter.playable !== false && chapter.hidden !== true;
+    }).forEach(function (chapter) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "xb-btn";
+      button.dataset.action = "dev-chapter";
+      button.dataset.chapter = chapter.id;
+      button.textContent = chapter.title;
+      els.devChapters.append(button);
+    });
+    DEV_ROUTE_PRESETS.forEach(function (preset) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "xb-btn";
+      button.dataset.action = "dev-route";
+      button.dataset.route = preset.id;
+      button.textContent = preset.label;
+      els.devRoutes.append(button);
+    });
+  }
+
+  function openDevPanel() {
+    if (!devMode) return;
+    renderDevPanel();
+    devPanelState.open = true;
+    devPanelState.previousFocus = document.activeElement;
+    els.devPanel.hidden = false;
+    els.devClose.focus({ preventScroll: true });
+  }
+
+  function closeDevPanel() {
+    if (!devPanelState.open) return;
+    devPanelState.open = false;
+    els.devPanel.hidden = true;
+    if (devPanelState.previousFocus && document.contains(devPanelState.previousFocus)) {
+      devPanelState.previousFocus.focus({ preventScroll: true });
+    }
+    devPanelState.previousFocus = null;
+  }
+
+  function startDevChapter(chapterId) {
+    if (!chapterById(chapterId)) return;
+    state.ending = null;
+    state.choices = [];
+    state.paused = false;
+    if (state.unlockedChapters.indexOf(chapterId) === -1) state.unlockedChapters.push(chapterId);
+    if (!startChapter(state, chapterId)) {
+      toast("章节没能载入");
+      return;
+    }
+    closeDevPanel();
+    state.scene = "vn";
+    showScene("vn");
+    render();
+    toast("测试模式：跳到" + (chapterById(chapterId).short || chapterId));
+  }
+
+  function startDevRoute(routeId) {
+    var preset = null;
+    for (var i = 0; i < DEV_ROUTE_PRESETS.length; i += 1) {
+      if (DEV_ROUTE_PRESETS[i].id === routeId) preset = DEV_ROUTE_PRESETS[i];
+    }
+    if (!preset) return;
+    var flags = state.flags;
+    flags.doorOutcome = preset.doorOutcome;
+    flags.condition = preset.condition;
+    flags.rescues = preset.rescues;
+    flags["help.used"] = false;
+    ["feimao", "zaowang", "dongsheng"].forEach(function (id) {
+      flags["fate." + id + ".dead"] = preset.dead.indexOf(id) !== -1;
+    });
+    flags["fate.player.dead"] = preset.playerDead === true;
+    flags["fate.lin.dead"] = false;
+    XB.core.syncDerivedFlags(state);
+    state.inventory.door = flags["item.door"] === true;
+    state.inventory.items = [];
+    state.inventory.giftBarley = false;
+    state.unlockedChapters = branchChapterIds();
+    state.ending = null;
+    state.choices = [];
+    state.codex = [];
+    state.paused = false;
+    if (!startChapter(state, "wuqi", "w041")) {
+      toast("测试结局没能载入");
+      return;
+    }
+    closeDevPanel();
+    state.scene = "vn";
+    showScene("vn");
+    render();
+    toast("测试模式：已跳到" + preset.label);
+  }
+
   /* ---------------- 结局 ---------------- */
 
   var ENDING_STATUS_TEXT = {
@@ -5765,11 +6392,16 @@
     } else {
       routeHeading = routeName;
     }
-    var showRouteLede = numberLabel !== "旧档";
-    els.endingRoute.textContent = routeHeading
-      ? routeHeading + (showRouteLede && state.ending.routeLede ? " · " + state.ending.routeLede : "")
-      : "";
+    els.endingRoute.textContent = routeHeading;
     els.endingRoute.hidden = !routeHeading;
+    var routeSummary = numberLabel !== "旧档" ? (state.ending.routeLede || "") : "";
+    els.endingSummary.textContent = routeSummary;
+    els.endingSummary.hidden = !routeSummary;
+    els.endingFates.textContent = endingFateLine(state.ending);
+    els.endingFates.hidden = !els.endingFates.textContent;
+    var routeClosing = state.ending.routeClosing || ((ROUTE_DEFS[state.ending.route] || {}).closing || "");
+    els.endingClosing.textContent = numberLabel !== "旧档" ? routeClosing : "";
+    els.endingClosing.hidden = !els.endingClosing.textContent;
 
     els.endingNames.textContent = "";
     if (!state.ending.names.length) {
@@ -5818,6 +6450,7 @@
     });
 
     els.endingDisclaimer.textContent = storyEnding.disclaimer || "本作人物与连队均为虚构，非史料人物。";
+    els.endingPanel.scrollTop = 0;
     els.endingBranch.hidden = endingReview.active;
     els.endingCodex.hidden = endingReview.active;
     els.endingHome.textContent = endingReview.active ? "返回存档" : "回到标题";
@@ -6423,6 +7056,12 @@
     nodoor: ["no_door_zero", "no_door_one", "no_door_two", "no_door_three", "no_door_three_excellent"],
     bad: ["bad_end"]
   };
+  // 未解锁只给分组级线索，既保留回看价值，也不提前泄露救人数与结局条件。
+  var BRANCH_LOCKED_LEDES = {
+    door: "门板还在不在？最后一段是谁走完的？",
+    nodoor: "空着手，带回了几个名字？",
+    bad: "草地有没有尽头？"
+  };
 
   function branchMapData() {
     return (XB.story && XB.story.branchMap) || null;
@@ -7006,7 +7645,9 @@
         var unlocked = !!store.endings[route];
         var run = unlocked ? branchLatestRunForRoute(store, route) : null;
         var title = unlocked ? (run && run.routeTitle ? run.routeTitle : def.title) : "尚未抵达";
-        var lede = unlocked ? (run && run.routeLede ? run.routeLede : def.lede) : "未解锁";
+        var lede = unlocked
+          ? (run && run.routeLede ? run.routeLede : def.lede)
+          : (BRANCH_LOCKED_LEDES[pair[0]] || "未解锁");
         var button = document.createElement("button");
         button.type = "button";
         button.className = "xb-branch-ending " +
@@ -7514,6 +8155,24 @@
     return text || ach.key;
   }
 
+  function achievementOptionCost(ach) {
+    var decision = achievementDecision(ach);
+    if (!decision || ach.kind === "interact") return "";
+    var cost = "";
+    (decision.nodes || []).forEach(function (nodeId) {
+      if (cost) return;
+      var found = branchStatementNode(nodeId);
+      if (!found || !found.node) return;
+      (found.node.options || []).forEach(function (option) {
+        if (cost) return;
+        var key = option.id || option.key;
+        var semantic = branchSemanticKey(decision, nodeId, option.key || option.id);
+        if (key === ach.key || semantic === ach.key) cost = option.cost || "";
+      });
+    });
+    return cost;
+  }
+
   function achievementConsequence(ach) {
     var decision = achievementDecision(ach);
     if (!decision) return "";
@@ -7538,6 +8197,7 @@
     var decision = achievementDecision(ach);
     var decisionTitle = decision ? decision.title : "";
     var consequence = achievementConsequence(ach);
+    var cost = achievementOptionCost(ach);
     var intro = "";
     var timedOut = meta.timedOut === true;
     if (ach.kind === "interact") {
@@ -7557,6 +8217,7 @@
     }
     var lines = [intro];
     if (consequence) lines.push(consequence);
+    if (cost) lines.push("代价：" + cost.replace(/[。；;]+$/, "") + "。");
     lines.push("因此，你解锁了「" + ach.title + "」。");
     return lines;
   }
@@ -7790,12 +8451,14 @@
     if (!state || !els.vnCondition) return;
     var condition = isFiniteNumber(state.flags.condition) ? state.flags.condition : 3;
     var label = XB.core.conditionLabel(condition);
+    var reasonEvent = latestPlayerStatusEvent();
+    if (reasonEvent && reasonEvent.to === condition) label += " · " + shortStatusReason(reasonEvent.reason);
     var text = els.vnCondition.querySelector("b");
     if (text) text.textContent = label;
     els.vnCondition.className = "vn-condition is-q" + condition;
     var units = XB.core.packUsage(state);
-    var capacity = Math.max(4, units / 2);
-    els.vnPackCount.textContent = (units / 2).toFixed(units % 2 === 0 ? 0 : 1) + "/" + capacity;
+    var capacity = Math.max(PACK_SLOTS, units / 2);
+    els.vnPackCount.textContent = (units / 2).toFixed(units % 2 === 0 ? 0 : 1) + "/" + capacity + " 格";
     els.vnPackButton.disabled = choiceRun.active || interactRun.active;
     els.vnPackButton.setAttribute("aria-disabled", els.vnPackButton.disabled ? "true" : "false");
   }
@@ -7807,7 +8470,7 @@
     };
     if (state.inventory.items.indexOf("roster") !== -1) add("roster", "花名册", "一直贴身带着，不占格。", 0);
     if (state.inventory.items.indexOf("pencil") !== -1) add("pencil", "铅笔", "记名字用的，不占格。", 0);
-    if (state.flags["item.door"] === true) add("door", "门板", "占两格，不能当物资使用；剧情里可以铺桥、挡雨、当床板。", DOOR_UNITS);
+    if (state.flags["item.door"] === true) add("door", "门板", "占两格；可铺桥、挡雨、当床板；草地上要状态优秀才背得出去。", DOOR_UNITS);
     if (state.inventory.items.indexOf("medicine") !== -1) add("medicine", "药", "两包草药，油纸裹着。半格。", 1);
     if (state.inventory.items.indexOf("barley") !== -1) add("barley", "青稞", "一小袋炒青稞。半格。", 1);
     if (state.inventory.items.indexOf("shoes") !== -1) add("shoes", "布鞋", "新纳的底，针脚密。一格。", 2);
@@ -7838,19 +8501,31 @@
     return recipes;
   }
 
+  // 草地尽头只列能把状态补到 4 的组合；补不到 4 的组合救不了门板，不放进来。
+  function doorSupplyRecipes() {
+    if (!state || !state.flags) return [];
+    var condition = isFiniteNumber(state.flags.condition) ? state.flags.condition : 3;
+    var missing = 4 - condition;
+    if (missing <= 0) return [];
+    return packRecipes().filter(function (recipe) {
+      return !recipe.disabled && recipe.delta >= missing;
+    });
+  }
+
   function renderPack() {
     var warning = packState.mode === "warning";
     var intro = packState.mode === "start";
+    var door = packState.mode === "door";
     els.packWarning.hidden = !warning;
     els.packWarning.textContent = warning
       ? "当前你的状态已不足以支撑继续行进，请立刻补充物资恢复体力。"
       : "";
-    els.packTitle.textContent = intro ? "出发前" : "物资";
+    els.packTitle.textContent = door ? "草地尽头" : intro ? "出发前" : "行囊";
     var used = XB.core.packUsage(state);
     var capacity = Math.max(8, used);
     els.packSummary.textContent =
       "行囊 " + formatSlots(used) + " / " + formatSlots(capacity) +
-      (state.flags["item.door"] === true ? "（门板占两格）" : "") +
+      (state.flags["item.door"] === true ? " · 门板占 2 格" : "") +
       " · 状态 " + XB.core.conditionLabel(state.flags.condition);
     els.packList.textContent = "";
     packItemRows().forEach(function (row) {
@@ -7871,9 +8546,9 @@
 
     var head = document.createElement("p");
     head.className = "xb-pack__subhead";
-    head.textContent = "可以这样用";
+    head.textContent = door ? "能补到“优秀”的组合" : "可以这样用";
     els.packList.append(head);
-    var recipes = packRecipes();
+    var recipes = door ? doorSupplyRecipes() : packRecipes();
     if (state.flags.condition >= 4) {
       var full = document.createElement("p");
       full.className = "xb-pack__empty";
@@ -7882,7 +8557,7 @@
     } else if (!recipes.length) {
       var none = document.createElement("p");
       none.className = "xb-pack__empty";
-      none.textContent = "现在没有能用的组合。";
+      none.textContent = door ? "没有能补到“优秀”的物资。" : "现在没有能用的组合。";
       els.packList.append(none);
     } else {
       var actions = document.createElement("div");
@@ -7899,12 +8574,14 @@
       });
       els.packList.append(actions);
     }
-    els.packNote.textContent = warning
-      ? "用物资把状态提回“勉强”以上；不用就走不出去。"
-      : intro
-        ? "你当前的状态为良好。使用物资可以把状态提到优秀；不用也可以出发。"
-        : "使用物资会消耗它；状态到优秀后不再需要。";
-    els.packClose.textContent = intro ? "不用，出发" : "关闭";
+    els.packNote.textContent = door
+      ? "门板还在你背上，但你的手已经握不住它。用一件能把你补回“优秀”的物资；不补，就只能把它放下。"
+      : warning
+        ? "用物资把状态提回“勉强”以上；不用就走不出去。"
+        : intro
+          ? "你当前的状态为良好。使用物资可以把状态提到优秀；草地尽头还要留一件能补回优秀的物资，门板才背得过去。"
+          : "使用物资会消耗它；状态到优秀后不再需要。";
+    els.packClose.textContent = door ? "不补了，继续" : intro ? "不用，出发" : "关闭";
     els.packClose.hidden = warning;
     els.packContinue.hidden = !warning;
     els.packContinue.textContent = warning
@@ -7962,6 +8639,16 @@
       finishPackPanel();
       return;
     }
+    if (packState.mode === "door") {
+      if (state.flags.condition === 4) {
+        toast("状态回到优秀，门板还能背。");
+        finishPackPanel();
+      } else {
+        toast("状态还不够，门板背不过去。");
+        renderPack();
+      }
+      return;
+    }
     renderPack();
   }
 
@@ -7982,6 +8669,22 @@
 
   function finishGrassSettlement() {
     if (state.flags.condition <= 1) XB.core.resolveGrassWarning(state);
+    var rescues = isFiniteNumber(state.flags.rescues) ? state.flags.rescues : 0;
+    var canTryDoorSupply = state.flags.condition > 1 &&
+      state.flags["fate.player.dead"] !== true &&
+      state.flags["had.door"] === true &&
+      state.flags.doorOutcome === "carried" &&
+      rescues <= 1 &&
+      !XB.core.doorCanCarry(state) &&
+      doorSupplyRecipes().length > 0;
+    if (canTryDoorSupply) {
+      openPackPanel("door", finishDoorSettlement);
+      return;
+    }
+    finishDoorSettlement();
+  }
+
+  function finishDoorSettlement() {
     var outcome = XB.core.settleDoor(state);
     XB.core.syncDerivedFlags(state);
     updateHud();
@@ -8073,6 +8776,9 @@
   /* ---------------- 场景与暂停 ---------------- */
 
   function go(scene) {
+    if (shareCardState.open) closeShareCard();
+    if (runStatsState.open) closeRunStats();
+    if (devPanelState.open) closeDevPanel();
     stopInteract();
     cancelAuto();
     cancelChoiceTimer();
@@ -8088,6 +8794,7 @@
       return;
     }
     clearStatusNotice();
+    resetStatusRunLog();
     XB.core.takeStatusEvents();
     state = defaults();
     state.settings = cloneJson(savesStore.settings);
@@ -8156,6 +8863,7 @@
     els.pauseMenu.hidden = false;
     els.vnSettings.hidden = true;
     els.vnRoster.hidden = true;
+    renderStatusRunLog();
     var first = els.pauseMenu.querySelector("button");
     if (first) first.focus();
   }
@@ -8458,6 +9166,15 @@
     els.achievementDetail.addEventListener("click", function (event) {
       if (event.target === els.achievementDetail) closeAchievementDetail();
     });
+    els.shareCard.addEventListener("click", function (event) {
+      if (event.target === els.shareCard) closeShareCard();
+    });
+    els.runStats.addEventListener("click", function (event) {
+      if (event.target === els.runStats) closeRunStats();
+    });
+    els.devPanel.addEventListener("click", function (event) {
+      if (event.target === els.devPanel) closeDevPanel();
+    });
     els.savesPanel.addEventListener("click", function (event) {
       if (event.target !== els.savesPanel) return;
       if (savePanelState.mode === "chapter-source") chapterSaveBack();
@@ -8479,6 +9196,7 @@
     if (event.button !== undefined && event.button !== 0) return;
     var target = event.target;
     if (!target || !target.closest) return;
+    if (shareCardState.open || runStatsState.open || devPanelState.open) return;
     if (branchState.open || achievementState.open) return;
     if (savePanelState.open || confirmState.open || endingReview.active || settingsState.open) return;
     if (target.closest("[data-action]")) return; // 按钮交给 click，避免一次点击走两条路
@@ -8507,7 +9225,38 @@
 
   function onKeyDown(event) {
     XB.audio.unlock();
-    // 回顾层在最上面：Esc 关闭，Tab 只在关闭键与正文之间走，其余键不穿透。
+    // 结局分享卡 / 本周目统计 / 测试模式盖在结局页与标题上：各自锁焦点，Esc 关闭。
+    if (shareCardState.open) {
+      if (event.key === "Escape") {
+        closeShareCard();
+        event.preventDefault();
+      } else if (event.key === "Tab") {
+        trapFocus(event, els.shareCardPanel);
+        event.preventDefault();
+      }
+      return;
+    }
+    if (runStatsState.open) {
+      if (event.key === "Escape") {
+        closeRunStats();
+        event.preventDefault();
+      } else if (event.key === "Tab") {
+        trapFocus(event, els.runStatsPanel);
+        event.preventDefault();
+      }
+      return;
+    }
+    if (devPanelState.open) {
+      if (event.key === "Escape") {
+        closeDevPanel();
+        event.preventDefault();
+      } else if (event.key === "Tab") {
+        trapFocus(event, els.devPanelBox);
+        event.preventDefault();
+      }
+      return;
+    }
+    // 回顾层在下面：Esc 关闭，Tab 只在关闭键与正文之间走，其余键不穿透。
     if (historyState.open) {
       if (event.key === "Escape") {
         closeHistory();
@@ -8771,6 +9520,20 @@
           openConfirm("new");
         }
         break;
+      case "save-default-source": {
+        var defaultSource = chapterReplaySourceSlots(savePanelState.chapterId)[0];
+        if (!defaultSource) {
+          toast("还没有可作为前情的已完结存档");
+          break;
+        }
+        if (savesStore.slots.length >= SAVE_SLOT_MAX) {
+          toast("存档已满，请先删除一个存档");
+          break;
+        }
+        savePanelState.targetId = null;
+        applyChapterStart(defaultSource, savePanelState.chapterId);
+        break;
+      }
       case "save-latest":
         if (latestUnfinishedSlot()) openConfirm("continue");
         break;
@@ -8892,6 +9655,33 @@
         if (endingReview.active) closeEndingReview();
         else go("title");
         break;
+      case "ending-share":
+        openShareCard();
+        break;
+      case "ending-run-stats":
+        openRunStats();
+        break;
+      case "share-close":
+        closeShareCard();
+        break;
+      case "share-download":
+        downloadShareCard();
+        break;
+      case "run-stats-close":
+        closeRunStats();
+        break;
+      case "dev-open":
+        openDevPanel();
+        break;
+      case "dev-close":
+        closeDevPanel();
+        break;
+      case "dev-chapter":
+        startDevChapter(target.dataset.chapter);
+        break;
+      case "dev-route":
+        startDevRoute(target.dataset.route);
+        break;
       case "ending-codex":
         openGallery();
         break;
@@ -8982,6 +9772,47 @@
     return String(reason || "").replace(/[。！？!?；;]+$/g, "").trim() || "路上的情况变了";
   }
 
+  // HUD 只放一个最短的原因；完整句子留给状态弹窗与暂停里的本周目记录。
+  function shortStatusReason(reason) {
+    var text = cleanStatusReason(reason);
+    if (text.length <= 14) return text;
+    var head = text.split(/[，。；,;]/)[0] || text;
+    return head.length > 12 ? head.slice(0, 12) : head;
+  }
+
+  function latestPlayerStatusEvent() {
+    for (var i = statusRunLog.length - 1; i >= 0; i -= 1) {
+      if (statusRunLog[i].kind === "player") return statusRunLog[i];
+    }
+    return null;
+  }
+
+  function statusRunLabel(event) {
+    return statusEventLine(event);
+  }
+
+  function resetStatusRunLog() {
+    statusRunLog = [];
+  }
+
+  function renderStatusRunLog() {
+    if (!els.pauseStatusLogList) return;
+    els.pauseStatusLogList.textContent = "";
+    var entries = statusRunLog.slice(-8);
+    if (!entries.length) {
+      var empty = document.createElement("li");
+      empty.className = "pause-status-log__empty";
+      empty.textContent = "这一程还没有状态变化。";
+      els.pauseStatusLogList.append(empty);
+      return;
+    }
+    entries.forEach(function (event) {
+      var row = document.createElement("li");
+      row.textContent = statusRunLabel(event);
+      els.pauseStatusLogList.append(row);
+    });
+  }
+
   function statusEventLine(event) {
     var reason = cleanStatusReason(event.reason);
     if (event.kind === "player") {
@@ -9006,7 +9837,20 @@
     if (!XB.core || typeof XB.core.takeStatusEvents !== "function") return;
     var events = XB.core.takeStatusEvents();
     if (!events.length) return;
+    var chapter = chapterById(state.chapterId);
+    events.forEach(function (event) {
+      statusRunLog.push({
+        kind: event.kind,
+        to: event.to,
+        reason: event.reason,
+        chapter: chapter ? chapter.title : ""
+      });
+    });
+    statusRunLog = statusRunLog.slice(-20);
     statusQueue = statusQueue.concat(events).slice(-12);
+    // HUD 的状态原因只认已经入队的本局记录；状态事件在 setFlag 之后才被抽走，
+    // 结算处的 updateHud 会早一步，所以这里补一次。
+    updateHud();
     flushStatusNotice();
   }
 

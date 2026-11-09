@@ -47,7 +47,7 @@
     <section id="scene-vn" class="scene" aria-label="对话" hidden>
       <p id="vn-chapter" class="vn-chapter"></p>
       <p id="vn-condition" class="vn-condition" aria-live="polite"><span>状态</span><b>良好</b></p>
-      <button type="button" id="vn-pack-button" class="vn-pack-button" data-action="pack">物资 <span id="vn-pack-count">0/4</span></button>
+      <button type="button" id="vn-pack-button" class="vn-pack-button" data-action="pack">行囊 <span id="vn-pack-count">0/4 格</span></button>
 
       <!-- 自动 / 跳过：只在线性节点显示 -->
       <div id="vn-toolbar" class="vn-toolbar" hidden>
@@ -64,7 +64,10 @@
         <span id="vn-next" class="vn-next" aria-hidden="true">▼</span>
       </div>
 
-      <p id="vn-choice-prompt" class="vn-choice-prompt" hidden></p>
+      <div id="vn-choice-head" class="vn-choice-head" hidden>
+        <p id="vn-choice-prompt" class="vn-choice-prompt"></p>
+        <p id="vn-choice-stakes" class="vn-choice-stakes" hidden></p>
+      </div>
       <div id="vn-choices" class="vn-choices" role="group" aria-label="选项" hidden></div>
 
       <!-- 多选：行囊/弃物。整卡可点，数字键切换，Enter 确认；没有倒计时 -->
@@ -118,6 +121,9 @@
         <p id="ending-date" class="xb-ending__date"></p>
         <p id="ending-lede" class="xb-ending__lede"></p>
         <p id="ending-route" class="xb-ending__route"></p>
+        <p id="ending-summary" class="xb-ending__summary"></p>
+        <p id="ending-fates" class="xb-ending__fates"></p>
+        <p id="ending-closing" class="xb-ending__closing"></p>
         <div class="xb-ending__cols">
           <div class="xb-ending__names-wrap">
             <h3 class="xb-ending__label">点名</h3>
@@ -128,14 +134,16 @@
             <p id="ending-stats" class="xb-ending__stats"></p>
           </div>
         </div>
+        <div id="ending-cards" class="xb-ending__cards" aria-label="五张精神卡"></div>
         <section id="ending-achievements" class="xb-ending__achievements" aria-labelledby="ending-achievements-title">
           <h3 id="ending-achievements-title" class="xb-ending__achievements-title">此周目解锁的成就有：</h3>
           <div id="ending-achievement-chips" class="xb-ending__achievement-chips"></div>
           <p id="ending-achievements-count" class="xb-ending__achievements-count"></p>
         </section>
-        <div id="ending-cards" class="xb-ending__cards" aria-label="五张精神卡"></div>
         <p id="ending-disclaimer" class="xb-ending__disclaimer"></p>
         <div class="xb-ending__actions">
+          <button type="button" id="ending-share" class="xb-btn" data-action="ending-share">生成分享卡</button>
+          <button type="button" id="ending-run-stats" class="xb-btn" data-action="ending-run-stats">本周目统计</button>
           <button type="button" id="ending-branch" class="xb-btn" data-action="ending-branch">查看剧情分支</button>
           <button type="button" id="ending-codex" class="xb-btn" data-action="ending-codex">史实图鉴</button>
           <button type="button" id="ending-home" class="xb-btn xb-btn--primary" data-action="ending-home">回到标题</button>
@@ -162,6 +170,10 @@
         <button type="button" class="pause-button" data-action="open-roster">花名册</button>
         <button type="button" class="pause-button" data-action="pause-map">返回地图</button>
         <button type="button" class="pause-button" data-action="pause-title">回到标题</button>
+        <details id="pause-status-log" class="pause-status-log">
+          <summary>本周目状态记录</summary>
+          <ol id="pause-status-log-list" class="pause-status-log__list"></ol>
+        </details>
       </div>
 
       <div id="vn-settings" class="xb-settings" role="dialog" aria-modal="true" aria-label="设置" hidden>
@@ -335,6 +347,72 @@
       </div>
     </div>
 
+    <!-- 本周目分享卡：Canvas 生成，不依赖外部图片；预览后可保存 PNG。 -->
+    <div id="share-card" class="xb-share" role="dialog" aria-modal="true" aria-labelledby="share-title" hidden>
+      <div id="share-card-panel" class="xb-share__panel">
+        <button type="button" id="share-close" class="xb-modal__close" data-action="share-close" aria-label="关闭分享卡">×</button>
+        <p class="xb-share__kicker">一块门板，两万五千里</p>
+        <h2 id="share-title" class="xb-share__title">本周目分享卡</h2>
+        <p class="xb-share__sub">只画这一周目：门板、同伴、五张精神卡。</p>
+        <div class="xb-share__frame">
+          <canvas id="share-card-canvas" width="1080" height="1440" aria-label="本周目分享卡预览"></canvas>
+        </div>
+        <div class="xb-share__actions">
+          <button type="button" id="share-download" class="xb-btn xb-btn--primary" data-action="share-download">保存图片</button>
+          <button type="button" class="xb-btn" data-action="share-close">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本周目统计：只读这一周目的门板、同伴、名册与五卡，不做完成度百分比 -->
+    <div id="run-stats" class="xb-runstats" role="dialog" aria-modal="true" aria-labelledby="run-stats-title" hidden>
+      <div id="run-stats-panel" class="xb-runstats__panel">
+        <button type="button" id="run-stats-close" class="xb-modal__close" data-action="run-stats-close" aria-label="关闭本周目统计">×</button>
+        <p class="xb-runstats__kicker">这一周目，走成了这样</p>
+        <h2 id="run-stats-title" class="xb-runstats__title">本周目统计</h2>
+        <p id="run-stats-route" class="xb-runstats__route"></p>
+        <div class="xb-runstats__grid">
+          <section class="xb-runstats__block">
+            <h3>门板</h3>
+            <p id="run-stats-door"></p>
+          </section>
+          <section class="xb-runstats__block">
+            <h3>状态</h3>
+            <p id="run-stats-condition"></p>
+          </section>
+          <section class="xb-runstats__block">
+            <h3>救人</h3>
+            <p id="run-stats-rescues"></p>
+          </section>
+        </div>
+        <h3 class="xb-runstats__heading">七段</h3>
+        <div id="run-stats-chapters" class="xb-runstats__chapters"></div>
+        <h3 class="xb-runstats__heading">同伴</h3>
+        <div id="run-stats-fates" class="xb-runstats__fates"></div>
+        <h3 class="xb-runstats__heading">点名</h3>
+        <ol id="run-stats-names" class="xb-runstats__names"></ol>
+        <h3 class="xb-runstats__heading">五张精神卡</h3>
+        <div id="run-stats-cards" class="xb-runstats__cards"></div>
+        <p id="run-stats-note" class="xb-runstats__note"></p>
+      </div>
+    </div>
+
+    <!-- 测试模式：仅 ?dev=1 显示；跳章与 11 条结局预置，不进入正式入口 -->
+    <button type="button" id="dev-toggle" class="xb-dev-toggle xb-btn" data-action="dev-open" hidden>测试</button>
+    <div id="dev-panel" class="xb-dev" role="dialog" aria-modal="true" aria-labelledby="dev-title" hidden>
+      <div id="dev-panel-box" class="xb-dev__panel">
+        <button type="button" id="dev-close" class="xb-modal__close" data-action="dev-close" aria-label="关闭测试模式">×</button>
+        <p class="xb-dev__kicker">仅本地调试</p>
+        <h2 id="dev-title" class="xb-dev__title">测试模式</h2>
+        <p class="xb-dev__note">只在本局跳转，跳转本身不写档；走到章末仍按正常规则结算。用于验证章节与隐藏分支，不是正式入口。</p>
+        <h3>跳到章节</h3>
+        <div id="dev-chapters" class="xb-dev__chapters"></div>
+        <h3>预置结局（从吴起末段开始）</h3>
+        <div id="dev-routes" class="xb-dev__routes"></div>
+        <button type="button" class="xb-btn" data-action="dev-close">关闭</button>
+      </div>
+    </div>
+
     <!-- 物资：随时可开；限时选项期间禁用。差状态复用同一面板做警告。 -->
     <div id="pack-panel" class="xb-pack-overlay" role="dialog" aria-modal="true" aria-labelledby="pack-title" hidden>
       <div class="xb-pack">
@@ -409,6 +487,7 @@
         </header>
         <div class="xb-saves__actions">
           <button type="button" id="save-new" class="xb-btn xb-btn--primary" data-action="save-new">开启新档</button>
+          <button type="button" id="save-default-source" class="xb-btn" data-action="save-default-source" hidden>用最近一周目开新档</button>
           <button type="button" id="save-latest" class="xb-btn" data-action="save-latest">上次玩到</button>
           <button type="button" id="save-delete" class="xb-btn" data-action="save-delete">删除存档</button>
           <button type="button" id="saves-back" class="xb-btn" data-action="saves-back" hidden>返回</button>
