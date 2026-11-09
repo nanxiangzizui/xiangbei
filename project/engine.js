@@ -6256,7 +6256,7 @@
     { id: "no_door_two", label: "8 两人成行", doorOutcome: "none", condition: 3, rescues: 2, dead: ["feimao"] },
     { id: "no_door_three", label: "9 三人犹立", doorOutcome: "none", condition: 3, rescues: 3, dead: [] },
     { id: "no_door_three_excellent", label: "10 人至“家”至", doorOutcome: "none", condition: 4, rescues: 3, dead: [] },
-    { id: "bad_end", label: "11 坏结局 · 草地没有尽头", doorOutcome: "none", condition: 0, rescues: 0, playerDead: true, dead: ["feimao", "zaowang", "dongsheng"] }
+    { id: "bad_end", label: "11 草地无归", doorOutcome: "none", condition: 0, rescues: 0, playerDead: true, dead: ["feimao", "zaowang", "dongsheng"] }
   ];
 
   function renderDevPanel() {
