@@ -1,6 +1,6 @@
-# 步骤二十一：文本细化与信息层（含结局三层，基于 v1.8.0-dev，未打包）
+# 步骤二十一：文本细化与信息层（含结局三层，v1.9.0-dev 已打包并部署）
 
-> 2026-11-09 · 分支 `v1.4-dev` · 已实现、已通过浏览器验证 · 尚未打包/部署 · 证据 `docs/evidence/text-pass/`、`text-pass-file/`、`text-pass-mobile/`
+> 2026-11-09 · 分支 `v1.4-dev` · 已实现、已通过浏览器验证 · 已随 v1.9.0-dev 打包并部署 GitHub Pages（`236b6e0`）与 Netlify（`6af1b987…`）· 证据 `docs/evidence/text-pass/`、`text-pass-file/`、`text-pass-mobile/`、`docs/evidence/live-v1.9.0/`
 > 需求来源：用户文本反馈（m00001）；结局文本三层按用户 `结局文本.txt`（m01552）。本步不改历史终点、11 条结局数量、行囊/状态账本与四段核心选择，只改“怎么写、怎么显示”。
 
 ## 1. 目标
