@@ -15,7 +15,7 @@ const SCRIPT_ORDER = ["art.js", "story.js", "engine.js"];
 // 与 engine.js 的 REQUIRED_IDS 对齐：缺一个引擎就抛错，所以列表必须逐字一致
 const REQUIRED_IDS = [
   "stage", "stage-art", "scene-title", "scene-map", "scene-vn", "scene-ending", "fx-layer",
-  "ending-title", "ending-date", "ending-lede", "ending-names", "ending-stats", "ending-cards",
+  "ending-title", "ending-date", "ending-lede", "ending-route", "ending-summary", "ending-fates", "ending-closing", "ending-names", "ending-stats", "ending-cards",
   "ending-achievements", "ending-achievements-title", "ending-achievements-count", "ending-achievement-chips",
   "ending-disclaimer", "ending-home", "ending-codex",
   "pause", "pause-menu", "toast", "autosave-notice", "debug", "orientation",
@@ -585,7 +585,7 @@ function checkConditionWhitelist() {
     .concat([
       "memory.zhang", "memory.door", "memory.luding_unknown", "memory.rollcall_missed_any",
       "memory.fly_bridge", "memory.fly_medicine", "memory.fly_leave",
-      "memory.zaowang_barley", "memory.zaowang_pot", "memory.zaowang_body",
+      "memory.zaowang_barley", "memory.zaowang_pot", "memory.zaowang_body", "memory.zaowang_leave",
       "memory.dongsheng_shoes", "memory.dongsheng_cloth", "memory.dongsheng_body",
       "memory.lin_north", "memory.lin_self",
       "memory.grass_share",
@@ -833,12 +833,12 @@ function checkChapterTable() {
   var XB = loadGame();
   var expected = [
     { id: "prologue", prefix: "p", count: 89, next: "xiangjiang", title: true },
-    { id: "xiangjiang", prefix: "x", count: 114, next: "zunyi", title: true },
+    { id: "xiangjiang", prefix: "x", count: 115, next: "zunyi", title: true },
     { id: "zunyi", prefix: "z", count: 118, next: "jinsha", title: true },
     { id: "jinsha", prefix: "j", count: 86, next: "luding", title: true },
-    { id: "luding", prefix: "l", count: 120, next: "grass", title: true, first: "l100" },
-    { id: "grass", prefix: "g", count: 136, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
-    { id: "wuqi", prefix: "w", count: 78, next: "ending", title: false },
+    { id: "luding", prefix: "l", count: 121, next: "grass", title: true, first: "l100" },
+    { id: "grass", prefix: "g", count: 144, next: "wuqi", title: true, extraEnds: ["coda", "badend"] },
+    { id: "wuqi", prefix: "w", count: 81, next: "ending", title: false },
     { id: "coda", prefix: "c", count: 18, next: "ending", title: true, hidden: true, last: "c012" },
     { id: "badend", prefix: "b", count: 8, next: "ending", title: true, hidden: true, last: "b006", codex: false }
   ];
@@ -882,7 +882,7 @@ function checkChapterTable() {
       allIds[node.id] = true;
     });
   });
-  notes.push("C24 OK 九章 89/114/118/86/120/136/78/18/8 共 767 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
+  notes.push("C24 OK 九章 89/115/118/86/121/144/81/18/8 共 780 节点，id 前缀/唯一/end/title+codex 位置与 chapter-integration 一致");
 }
 
 // C25：7 个 codex 节点各一次，id 与 story.codex 一致；图鉴只读一份数据
@@ -1278,29 +1278,32 @@ function checkEndingRoutes() {
     if (ending.route !== route) fail("C39", label + " 路线应为 " + route + "，实际 " + ending.route);
     if (ending.routeTitle !== title) fail("C39", label + " 标题应为 " + title + "，实际 " + ending.routeTitle);
     if (!ending.routeLede) fail("C39", label + " 缺路线引语");
+    if (!ending.routeClosing) fail("C39", label + " 缺结局收束句");
     if (ending.routeLabel !== routeLabel) fail("C39", label + " 编号应为 " + routeLabel + "，实际 " + ending.routeLabel);
     if (ending.routeIndex !== routeIndex) fail("C39", label + " routeIndex 应为 " + routeIndex);
     if (companyEnd !== undefined && ending.stats.companyEnd !== companyEnd) fail("C39", label + " companyEnd 应为 " + companyEnd);
     if (namesLen !== undefined && ending.names.length !== namesLen) fail("C39", label + " 点名应为 " + namesLen + " 名");
     return ending;
   }
-  expectRoute("7(1) 门板·一直优秀", { doorOutcome: "carried", rescues: 0, condition: 4 }, "door_excellent", "门板", 19, 7, "1", 1);
-  expectRoute("7(2) 门板留草地·救1", { doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门板", 19, 7, "2", 2);
-  expectRoute("7(2) 门板留桥上·救1", { doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "桥板", 19, 7, "2", 2);
-  expectRoute("7(3) 门板到吴起·救2", { doorOutcome: "carried", rescues: 2, condition: 3 }, "door_carry_two", "门板", 19, 7, "3", 3);
-  expectRoute("7(4) 门板留草地·救2", { doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "门板", 19, 7, "4", 4);
-  expectRoute("7(4) 门板留桥上·救2", { doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "桥板", 19, 7, "4", 4);
-  var seven5 = expectRoute("7(5) 空页", { doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "空页", 18, 8, "5", 5);
+  var excellent = expectRoute("7(1) 门至人散", { doorOutcome: "carried", rescues: 0, condition: 4 }, "door_excellent", "门至人散", 19, 7, "1", 1);
+  if (excellent.routeLede.indexOf("一扇门") === -1) fail("C39", "7(1) 零人存活短描述没用动态句");
+  expectRoute("7(2) 门落无声·草地", { doorOutcome: "grass", rescues: 1, condition: 1 }, "door_grass_one", "门落无声", 19, 7, "2", 2);
+  var bridge2 = expectRoute("7(2) 门落无声·桥头", { doorOutcome: "bridge", rescues: 1, condition: 1 }, "door_grass_one", "门落无声", 19, 7, "2", 2);
+  if (bridge2.routeLede.indexOf("桥头") === -1) fail("C39", "7(2) 桥头短描述未替换");
+  expectRoute("7(3) 门与归人", { doorOutcome: "carried", rescues: 2, condition: 3 }, "door_carry_two", "门与归人", 19, 7, "3", 3);
+  expectRoute("7(4) 板留人渡·草地", { doorOutcome: "grass", rescues: 2, condition: 2 }, "door_grass_many", "板留人渡", 19, 7, "4", 4);
+  expectRoute("7(4) 板留人渡·桥头", { doorOutcome: "bridge", rescues: 2, condition: 2 }, "door_grass_many", "板留人渡", 19, 7, "4", 4);
+  var seven5 = expectRoute("7(5) 替你答到", { doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true }, "door_others", "替你答到", 18, 8, "5", 5);
   if (seven5.fate.player !== "dead" || seven5.fate.dongsheng !== "dead") fail("C39", "7(5) fate 快照不对");
   var sacrifice = seven5.cards.filter(function (card) { return card.id === "sacrifice"; })[0];
   if (!sacrifice || sacrifice.lit !== true) fail("C39", "7(5) 牺牲卡应亮");
   if (sacrifice.line !== XB.story.ending.kongyeSacrificeLine) fail("C39", "7(5) 牺牲卡没用 kongyeSacrificeLine");
-  expectRoute("8(1) 空手·救0", { rescues: 0, condition: 3 }, "no_door_zero", "空手", 19, 7, "6", 6);
-  expectRoute("8(2) 空手·救1", { rescues: 1, condition: 2 }, "no_door_one", "空手", 19, 7, "7", 7);
-  expectRoute("8(3) 空手·救2", { rescues: 2, condition: 2 }, "no_door_two", "空手", 19, 7, "8", 8);
-  expectRoute("8(4) 空手·救3", { rescues: 3, condition: 3 }, "no_door_three", "空手", 19, 7, "9", 9);
-  expectRoute("8(5) 空手·救3且优秀", { rescues: 3, condition: 4 }, "no_door_three_excellent", "空手", 19, 7, "10", 10);
-  var bad = expectRoute("坏结局", { rescues: 1, condition: 0 }, "bad_end", "没有走出草地", 18, 0, "11", 11);
+  expectRoute("8(1) 无人应到", { rescues: 0, condition: 3 }, "no_door_zero", "无人应到", 19, 7, "6", 6);
+  expectRoute("8(2) 一人同北", { rescues: 1, condition: 2 }, "no_door_one", "一人同北", 19, 7, "7", 7);
+  expectRoute("8(3) 两人成行", { rescues: 2, condition: 2 }, "no_door_two", "两人成行", 19, 7, "8", 8);
+  expectRoute("8(4) 三人犹立", { rescues: 3, condition: 3 }, "no_door_three", "三人犹立", 19, 7, "9", 9);
+  expectRoute("8(5) 人至“家”至", { rescues: 3, condition: 4 }, "no_door_three_excellent", "人至“家”至", 19, 7, "10", 10);
+  var bad = expectRoute("坏结局", { rescues: 1, condition: 0 }, "bad_end", "草地无归", 18, 0, "11", 11);
   if (bad.fate.player !== "dead" || bad.names.length !== 0) fail("C39", "坏结局应为无点名且我死");
 
   var state = makeState({ "had.door": true, "item.door": false, doorOutcome: "others", rescues: 3, condition: 0, "fate.feimao.dead": true, "fate.zaowang.dead": true, "fate.dongsheng.dead": true });
@@ -1964,12 +1967,12 @@ function checkReleaseRuntime() {
   notes.push("C38 OK 六个运行时无 http(s)、无 fetch/XHR、无 type=module；CREDITS 仅文本署名");
 }
 
-// C43：存档列表（v1.6）：唯一持久层 xiangbei.saves.v1，单档仍走 v2 normalize，上限 20/512KB
+// C43：存档列表（v1.6）：唯一持久层 xiangbei.saves.v1，单档仍走 v2 normalize，上限 40/512KB
 function checkSaveSlots() {
   var engine = readProject("engine.js");
   [
     'SAVES_KEY = "xiangbei.saves.v1"',
-    "SAVE_SLOT_MAX = 20",
+    "SAVE_SLOT_MAX = 40",
     "MAX_SAVES_BYTES = 512 * 1024",
     "function normalizeSavesStore(",
     "function normalizeSlot(",
@@ -2000,7 +2003,7 @@ function checkSaveSlots() {
   if (saveNowBody.indexOf("var slot = activeSlot();") === -1) fail("C43", "saveNow 没有先找当前档");
   if (saveNowBody.indexOf("slot.state = payload;") === -1) fail("C43", "saveNow 没有覆盖当前档");
   if (saveNowBody.indexOf("createSlotRecord(payload)") === -1) fail("C43", "saveNow 缺首次建槽");
-  notes.push("C43 OK 存档列表 xiangbei.saves.v1 / 单档 normalize / 20 档 512KB / 迁移后删旧键 / 同档覆盖");
+  notes.push("C43 OK 存档列表 xiangbei.saves.v1 / 单档 normalize / 40 档 512KB / 迁移后删旧键 / 同档覆盖");
 }
 
 // C44：标题是纯标题；首项「开始 / 继续」开存档面板；初始化只在设置的危险操作里
@@ -2069,14 +2072,14 @@ function checkSavePanelCopy() {
   ].forEach(function (text) {
     if (copy.indexOf(text) === -1) fail("C46", "确认文案缺：" + text);
   });
-  if (engine.indexOf('"的存档" + (slotEnded(slot) ? "（已完结）" : "（未完结）")') === -1) {
-    fail("C46", "存档主行格式不是「…的存档（已完结/未完结）」");
+  if (engine.indexOf('"结局 " + numberLabel + "/11"') === -1 || engine.indexOf('" · 未完结"') === -1 || engine.indexOf("ending.routeTitle") === -1) {
+    fail("C46", "存档主行没有「结局 N/11 · 路线名」或「章名 · 未完结」");
   }
-  if (engine.indexOf("formatSaveDate(slot.createdAt)") === -1) fail("C46", "存档日期没有取创建时间");
+  if (engine.indexOf("formatSaveClock(slot.updatedAt)") === -1) fail("C46", "存档副行没有取最后保存时间");
   var css = readProject("style.css");
   if (css.indexOf(".xb-saves__row.is-selected") === -1) fail("C46", "缺选中加深样式");
   if (css.indexOf("background: var(--ink);") === -1) fail("C46", "选中态没有墨色底");
-  notes.push("C46 OK 列表「YYYY年MM月DD日的存档（已完结/未完结）」/ 六句确认文案逐字 / 选中墨底朱砂条");
+  notes.push("C46 OK 列表「结局 N/11 · 路线名」「章名 · 未完结」+ 时间与最后选择 / 六句确认文案逐字 / 选中墨底朱砂条");
 }
 
 // C47：初始化清四类记录但保留设置；?reset=1 只清存档

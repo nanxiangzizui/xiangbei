@@ -183,3 +183,11 @@ buildLiveBranchRun() 从 state.choices + unlockedChapters + chapterId + flags �
 - 代码：回退 index.html/style.css/story.js/engine.js 的步骤十二改动；删除 docs/branch-map.md、step-12、_pw-step12.js；check-build/smoke 的 C41/S47 同步回退。
 - 存档：删除 xiangbei.branches.v1 只影响回看记录，不影响主存档/名册；不需要迁移。
 - 不触碰 main / 线上版本；部署需用户确认。
+
+## 10. 2026-11-09 补丁：未解锁结局模糊提示
+
+- 问题：0/11 时灰卡直接写“未解锁”，细节还可能带出精确救人数，等于提前剧透路线账本，和 `docs/branch-map.md` 的“只给模糊提示”口径不一致。
+- 改动：`project/engine.js` 增加 `BRANCH_LOCKED_LEDES`，灰卡 lede 按组显示——带板“门板还在不在？最后一段是谁走完的？”、空手“空着手，带回了几个名字？”、坏结局“草地有没有尽头？”；标题仍“尚未抵达”。`project/story.js` 的 `no_door_one/two/three/three_excellent` hint 改为不写人数的说法。
+- 保留：解锁后的 routeTitle/routeLede 与详情完整信息不变；灰卡只隐藏精确条件，不隐藏“还有一个结局”这一事实。
+- 验收：`_pw-step12.js --case=empty` 22/22；11 张灰卡无“未解锁”，五张带板、五张空手、一张坏结局各成组；door_excellent 与 no_door_three 详情无“救下了一个人/两个人/三个人”。证据 `docs/evidence/step-12-vague-hints/`。
+- 未重跑：完整 98/98 分支专项、移动/隐私；属 P1。

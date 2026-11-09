@@ -1,6 +1,6 @@
 # 第一章 · 湘江
 - id: xiangjiang ｜ 史实注: xiangjiang ｜ 选择: x015（弃物多选）、x025a/x025b（先渡谁）
-- 定稿: 1902 字 ｜ 107 beat ｜ 时长(B) 8:11
+- 定稿: 1928 字 ｜ 108 beat ｜ 时长(B) 8:17
 - bg: xiangjiang_ford, xiangjiang_dawn ｜ sfx: river, gunfire_far, wind, boat
 - 演出: 浮桥人潮横移长镜 / 江面漂物 / 名册特写（划名）
 - 注意: 弃物只改变带过江的物资与后文可用的东西，不评分；门板去留读最终 item.door
@@ -173,6 +173,7 @@ B｜按命令先过江｜set: choice.xiangjiang.hold=false｜cost: 桥头最后�
 【旁白】我把名册合上。合上之前，我数了一遍剩下的名字。
 【旁白】数到第三遍，才数清。
 【旁白】数清以后，我在封皮上写了一个数。写完又涂掉了。
+【旁白】湘江之后第七天，我们才走出那片山。山里的雨一直没停。
 【标题卡】第二章 · 遵义
 【史实注】xiangjiang
 【结束】next=zunyi

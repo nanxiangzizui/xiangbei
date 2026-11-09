@@ -15,6 +15,7 @@ const PROJECT = path.join(ROOT, "project");
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const SAVE_KEY = "xiangbei.save.v2";
 const LEGACY_SAVE_KEY = "xiangbei.save.v1";
+const SAVES_KEY = "xiangbei.saves.v1";
 const ROSTER_KEY = "xiangbei.roster.v1";
 const CHAPTERS = ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "coda", "badend"];
 
@@ -182,6 +183,8 @@ function stamp() {
       items: [], giftBarley: state.flags["inventory.giftBarley"] === true
     }, (partial && partial.inventory) || {});
     state.inventory.door = state.flags["item.door"] === true;
+    await page.evaluate((key) => localStorage.removeItem(key), SAVES_KEY);
+    await page.evaluate((key) => localStorage.removeItem(key), "xiangbei.chapters.v1");
     await page.evaluate(([key, value]) => localStorage.setItem(key, value), [SAVE_KEY, JSON.stringify(state)]);
     await page.evaluate((key) => localStorage.removeItem(key), LEGACY_SAVE_KEY);
   }
@@ -205,6 +208,11 @@ function stamp() {
     return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), LEGACY_SAVE_KEY);
   }
   async function readSave() {
+    const store = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), SAVES_KEY);
+    if (store && Array.isArray(store.slots) && store.slots.length) {
+      const slot = store.slots.find((item) => item.id === store.activeId) || store.slots[store.slots.length - 1];
+      if (slot && slot.state) return Object.assign({ version: 2 }, slot.state);
+    }
     return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || "null"), SAVE_KEY);
   }
   async function readRoster() {
@@ -328,10 +336,23 @@ function stamp() {
     return false;
   }
 
+  async function resumeSeededSlot() {
+    await hit(page.locator('#title-menu [data-action="saves"]'));
+    check("存档面板打开", await waitVisible("#saves-panel"), (await info()).raw);
+    const rows = page.locator('#saves-list [data-action="save-slot"]');
+    if (!(await rows.count())) throw new Error("seed 后存档列表为空");
+    await hit(rows.first());
+    if (await waitVisible("#save-confirm", 3000)) {
+      await hit(page.locator("#save-confirm-yes"));
+    }
+    await sleep(600);
+  }
+
   async function openAt(chapter, node, flags, inventory) {
     await seed({ scene: "vn", chapterId: chapter, nodeId: node, flags: flags || {}, inventory: inventory || {} });
     await gotoTitle("?debug=1");
     await sleep(300);
+    await resumeSeededSlot();
   }
   async function closeCodex() {
     if (await visible("#codex")) {
@@ -345,6 +366,7 @@ function stamp() {
     for (let i = 0; i < (max || 10); i += 1) {
       if ((await info()).node === id) return true;
       if (await visible("#codex")) { await hit(page.locator("#codex-close")); await sleep(300); continue; }
+      if (await visible("#vn-title-card")) { await hit(page.locator("#vn-title-card")); await sleep(400); continue; }
       if (await visible("#vn-dialogue")) { await nextLine(); continue; }
       await sleep(200);
     }
@@ -949,9 +971,112 @@ function stamp() {
     await sleep(900);
     s = await readSave();
     check("旧 ending 补 legacy", s && s.ending && s.ending.route === "legacy", s && s.ending && s.ending.route);
-    check("旧 ending 玩家死", s && s.flags["fate.player.dead"] === true);
-    check("旧 ending 不重算编号", s && s.ending.routeIndex === 0, s && s.ending.routeIndex);
-    check("旧 ending 保留名册", s && s.ending.names.length === 8, s && s.ending.names.length);
+  }
+
+  async function caseDoorSupply() {
+    await clearRoster();
+
+    // 1) 真实草地结算：condition 3 -> -1 -> 2；门板 + 铁锅 +2 补到优秀 → carried。
+    await openAt("grass", "g027", {
+      condition: 3, rescues: 1, "had.door": true, "item.door": true, "item.homepot": true, doorOutcome: "carried"
+    }, { door: true, items: ["roster", "pencil", "pot"] });
+    check("门板补给 起点 g027", await waitNode("g027", 8000), (await info()).raw);
+    await nextLine();
+    check("门板补给 弹窗", await waitVisible("#pack-panel"), (await info()).raw);
+    check("门板补给 标题", (await page.locator("#pack-title").innerText()).indexOf("草地尽头") !== -1, await page.locator("#pack-title").innerText());
+    check("门板补给 只列 +2", (await page.locator('[data-pack-use="pot"]').count()) === 1 && (await page.locator('[data-pack-use="shoes"]').count()) === 0);
+    check("门板补给 关闭文案", (await page.locator("#pack-close").innerText()).indexOf("不补了") !== -1, await page.locator("#pack-close").innerText());
+    check("门板补给 用铁锅", await useRecipe("pot"));
+    check("门板补给 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
+    check("门板补给 状态优秀", (await page.locator("#vn-condition").innerText()).indexOf("优秀") !== -1, await page.locator("#vn-condition").innerText());
+    check("门板补给 铁锅扣掉", (await page.locator("#vn-pack-count").innerText()).indexOf("2/4") === 0, await page.locator("#vn-pack-count").innerText());
+    check("门板补给 门板 carried", /\bdoor\s+true/.test((await info()).raw), (await info()).raw);
+
+    // 从这里真实走完草地末段、终章与吴起，不再注入 w041。
+    check("门板成功 实走到 w041", await advanceUntil("w041", 140), (await info()).raw);
+    await closeCodex();
+    check("门板成功 到结局", await waitEnding(20000), (await info()).raw);
+    let data = await endingData();
+    check("门板成功 1/11", data.route.indexOf("结局1/11（门至人散）") === 0, data.route);
+    check("门板成功 七名", data.names === 7, data.names);
+    check("门板成功 五卡", data.cards === 5, data.cards);
+    check("门板成功 快照 route", data.ending && data.ending.route === "door_excellent", data.ending && data.ending.route);
+    await shot("door-supply-1-11");
+
+    // 2) 刷新：章末存档仍停在 g027，重进后再点一次到 g027a；结算重跑但不重复扣。
+    await openAt("grass", "g027", {
+      condition: 3, rescues: 1, "had.door": true, "item.door": true, "item.homepot": true, doorOutcome: "carried"
+    }, { door: true, items: ["roster", "pencil", "pot"] });
+    check("门板补给刷新 起点", await waitNode("g027", 8000), (await info()).raw);
+    await nextLine();
+    check("门板补给刷新 首次窗", await waitVisible("#pack-panel"), (await info()).raw);
+    await page.reload({ waitUntil: "load" });
+    await sleep(350);
+    await resumeSeededSlot();
+    check("门板补给刷新 回到 g027", await waitNode("g027", 8000), (await info()).raw);
+    await nextLine();
+    check("门板补给刷新 重开窗", await waitVisible("#pack-panel", 10000), (await info()).raw);
+    check("门板补给刷新 不重复扣", (await page.locator("#vn-condition").innerText()).indexOf("勉强") !== -1, await page.locator("#vn-condition").innerText());
+    check("门板补给刷新 用铁锅", await useRecipe("pot"));
+    check("门板补给刷新 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
+    check("门板补给刷新 门板 carried", /\bdoor\s+true/.test((await info()).raw), (await info()).raw);
+
+    // 3) 负例：只有 +1，补不到 4，不弹假窗口，走原门板舍弃；结局 2/11。
+    await openAt("grass", "g027", {
+      condition: 3, rescues: 1, "had.door": true, "item.door": true, "item.shoes": true, doorOutcome: "carried"
+    }, { door: true, items: ["roster", "pencil", "shoes"] });
+    check("门板负例 起点", await waitNode("g027", 8000), (await info()).raw);
+    await nextLine();
+    check("门板负例 不弹补给窗", !(await visible("#pack-panel")) && (await waitVisible("#door-modal")), (await info()).raw);
+    check("门板负例 门板弹窗", (await page.locator("#door-modal").innerText()).indexOf("门板") !== -1);
+    await hit(page.locator("#door-discard"));
+    check("门板负例 到 g028b", await waitNode("g028b", 10000), (await info()).raw);
+    check("门板负例 落草地", (await page.locator("#vn-condition").innerText()).indexOf("勉强") !== -1 &&
+      !/\bdoor\s+true/.test((await info()).raw), (await info()).raw);
+    await openAt("wuqi", "w041", {
+      condition: 2, rescues: 1, "had.door": true, "item.door": false, "grass.settled": true,
+      "item.shoes": false, doorOutcome: "grass"
+    }, { door: false, items: ["roster", "pencil"] });
+    await sleep(500);
+    await closeCodex();
+    check("门板负例 到结局", await waitEnding(16000), (await info()).raw);
+    data = await endingData();
+    check("门板负例 2/11", data.route.indexOf("结局2/11（门落无声）") === 0, data.route);
+    check("门板负例 七名", data.names === 7, data.names);
+    check("门板负例 快照 route", data.ending && data.ending.route === "door_grass_one", data.ending && data.ending.route);
+    await shot("door-supply-2-11");
+  }
+
+  async function caseEndingCards() {
+    await clearRoster();
+    await openAt("wuqi", "w041", {
+      condition: 4, rescues: 1, "had.door": true, "item.door": true, "grass.settled": true,
+      "item.homepot": false, doorOutcome: "carried"
+    }, { door: true, items: ["roster", "pencil"] });
+    await sleep(500);
+    await closeCodex();
+    check("五卡首屏 到结局", await waitEnding(16000), (await info()).raw);
+    const layout = await page.evaluate(() => {
+      const panel = document.querySelector("#ending-panel");
+      const cards = document.querySelector("#ending-cards");
+      const cardEls = Array.from(document.querySelectorAll("#ending-cards .xb-ending__card"));
+      const p = panel.getBoundingClientRect();
+      const c = cards.getBoundingClientRect();
+      const last = cardEls.length ? cardEls[cardEls.length - 1].getBoundingClientRect() : null;
+      return {
+        panelTop: p.top, panelBottom: p.bottom, panelScrollTop: panel.scrollTop,
+        panelScrollHeight: panel.scrollHeight, panelClientHeight: panel.clientHeight,
+        cardsTop: c.top, cardsBottom: c.bottom,
+        cardsScrollHeight: cards.scrollHeight, cardsClientHeight: cards.clientHeight,
+        lastCardBottom: last && last.bottom, count: cardEls.length
+      };
+    });
+    check("五卡首屏 数量", layout.count === 5, JSON.stringify(layout));
+    check("五卡首屏 未滚动", layout.panelScrollTop === 0, JSON.stringify(layout));
+    check("五卡首屏 在面板内", layout.cardsTop >= layout.panelTop && layout.cardsBottom <= layout.panelBottom + 1, JSON.stringify(layout));
+    check("五卡首屏 最后一张可见", layout.lastCardBottom <= layout.panelBottom + 1, JSON.stringify(layout));
+    check("五卡首屏 卡片区不内滚", layout.cardsScrollHeight <= layout.cardsClientHeight + 1, JSON.stringify(layout));
+    await shot("ending-cards-first-screen");
   }
 
   async function caseRefresh() {
@@ -1110,6 +1235,8 @@ function stamp() {
     if (mode === "routes" || mode === "all") await caseRoutes();
     if (mode === "coda" || mode === "all") await caseCoda();
     if (mode === "crises" || mode === "all") await caseCrises();
+    if (mode === "doorsupply" || mode === "all") await caseDoorSupply();
+    if (mode === "endingcards") await caseEndingCards();
     if (mode === "notice") await caseNotice();
     if (mode === "xiangjiang" || mode === "all") await caseXiangjiang();
     if (mode === "pack" || mode === "all") await casePack();

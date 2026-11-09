@@ -1,6 +1,6 @@
 # 第四章 · 泸定
 - id: luding ｜ 史实注: luding ｜ 选择: l019（有板 3 选 / 无板 2 选）、l027
-- 定稿: 1829 字 ｜ 114 beat ｜ 时长(B) 7:52
+- 定稿: 1869 字 ｜ 115 beat ｜ 时长(B) 8:02
 - bg: luding_bridge, luding_after ｜ sfx: river_roar, iron, wind, gunfire_far
 - 演出: 十三根铁索横在河上 / 光点一个一个亮 / 桥板一块一块铺
 - 注意: 22 名突击队员只写“光点”和数字，不写姓名（姓名有佚散，难以确定）；门板铺桥后 item.door 变 false，l019x 用 !choice.luding.door 防止同一回合二次触发
@@ -129,6 +129,7 @@ B｜继续走｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你没
 [[end]]
 [[if:fate.feimao.dead]]
 【旁白】飞毛腿没过来。他的号挂在桥头的木桩上，还热着。
+【旁白】我站在桥尾，看着那支号。桥上的人一个个过去，谁也没有停。我想喊他，喉咙里只有烟。
 【旁白】他的帽子落在桥板上。我捡起来，里头有一张纸。
 【旁白】纸上三个字，是林先生写的。比我写得正。
 【旁白】我把纸展开，照着抄进名册第三页。

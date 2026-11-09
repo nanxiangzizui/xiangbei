@@ -29,9 +29,9 @@
 | 8 | `no_door_two` | 8/11 | 不带门板，救 2 人 | 无 | 活 | 19 | 7 |
 | 9 | `no_door_three` | 9/11 | 不带门板，救 3 人，结算非优秀 | 无 | 活 | 19 | 7 |
 | 10 | `no_door_three_excellent` | 10/11 | 不带门板，救 3 人，结算优秀 | 无 | 活 | 19 | 7 |
-| 11 | `bad_end` | 11/11 | 没有走出草地 | 无/留 | 死 | 18 | 0 |
+| 11 | `bad_end` | 11/11 | 你死在草地，没有到吴起 | 无/留 | 死 | 18 | 0 |
 
-结算页统一显示 `结局3/11（门板） · …` 这种形式；`routeIndex` 为 1–11，`routeLabel` 为 `1`…`11`。旧档显示 `旧档`，不重算。
+结算页统一显示 `结局3/11（门与归人）` + 短描述 + 动态命运句 + 收束句；`routeIndex` 为 1–11，`routeLabel` 为 `1`…`11`。旧档显示 `旧档`，不重算。
 
 ## 1. 边界与红线
 
@@ -83,7 +83,8 @@
 5. 结算后状态 1：若 `rescues===3 && help.used===false` → +1 到 2（无门板路径的援助，`memory.help`）；否则弹补给警告。
 6. 状态 0 → 死亡；若满足 5/11 走 5/11，否则 11/11。
 7. 状态 1 弹 `#danger-modal`：同意开物资栏；拒绝 / 没有可用物资 → 死亡；5/11 或 11/11。
-8. 门板条件与结局。
+8. 状态补到 2–4 后、门板结算前：若门板仍在身上、`rescues<=1`、当前仍带不动门板，弹“草地尽头”物资窗；只列能把状态补到 4 的配方。补到 4 则保留门板；关闭或补不到 4 则按门板条件判 `grass`。该窗口只对 `rescues<=1` 开放，救 2/3 人的路径不能靠补状态绕过质量/人数条件。
+9. 门板条件与结局。
 
 救人扣状态：
 
@@ -105,6 +106,17 @@
 - 无门板：草地结算 -1 后仍为差时（`settleGrass`）触发；写 `memory.help`，演 `g028h–g028j`（“我的脚没有沾地”）。
 - 有板路径帮助后，草地 -1 会再次到差，此时弹补给警告；这是“救满三人”的必经取舍，不是bug。
 - 帮助文本不再是一句旁白：有板 5 句、无板 3 句，三人各有一个动作/一句台词。
+
+### 2.4 草地尽头的门板补给窗（2026-11-09）
+
+- 背景：草地固定 -1 发生在门板结算之前；`rescues<=1` 时只有最终状态 4 才能带板，因此旧实现里 1/11 数学上不可达。修复不是放宽 1/11 条件，而是在扣状态之后、`settleDoor` 之前给一次明确的最后一搏。
+- 触发条件（全部满足）：`condition > 1`、人未死、`had.door`、`doorOutcome === "carried"`、`rescues <= 1`、`doorCanCarry` 仍为 false、且至少有一个配方能把状态补到 4。
+- 窗口：复用 `#pack-panel` 的 `door` 模式，标题“草地尽头”；只列 `delta >= 4 - condition` 的配方，补不到 4 的组合不显示，避免“用了物资仍然丢板”的假希望。
+- 结算：用到 4 → 保留 `carried`，进入吴起带板路线；关闭“不补了，继续”、或配方不足 → `settleGrass` 后的门板条件照旧判 `grass`；状态 1 的 `danger-modal` 先走，不会和本窗口叠成一个连弹。
+- 限制：只对 `rescues<=1` 开放。救 2/3 人的玩家仍按原质量/人数条件走 3/11、4/11，不能用补给窗绕过。
+- 刷新/读档：停在 `g027a` 且满足条件时重新开窗；不写额外 pending 标记，避免二次扣状态或重复消耗。
+- p024 文案提示“留一件能在草地尽头把状态补回优秀的物资”，但不强制；用掉最后一件物资仍是玩家自己的取舍。
+- 证据：`project/tools/_pw-step11.js --case=doorsupply` 44/44（`docs/evidence/step-11/doorsupply-e2e`）；成功路径 `condition 3 + 锅` → 窗 → 优秀 → `doorOutcome=carried`，随后不再注入节点，连续实走 g028b→终章→吴起 w001–w040→w041→结局 1/11（点名 7、五卡 5、快照 `door_excellent`）；反例 `condition 3 + 无可用配方` → 舍弃门板 → 2/11；刷新与旧档路径同测。
 
 ## 3. 物资
 
@@ -190,7 +202,7 @@
 
 - 5/11 例外：救 3 人、出发带门板、我死在草地，且门板仍在身上（或已结算成 `others`）→ 门板由他人带到吴起，`doorOutcome="others"`，不弹舍弃。湘江 C 已把门板留在浮桥的，不算 5/11，走坏结局。
 - 其余：若 `had.door && !doorCarried && doorOutcome!=="bridge"`，弹“必须舍弃门板”；点击后 `doorOutcome="grass"`、`item.door=false`，继续。
-- 已留在桥上（`bridge`，湘江 C 或泸定 A）不弹舍弃，结局标题用“桥板”，lede 写“门板留在了桥上”。
+- 已留在桥上（`bridge`，湘江 C 或泸定 A）不弹舍弃；结局标题仍按该路线（“门落无声”或“板留人渡”），短描述换桥头版本：“门板留在了桥头。你到了吴起，后来的人从它撑住的地方走了过去。”
 - 满足 A/B/C 则保留门板；不满足则舍弃。
 - 舍弃弹窗文案：“由于你体力透支，或帮手不足，无法将门板带到终点，你必须舍弃。”按钮“舍弃门板”。
 
@@ -198,25 +210,26 @@
 
 > 判定顺序：先判死，再判无板，再判带板；每一行互斥。`player.dead` 由状态结算产生；`doorCarried` 是快照值。
 
-| # | route id | 标签 | 条件 | 门板标题 | 我 | companyEnd | names |
+| # | route id | 标签 | 条件 | 结局标题 | 我 | companyEnd | names |
 |---:|---|---|---|---|---|---:|---:|
-| 1 | `door_excellent` | 1/11 | `had.door && !player.dead && doorCarried && condition===4 && rescues<=1` | 门板 | 活 | 19 | 7 |
-| 2 | `door_grass_one` | 2/11 | `had.door && !player.dead && !doorCarried && rescues<=1` | 门板 / 桥板 | 活 | 19 | 7 |
-| 3 | `door_carry_two` | 3/11 | `had.door && !player.dead && doorCarried && rescues>=2` | 门板 | 活 | 19 | 7 |
-| 4 | `door_grass_many` | 4/11 | `had.door && !player.dead && !doorCarried && rescues>=2` | 门板 / 桥板 | 活 | 19 | 7 |
-| 5 | `door_others` | 5/11 | `had.door && player.dead && doorOutcome==="others"`（门板仍在草地，三人抬你出去） | 空页 | 死 | 18 | 8 |
-| 6 | `no_door_zero` | 6/11 | `!had.door && !player.dead && rescues===0` | 空手 | 活 | 19 | 7 |
-| 7 | `no_door_one` | 7/11 | `!had.door && !player.dead && rescues===1` | 空手 | 活 | 19 | 7 |
-| 8 | `no_door_two` | 8/11 | `!had.door && !player.dead && rescues===2` | 空手 | 活 | 19 | 7 |
-| 9 | `no_door_three` | 9/11 | `!had.door && !player.dead && rescues===3 && condition<4` | 空手 | 活 | 19 | 7 |
-| 10 | `no_door_three_excellent` | 10/11 | `!had.door && !player.dead && rescues===3 && condition===4` | 空手 | 活 | 19 | 7 |
-| 11 | `bad_end` | 坏结局 | `player.dead && !(had.door && doorOutcome==="others")` | 没有走出草地 | 死 | 18 | 0 |
+| 1 | `door_excellent` | 1/11 | `had.door && !player.dead && doorCarried && condition===4 && rescues<=1` | 门至人散 | 活 | 19 | 7 |
+| 2 | `door_grass_one` | 2/11 | `had.door && !player.dead && !doorCarried && rescues<=1` | 门落无声 | 活 | 19 | 7 |
+| 3 | `door_carry_two` | 3/11 | `had.door && !player.dead && doorCarried && rescues>=2` | 门与归人 | 活 | 19 | 7 |
+| 4 | `door_grass_many` | 4/11 | `had.door && !player.dead && !doorCarried && rescues>=2` | 板留人渡 | 活 | 19 | 7 |
+| 5 | `door_others` | 5/11 | `had.door && player.dead && doorOutcome==="others"`（门板仍在草地，三人抬你出去） | 替你答到 | 死 | 18 | 8 |
+| 6 | `no_door_zero` | 6/11 | `!had.door && !player.dead && rescues===0` | 无人应到 | 活 | 19 | 7 |
+| 7 | `no_door_one` | 7/11 | `!had.door && !player.dead && rescues===1` | 一人同北 | 活 | 19 | 7 |
+| 8 | `no_door_two` | 8/11 | `!had.door && !player.dead && rescues===2` | 两人成行 | 活 | 19 | 7 |
+| 9 | `no_door_three` | 9/11 | `!had.door && !player.dead && rescues===3 && condition<4` | 三人犹立 | 活 | 19 | 7 |
+| 10 | `no_door_three_excellent` | 10/11 | `!had.door && !player.dead && rescues===3 && condition===4` | 人至“家”至 | 活 | 19 | 7 |
+| 11 | `bad_end` | 坏结局 | `player.dead && !(had.door && doorOutcome==="others")` | 草地无归 | 死 | 18 | 0 |
 
 ### 6.1 边界收束
 
-- 1/11 的设计主例是“0 人获救 + 一直优秀”；实现按“带出 + 优秀 + 救≤1”收束。救 1 人且最终优秀也归 1/11，文案不写“0 人”，避免出现第 6 种门板路线。
+- 1/11 的设计主例是“0 人获救 + 一直优秀”；实现按“带出 + 最终优秀 + 救≤1”收束。草地固定 -1 后，1/11 会在门板结算前得到一次“草地尽头”补给窗：只有把状态补回 4 才能继续背板；这是 1/11 从“数学上不可达”恢复为可达的关键。救 1 人且最终优秀也归 1/11，文案不写“0 人”，避免出现第 6 种门板路线。
 - 3/11 的设计主例是“救 2 人 + 带板 + 条件 C”；救 3 人但活着且满足 B 也归 3/11，文案不写“2 人”。
-- 2/11 与 4/11 都是“门板没带出”，按救人数分；不另设“门板留草地”的独立标题。`doorOutcome==="bridge"`（湘江 C 或泸定 A）时标题“桥板”，否则标题“门板”；bridge 的 lede 写“门板留在了桥上”，grass 的 lede 写“门板留在了草地”。
+- 2/11 与 4/11 都是“门板没带出”，按救人数分。`doorOutcome==="bridge"`（湘江 C 或泸定 A）时短描述写“门板留在了桥头。你到了吴起，后来的人从它撑住的地方走了过去。”；`grass` 时写“门板留在了草地。你到了吴起，带着几个人，也带着它留下的那一点重量。”。标题不因桥/草地把“门落无声/板留人渡”改成“桥板”。
+- 1/11 救 0 时写“背来的是一扇门，不是一路的人”；救 1 时点名唯一活下来的人。3/11 保留“至少还有几个名字”，实际姓名由命运句写；7/11 同样保留“至少还有一个名字”，姓名由命运句写。6/8/9/10 的短描述只写人数，不写具体是谁；姓名由结局页动态命运句补足（见 §9.6）。
 - 5/11 是唯一“我死、门板仍到吴起”的路线；`doorOutcome="others"`，8 名（含满崽），companyEnd 18，林先生 absent。湘江 C 已把门板留在浮桥的，即使救 3 人死在草地，门板也不在吴起，走 11/11 坏结局。
 - 坏结局不走吴起点名：`names=[]`，companyEnd 18，ending 页显示“名册没有翻到吴起”；五卡仍渲染，按条件亮/灰。
 - 没有“全活”；没有“救 3 且带板且活着”。
@@ -307,8 +320,9 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 | `route` | string | 11 个 route id 之一；旧档 `legacy` |
 | `routeIndex` | 1–11 | 顺序号 |
 | `routeLabel` | string | `1/11`…`10/11`/`坏结局` |
-| `routeTitle` | string | 门板/桥板/空页/空手/没有走出草地 |
-| `routeLede` | string | 结局页一句 |
+| `routeTitle` | string | 门至人散/门落无声/门与归人/板留人渡/替你答到/无人应到/一人同北/两人成行/三人犹立/人至“家”至/草地无归 |
+| `routeLede` | string | 结局页短描述；桥头/草地/救人数会改写措辞 |
+| `routeClosing` | string | 结局页收束句，两行以 `\n` 分隔；旧快照可缺 |
 | `condition` | 0–4 | 结算状态 |
 | `rescues` | 0–3 | 救人数 |
 | `doorOutcome` | enum | 门板去向 |
@@ -364,14 +378,14 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ### 9.3 草地
 
-- `g018x`（灶王，16s，默认 D“不救”）：
+- `g018x`（灶王，16s，默认 C“继续赶路”）：
   - A 青稞（requires item.barley）：消耗青稞、救（quality 2）、`rescues+1`、`memory.zaowang_barley`。
   - B 铁锅（requires item.homepot）：消耗锅、救（quality 3）、`rescues+1`、`memory.zaowang_pot`。
-  - C 不救：`fate.zaowang.dead=true`、`quality.zaowang=0`。
-- `g026x`（冬生，12s，默认 C“不救”）：
+  - C 继续赶路（不救）：`fate.zaowang.dead=true`、`quality.zaowang=0`。
+- `g026x`（冬生，12s，默认 C“继续赶路”）：
   - A 布鞋（requires item.shoes）：消耗鞋、救（quality 3）、`rescues+1`、`memory.dongsheng_shoes`。
   - B 雨布（requires item.raincloth）：消耗雨布、救（quality 3）、`rescues+1`、`memory.dongsheng_cloth`。
-  - C 不救：`fate.dongsheng.dead=true`、`quality.dongsheng=0`。
+  - C 继续赶路（不救）：`fate.dongsheng.dead=true`、`quality.dongsheng=0`。
   - 不再有“背他走/替蹲风口”。
 - 冬生获救后新增 `g026y`：“冬生把一小袋青稞塞给我。他说，这个不占地方。”；engine 置 `giftBarley=true`。
 - 死亡段 g019–g023b 保留 `fate.zaowang.dead` 守卫；g021 用 dead && item.homepot；g021b 用 dead && !item.homepot。
@@ -427,8 +441,20 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ### 9.6 ending 文案
 
-- `story.ending.routes` 扩为 11 个 route 的 title/lede；`routeLabel`/`routeIndex` 由 engine 映射，单源。
-- 1/11/3/11 标题“门板”；2/11/4/11 标题“门板”或“桥板”；5/11 标题“空页”；6/11–10/11 标题“空手”；11/11 标题“没有走出草地”。
+结局文本分三层，单源在 `story.ending.routes` 与 `ROUTE_DEFS`，engine 不另写结局段子。
+
+1. **结局名**：`routeTitle`，用于分支图、存档列表和结局页标题。11 个名字：门至人散/门落无声/门与归人/板留人渡/替你答到/无人应到/一人同北/两人成行/三人犹立/人至“家”至/草地无归。
+2. **结局短描述**：`routeLede`，用于分支卡、存档列表和结局页标题下方。门板去向 + 活着/没到的人；救人数相同但桥/草地不同时改措辞；1/11、3/11、7/11 可点名实际存活者，6/8/9/10 只写人数。
+3. **结局收束句**：`routeClosing`，只在结局页短描述与命运句之后显示，两行，`white-space: pre-line`；它承担情绪与价值落点，不重复点名。
+
+- 1/11 门至人散：救 0 写“只是你背来的是一扇门，不是一路的人”；救 1 写“活下来的只有X。其余的人，都留在了路上”。
+- 2/11 门落无声：默认草地版；桥头版写“门板留在了桥头。你到了吴起，后来的人从它撑住的地方走了过去。”。
+- 3/11 门与归人：按实际存活组合写“门板到了吴起。X和Y也到了。Z没有。”；三人全在时写“飞毛腿、灶王、冬生都到了”。
+- 4/11 板留人渡：默认桥头版；草地版写“门板留在了草地。你到了吴起，带着几个人，也带着它留下的那一点重量。”。
+- 5/11 替你答到、6/11 无人应到、8/11 两人成行、9/11 三人犹立、10/11 人至“家”至、11/11 草地无归使用定稿短描述（见 §6 与 `story.js`）。
+- 7/11 一人同北：短描述点名唯一活下来的人。
+- 结局页标题下依次是：结局名（`#ending-route`）→ 短描述（`#ending-summary`）→ 动态命运句（`#ending-fates`）→ 收束句（`#ending-closing`）。短描述写门板去向与存活人数/姓名，动态命运句只写到达/未到达的同伴与林先生（若死），不再重复门板句；旧档没有短描述时，命运句补回门板去向。
+- 旧快照缺 `routeClosing` 时按 route 取新收束句；旧档 `legacy` 隐藏短描述与收束句，只显示旧标题/lede 与命运句。
 - `kongyeSacrificeLine` 改通用“你把自己，留在了草地尽头。”，5/11 与坏结局可复用。
 - 五卡不变；`sacrifice` 条件改 `player.dead || choice.xiangjiang.hold`。
 - 林先生因果句：5/11“林先生没有等到收容队。”；坏结局“她留在草地找我。”
@@ -443,8 +469,8 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ### 10.2 物资按钮/面板
 
-- `#vn-pack-button`：常驻（VN 场景），显示“物资 3/4”；限时选项时 `disabled`，不隐藏。
-- `#vn-pack`：覆盖层 dialog；标题“物资”；容量“已占 X/4 格”；列表每件名称、占格、描述、“使用”按钮/禁用原因。
+- `#vn-pack-button`：常驻（VN 场景），显示“行囊 3/4 格 · 门板占 2 格”（无门板时省略后半句）；限时选项时 `disabled`，不隐藏。
+- `#vn-pack`：覆盖层 dialog；标题“行囊”（出发前/草地尽头另标）；容量“行囊 X / Y 格 · 门板占 2 格 · 状态 …”；列表每件名称、占格、描述、“使用”按钮/禁用原因。
 - 门板：“不可使用”；雨布：非草地“只能在草地使用”；优秀：“状态已足够”；单药/单青稞：“需要与……同用”。
 - 状态变化自动开面板时，顶部显示“状态：差”或“状态变化”；差状态关闭 = 结算，不是普通关闭。
 - 开局面板：标题“出发前”，文案“你当前的状态为良好，是否使用物资将状态提升至优秀？”；关闭不惩罚。
@@ -457,7 +483,8 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ### 10.4 结局页
 
-- `#ending-route` 显示“结局1/11（门板） · lede”；坏结局“坏结局 · 没有走出草地”。
+- `#ending-route` 只显示“结局1/11（门至人散）”；坏结局“结局11/11（草地无归）”。
+- `#ending-summary` 显示短描述；`#ending-fates` 显示动态命运句；`#ending-closing` 显示两行收束句；旧档 `legacy` 隐藏 summary/closing。
 - names 为空时隐藏点名列，显示“名册没有翻到吴起。”；stats 仍显示 companyEnd 18。
 - 五卡保留；坏结局也显示，按条件亮/灰。
 - 名册回廊旧页/新页混排；旧页不改数据。
@@ -496,7 +523,7 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 - 物资：4 格 = 8 个半格；药/青稞 0.5、鞋 1、锅/雨布/门板 2；5 种配方；门板不可用；雨布仅草地；限时选项禁用物资栏；冬生赠青稞不占格。
 - 状态：初始良好；救人按 `rescuePenalty` 扣级；有板救满第三人且状态为差时当场“三人帮助”回勉强，草地 -1 再回差后弹补给警告；无板则草地结算跌到差时帮助；0 死；1 弹 `#danger-modal`（同意/拒绝）；物资面板与门板舍弃弹窗。
 - 结局：带板 1/11–5/11 + 无板 6/11–10/11 + 坏结局，共 11 条；顺序先判死，再判 5/11/坏结局，再按带板/无板与救人数收束；林先生只在我死时死；没有全活。
-- 剧情：序章 4 格口径；泸定飞毛腿“门板铺桥/药/抱板走”；草地灶王“青稞/锅/不救”、冬生“鞋/雨布/不救”并赠青稞；`g027a` 草地结算；`g026h–g026m`（有板）/`g028h–g028j`（无板）三人帮助；`g898` 坏结局、`g899` 空页、`g900` 吴起；隐藏 `badend` 章。
+- 剧情：序章 4 格口径；泸定飞毛腿“门板铺桥/药/抱板走”；草地灶王“青稞/锅/继续赶路”、冬生“鞋/雨布/继续赶路”并赠青稞；`g027a` 草地结算；`g026h–g026m`（有板）/`g028h–g028j`（无板）三人帮助；`g898` 坏结局、`g899` 空页、`g900` 吴起；隐藏 `badend` 章。
 - UI：左上角状态 HUD、物资按钮/面板、差警告 `#danger-modal`、门板弹窗、结局页“结局N/11”、名册回廊。
 - 工具：`check-build` 39/39、`smoke` 46/46、`check-script` 9 剧本 OK；新增 `project/tools/_pw-step11.js`。
 
@@ -520,7 +547,7 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 
 ### 12.3 未做/例外
 
-- 真人 11 路线计时与真人 20 分钟验收未做；文本源 11278 字（v1.5 扩写后，A 口径 31:12 / B 口径 48:30，B 估算偏保守），当前只有快速点击证据。
+- 真人 11 路线计时与真人 20 分钟验收未做；文本源 11620 字（文本细化后，A 口径 32:09 / B 口径 49:58，B 估算偏保守），当前只有快速点击证据。
 - Chrome/Safari、真机触摸、隐私模式未在 v1.4 重跑；沿用 v1.3 的 P0/P1 例外。
 - 公网仍是 v1.1.1；`dist/` 未重打包，未部署。
 - `main` 保留 v1.3 / tag `step-10-done`；本步在 `v1.4-dev` 分支完成，tag `step-11-done`。

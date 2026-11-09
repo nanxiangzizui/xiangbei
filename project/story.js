@@ -14,7 +14,7 @@
         short: "于都",
         playable: true,
         nodes: [
-          { id: "p001", type: "line", speaker: "旁白", text: "1934年10月17日，于都河上起雾。", bg: "yudu_river" },
+          { id: "p001", type: "line", speaker: "旁白", text: "一九三四年十月十七日，于都河上起雾。", bg: "yudu_river" },
           { id: "p002", type: "line", speaker: "旁白", text: "雾里看不见对岸，只看得见火把。火把从村口一直排到水边。" },
           { id: "p003", type: "line", speaker: "旁白", text: "河上有一座浮桥。桥面是门板，一块压着一块，压得很紧。" },
           { id: "p004", type: "line", speaker: "旁白", text: "桥板是各家送来的：门板、床板，还有一副寿材，黑漆没干透。" },
@@ -75,6 +75,8 @@
             id: "p021",
             type: "choice",
             prompt: "娘把锯子搁下，等你说。",
+            stakes: "门板占两格，背上多三十斤。",
+            timeoutText: "你还没开口。娘把锯子递过来，又低头去解门板上的绳。",
             record: "choice.prologue.door",
             timeout: 16,
             defaultOption: "A",
@@ -235,6 +237,8 @@
             id: "p037",
             type: "choice",
             prompt: "桥头的人往前挤。前面就是浮桥。",
+            stakes: "后面的人推着你，停一步就挡路。",
+            timeoutText: "后面的人撞了你一下。你顺着人流上了桥。",
             record: "choice.prologue.lookback",
             timeout: 16,
             defaultOption: "B",
@@ -507,6 +511,8 @@
             type: "choice",
             when: "item.door",
             prompt: "桥头的人往后挤。老周还在那边。",
+            stakes: "回去，可能赶不上渡船；过去，桥头就少一个人。",
+            timeoutText: "你还没决定。后面的人撞上来，门板脱了手，被人拖去垫桥头。",
             record: "choice.xiangjiang.hold",
             timeout: 20,
             defaultOption: "C",
@@ -544,6 +550,8 @@
             type: "choice",
             when: "!item.door && !choice.xiangjiang.hold",
             prompt: "桥头的人往后挤。老周还在那边。",
+            stakes: "回去，可能赶不上渡船；过去，桥头就少一个人。",
+            timeoutText: "你还没决定，脚已经往回跑了。",
             record: "choice.xiangjiang.hold",
             timeout: 20,
             defaultOption: "A",
@@ -631,6 +639,7 @@
           { id: "x035", type: "line", speaker: "旁白", text: "我把名册合上。合上之前，我数了一遍剩下的名字。" },
           { id: "x036", type: "line", speaker: "旁白", text: "数到第三遍，才数清。" },
           { id: "x037", type: "line", speaker: "旁白", text: "数清以后，我在封皮上写了一个数。写完又涂掉了。" },
+          { id: "x161", type: "line", speaker: "旁白", text: "湘江之后第七天，我们才走出那片山。山里的雨一直没停。" },
           { id: "x038", type: "title", text: "第二章 · 遵义", sub: "一九三五年 · 一月", place: "黔北 · 遵义", bg: "zunyi_hall" },
           { id: "x039", type: "codex", codexId: "xiangjiang" },
           { id: "x900", type: "end", next: "zunyi" }
@@ -643,7 +652,7 @@
         short: "遵义",
         playable: true,
         nodes: [
-          { id: "z001", type: "line", speaker: "旁白", text: "1935年1月，遵义。", bg: "zunyi_hall" },
+          { id: "z001", type: "line", speaker: "旁白", text: "一九三五年一月，遵义。", bg: "zunyi_hall" },
           { id: "z002", type: "line", speaker: "旁白", text: "雪化了又冻，屋檐下挂着冰。" },
           { id: "z004", type: "line", speaker: "旁白", text: "我们驻下，第一次睡满了整夜。" },
           { id: "z005", type: "line", speaker: "旁白", text: "会开了三天。" },
@@ -700,7 +709,7 @@
           { id: "z139", type: "line", speaker: "旁白", text: "火盆里响了一声。" },
           { id: "z140", type: "line", speaker: "飞毛腿", text: "走得到。我算过，走一年，差不多了。" },
           { id: "z141", type: "line", speaker: "灶王", text: "走到了，我给你们煮一顿干的。" },
-          { id: "z142", type: "line", speaker: "冬生", text: "我要吹号。吹给全连听。" },
+          { id: "z142", type: "line", speaker: "冬生", text: "到了以后，我要吹号。吹给全连听。" },
           { id: "z143", type: "line", speaker: "林先生", text: "我不知道。我把路上的字写完，再说。" },
           { id: "z144", type: "line", speaker: "旁白", text: "他们看我。" },
           { id: "z145", type: "line", speaker: "满崽", text: "我不知道。名册不能丢。" },
@@ -978,6 +987,8 @@
             id: "j024",
             type: "choice",
             prompt: "最后一批上船前，何指导员问：先渡谁？",
+            stakes: "船只有六条，对岸的追兵不等人。",
+            timeoutText: "何指导员又问了一遍。你还没开口，主力已经往船上走。",
             record: "choice.jinsha.priority",
             timeout: 16,
             defaultOption: "A",
@@ -1199,6 +1210,8 @@
             type: "choice",
             when: "item.door",
             prompt: "桥板不够。飞毛腿趴在桥头，背上在淌血。你背上有一块门板。",
+            stakes: "桥板还差三块。你只有这一块门板，或者一副药。",
+            timeoutText: "你还没决定。后面的人从你身边挤过去，你跟着迈上了桥。",
             record: "choice.luding.door",
             timeout: 12,
             defaultOption: "C",
@@ -1254,6 +1267,8 @@
             // 选“铺桥”会把 item.door 置 false；若只看 item.door，l019x 会在同一回合重新出现。
             when: "!item.door && !choice.luding.door",
             prompt: "桥板不够。飞毛腿趴在桥头，背上在淌血。你背上没有门板。",
+            stakes: "药只有一副。桥那头还在等板子。",
+            timeoutText: "你还没决定，脚已经跟着前面的人走了。",
             record: "choice.luding.door",
             timeout: 12,
             defaultOption: "B",
@@ -1381,6 +1396,13 @@
             when: "!fate.feimao.dead"
           },
           { id: "l022", type: "line", speaker: "旁白", text: "飞毛腿没过来。他的号挂在桥头的木桩上，还热着。", when: "fate.feimao.dead" },
+          {
+            id: "l022f",
+            type: "line",
+            speaker: "旁白",
+            text: "我站在桥尾，看着那支号。桥上的人一个个过去，谁也没有停。我想喊他，喉咙里只有烟。",
+            when: "fate.feimao.dead"
+          },
           { id: "l143", type: "line", speaker: "旁白", text: "他的帽子落在桥板上。我捡起来，里头有一张纸。", when: "fate.feimao.dead" },
           { id: "l144", type: "line", speaker: "旁白", text: "纸上三个字，是林先生写的。比我写得正。", when: "fate.feimao.dead" },
           { id: "l145", type: "line", speaker: "旁白", text: "我把纸展开，照着抄进名册第三页。", when: "fate.feimao.dead" },
@@ -1403,6 +1425,8 @@
             id: "l027",
             type: "choice",
             prompt: "二十二个人，名字不全。",
+            stakes: "名册只剩一页空纸。写错，就再没有地方改。",
+            timeoutText: "你握着笔，纸洇开一小块。最后写下去的是数字。",
             record: "choice.luding.names",
             timeout: 12,
             defaultOption: "A",
@@ -1479,6 +1503,7 @@
           { id: "g100", type: "line", speaker: "旁白", text: "走进草地第三天，队伍开始有人掉队。" },
           { id: "g101", type: "line", speaker: "旁白", text: "掉队的人不喊。他们蹲下去，像在系鞋带。" },
           { id: "g102", type: "line", speaker: "旁白", text: "后面的人走过去，把他架起来。架不动，就两个人架。" },
+          { id: "g103a", type: "line", speaker: "旁白", text: "草地第七天。干粮袋轻得能捏成一把。前面有人开始解皮带。" },
           { id: "g004", type: "line", speaker: "旁白", text: "背上的门板这时候是一张床。", when: "item.door" },
           { id: "g005", type: "line", speaker: "旁白", text: "伤员躺上去，比躺在泥里强。", when: "item.door" },
           {
@@ -1495,6 +1520,8 @@
             type: "choice",
             when: "item.barley",
             prompt: "干粮袋里，还剩最后一小袋青稞。",
+            stakes: "断粮第七天。分出去，你自己就少一口。",
+            timeoutText: "你捏着袋口，捏了很久。最后把袋口重新扎紧。",
             record: "choice.grass.share",
             timeout: 20,
             defaultOption: "B",
@@ -1637,6 +1664,8 @@
             id: "g018x",
             type: "choice",
             prompt: "火生不起来。灶王蹲在风口上，嘴唇发紫。锅里什么都没有。",
+            stakes: "火只差一把柴。你手里只有青稞和锅。",
+            timeoutText: "号声响了第二次。你把脸转开，跟上了前面的人。",
             record: "choice.grass.zaowang",
             timeout: 16,
             defaultOption: "C",
@@ -1675,14 +1704,14 @@
               },
               {
                 key: "C",
-                text: "不救了，跟上队伍",
+                text: "继续赶路",
                 value: "C",
-                statusReason: "你跟上队伍走了",
+                statusReason: "你继续赶路",
                 set: {
                   "fate.zaowang.dead": true,
                   "memory.zaowang_leave": true
                 },
-                cost: "火没起来。你走了。"
+                cost: "你走在前头。他没有跟上来。"
               }
             ]
           },
@@ -1691,6 +1720,20 @@
             type: "line",
             speaker: "旁白",
             text: "火没起来。他就在那儿蹲着，没再站起来。",
+            when: "fate.zaowang.dead"
+          },
+          {
+            id: "g019n",
+            type: "line",
+            speaker: "旁白",
+            text: "风把火堆上的灰吹起来，落在他肩上。他坐着，没有掸。",
+            when: "fate.zaowang.dead"
+          },
+          {
+            id: "g019o",
+            type: "line",
+            speaker: "旁白",
+            text: "我站着。后面的人在喊，声音隔着一层雾。我想说一句什么，喉咙里只有冷气。",
             when: "fate.zaowang.dead"
           },
           {
@@ -1722,23 +1765,32 @@
             type: "line",
             speaker: "旁白",
             text: "我把他埋在一个能看见太阳的地方。那天没有太阳。",
-            when: "fate.zaowang.dead"
+            when: "fate.zaowang.dead && !memory.zaowang_leave"
+          },
+          {
+            id: "g020m",
+            type: "line",
+            speaker: "旁白",
+            text: "收容队把他埋在一个能看见太阳的地方。那天没有太阳。",
+            when: "fate.zaowang.dead && memory.zaowang_leave"
           },
           {
             id: "g020a",
             type: "line",
             speaker: "旁白",
             text: "我把家里的铁锅擦了一遍，又擦一遍，像他擦他那口。",
-            when: "fate.zaowang.dead && item.homepot"
+            when: "fate.zaowang.dead && !memory.zaowang_leave && item.homepot"
           },
-          { id: "g143", type: "line", speaker: "旁白", text: "飞毛腿把灶王的锅背起来。锅沿磕着他的肩胛骨。", when: "fate.zaowang.dead && !fate.feimao.dead" },
-          { id: "g144", type: "line", speaker: "飞毛腿", text: "我替他背。到了吴起，我给他煮一顿。", when: "fate.zaowang.dead && !fate.feimao.dead" },
-          { id: "g145", type: "line", speaker: "旁白", text: "冬生把灶王的锅背起来。锅比他大，走一步，晃一下。", when: "fate.zaowang.dead && fate.feimao.dead && !fate.dongsheng.dead" },
+          { id: "g143", type: "line", speaker: "旁白", text: "飞毛腿把灶王的锅背起来。锅沿磕着他的肩胛骨。", when: "fate.zaowang.dead && !memory.zaowang_leave && !fate.feimao.dead" },
+          { id: "g144", type: "line", speaker: "飞毛腿", text: "我替他背。到了吴起，我给他煮一顿。", when: "fate.zaowang.dead && !memory.zaowang_leave && !fate.feimao.dead" },
+          { id: "g145", type: "line", speaker: "旁白", text: "冬生把灶王的锅背起来。锅比他大，走一步，晃一下。", when: "fate.zaowang.dead && !memory.zaowang_leave && fate.feimao.dead && !fate.dongsheng.dead" },
           {
             id: "g021",
             type: "choice",
-            when: "fate.zaowang.dead && item.homepot",
+            when: "fate.zaowang.dead && !memory.zaowang_leave && item.homepot",
             prompt: "灶王的小锅还在火堆边。",
+            stakes: "背上已经压着门板和粮袋。",
+            timeoutText: "你站了一会儿。队伍开始走，你弯腰把锅提了起来。",
             record: "choice.grass.pot",
             timeout: 16,
             defaultOption: "A",
@@ -1764,28 +1816,28 @@
             type: "line",
             speaker: "旁白",
             text: "我把小锅留在了火堆边。背着它，我也走不出去。",
-            when: "fate.zaowang.dead && !item.homepot"
+            when: "fate.zaowang.dead && !memory.zaowang_leave && !item.homepot"
           },
           {
             id: "g022a",
             type: "line",
             speaker: "旁白",
             text: "我把小锅背上。锅沿磕着门板，一路响。",
-            when: "fate.zaowang.dead && item.pot && item.door"
+            when: "fate.zaowang.dead && !memory.zaowang_leave && item.pot && item.door"
           },
           {
             id: "g022c",
             type: "line",
             speaker: "旁白",
             text: "我把小锅背上。锅沿硌着背，一路响。",
-            when: "fate.zaowang.dead && item.pot && !item.door"
+            when: "fate.zaowang.dead && !memory.zaowang_leave && item.pot && !item.door"
           },
           {
             id: "g022b",
             type: "line",
             speaker: "旁白",
             text: "我把小锅放在他手边。",
-            when: "fate.zaowang.dead && !item.pot"
+            when: "fate.zaowang.dead && !memory.zaowang_leave && !item.pot"
           },
           {
             id: "g023b",
@@ -1815,6 +1867,8 @@
             id: "g026x",
             type: "choice",
             prompt: "冬生走不动了，坐在泥里，号抱在怀里。",
+            stakes: "前面还有三天。你只有一双鞋，一块雨布。",
+            timeoutText: "号声从前面传来。你站起来，跟着号声走了。",
             record: "choice.grass.dongsheng",
             timeout: 12,
             defaultOption: "C",
@@ -1855,16 +1909,37 @@
               },
               {
                 key: "C",
-                text: "不救，继续走",
+                text: "继续赶路",
                 value: "C",
-                statusReason: "你继续往前走",
+                statusReason: "你继续赶路",
                 set: {
                   "fate.dongsheng.dead": true,
                   "memory.dongsheng_leave": true
                 },
-                cost: "你走在前头。他没有跟上来。"
+                cost: "你走在前头。他不会跟上来。"
               }
             ]
+          },
+          {
+            id: "g026n",
+            type: "line",
+            speaker: "旁白",
+            text: "我往前走了十几步。身后没有脚步声。",
+            when: "fate.dongsheng.dead"
+          },
+          {
+            id: "g026o",
+            type: "line",
+            speaker: "旁白",
+            text: "我想回头。后面的人流推着我，一直往前。",
+            when: "fate.dongsheng.dead"
+          },
+          {
+            id: "g026p",
+            type: "line",
+            speaker: "旁白",
+            text: "号声没有再响。草地很静，静得能听见自己的鞋底。",
+            when: "fate.dongsheng.dead"
           },
           {
             id: "g026y",
@@ -1982,6 +2057,13 @@
             when: "fate.player.dead"
           },
           {
+            id: "g029a",
+            type: "line",
+            speaker: "旁白",
+            text: "离吴起还有三天。前面的人说，翻过最后一道梁，就能看见窑洞。",
+            when: "!fate.player.dead"
+          },
+          {
             id: "g029",
             type: "title",
             text: "终章 · 吴起",
@@ -2003,7 +2085,7 @@
         short: "吴起",
         playable: true,
         nodes: [
-          { id: "w001", type: "line", speaker: "旁白", text: "1935年10月19日，吴起镇。土是黄的，天很高。", bg: "wuqi_dawn" },
+          { id: "w001", type: "line", speaker: "旁白", text: "一九三五年十月十九日，吴起镇。土是黄的，天很高。", bg: "wuqi_dawn" },
           { id: "w002", type: "line", speaker: "旁白", text: "镇口的窑洞墙上刷着标语：北上抗日。" },
           { id: "w003", type: "line", speaker: "旁白", text: "老乡站在门边看我们，不说话。有人把一筐土豆放在路口，转身就进屋。" },
           { id: "w004", type: "line", speaker: "旁白", text: "有人在井边打水，先给伤员。轮到我，只剩半瓢，底的泥一晃一晃。" },
@@ -2030,6 +2112,8 @@
             type: "choice",
             when: "item.door",
             prompt: "门板靠在墙上。标语还没写。",
+            stakes: "标语要写，板子只有一块。",
+            timeoutText: "你还没开口。林先生已经把粉笔按在门板上。",
             record: "choice.wuqi.door",
             timeout: 20,
             defaultOption: "A",
@@ -2096,10 +2180,13 @@
           { id: "w022a", type: "line", speaker: "旁白", text: "念到林先生。没有人应。她没等到收容队。", when: "fate.lin.dead" },
           { id: "w023", type: "line", speaker: "旁白", text: "念到老周。队伍里没有人应。" },
           { id: "w024", type: "line", speaker: "旁白", text: "念到灶王。没有人应。", when: "fate.zaowang.dead" },
+          { id: "w024b", type: "line", speaker: "旁白", text: "他的锅在我背上。锅沿硌着肩胛骨，跟一路上的响法一样。", when: "fate.zaowang.dead && item.pot" },
           { id: "w024a", type: "line", speaker: "旁白", text: "念到灶王。他从锅边抬起头，应了一声。", when: "!fate.zaowang.dead" },
           { id: "w025", type: "line", speaker: "旁白", text: "念到飞毛腿。没有人应。", when: "fate.feimao.dead" },
           { id: "w025a", type: "line", speaker: "旁白", text: "念到飞毛腿。他把号举了举。", when: "!fate.feimao.dead" },
-          { id: "w119", type: "line", speaker: "旁白", text: "冬生把号抱在怀里。号嘴上有牙印。", when: "fate.feimao.dead && !fate.dongsheng.dead" },
+          { id: "w119", type: "line", speaker: "旁白", text: "冬生把号贴在嘴上，没有吹。号嘴上有牙印。", when: "fate.feimao.dead && !fate.dongsheng.dead" },
+          { id: "w025d", type: "line", speaker: "旁白", text: "念到冬生。没有人应。", when: "fate.dongsheng.dead" },
+          { id: "w025c", type: "line", speaker: "旁白", text: "桥头的号，草地里的号，都没有响。", when: "fate.feimao.dead && fate.dongsheng.dead" },
           {
             id: "w026",
             type: "interact",
@@ -2201,52 +2288,61 @@
       // v1.4：带板 5 条 + 无板 5 条 + 坏结局；历史终点不变，路线只改人物命运与门板去向。
       routes: {
         door_excellent: {
-          title: "门板",
-          lede: "门板到了吴起。你也是。"
+          title: "门至人散",
+          lede: "门板到了吴起，你也还站得住。可回头时，能和你一起应到的人，已经没剩几个。",
+          closing: "娘说，家在人身上。\n你背来了门，却没能把那个家完整地背回来。"
         },
         door_grass_one: {
-          title: "门板",
-          lede: "门板留在了草地。你到了吴起。",
-          bridgeTitle: "桥板",
-          bridgeLede: "门板留在了桥上。你到了吴起。"
+          title: "门落无声",
+          lede: "门板留在了草地。你到了吴起，像把一部分自己留在了身后。",
+          bridgeLede: "门板留在了桥头。你到了吴起，后来的人从它撑住的地方走了过去。",
+          closing: "它替你挡过风，铺过路，当过床。\n最后，它替你留在了那里。"
         },
         door_carry_two: {
-          title: "门板",
-          lede: "门板到了吴起。你也是。"
+          title: "门与归人",
+          lede: "门板到了吴起，你也到了。至少还有几个名字，能和你一起看见陕北的天。",
+          closing: "真正被背到终点的，不是那块板，\n是那些没有松开的人。"
         },
         door_grass_many: {
-          title: "门板",
-          lede: "门板留在了草地。你到了吴起。",
-          bridgeTitle: "桥板",
-          bridgeLede: "门板留在了桥上。你到了吴起。"
+          title: "板留人渡",
+          lede: "门板留在了桥头。你带着活着的人继续向北，后来的人从它撑住的地方走了过去。",
+          grassLede: "门板留在了草地。你到了吴起，带着几个人，也带着它留下的那一点重量。",
+          closing: "有些东西留在原地，不是失去，\n是替后来的人把路撑住。"
         },
         door_others: {
-          title: "空页",
-          lede: "名册上多了一个名字，又划掉了。"
+          title: "替你答到",
+          lede: "你没能走出草地。门板和你的名字，被人带到了吴起；点名时，有人替你应了一声。",
+          closing: "你没有到。\n但你没有从名册上消失。"
         },
         no_door_zero: {
-          title: "空手",
-          lede: "你空着手，走到了吴起。"
+          title: "无人应到",
+          lede: "你空着手到了吴起。名册翻到最后，能自己应到的人，已经没有几个。",
+          closing: "你把自己带到了终点，\n却没能把身边的人一起带出这条路。"
         },
         no_door_one: {
-          title: "空手",
-          lede: "你空着手，走到了吴起。"
+          title: "一人同北",
+          lede: "你空着手到了吴起。至少还有一个名字，在你身边应了一声。",
+          closing: "你丢掉了很多东西，\n最后还留下了一个人。"
         },
         no_door_two: {
-          title: "空手",
-          lede: "你空着手，走到了吴起。"
+          title: "两人成行",
+          lede: "你空着手，把两个人带到了吴起。路没有变短，身后的脚步却不再只有你一个。",
+          closing: "你没有门板，\n却替两个人挡过一段路。"
         },
         no_door_three: {
-          title: "空手",
-          lede: "你空着手，走到了吴起。"
+          title: "三人犹立",
+          lede: "三个人都到了，你也还站着。只是这一路的重量，已经把你们压得所剩不多。",
+          closing: "你们没有走得更轻松，\n只是一起走到了。"
         },
         no_door_three_excellent: {
-          title: "空手",
-          lede: "你空着手，走到了吴起。"
+          title: "人至“家”至",
+          lede: "娘说，家在人身上。你空着手，却把三个人都带到了吴起。",
+          closing: "你没有背来门板，\n却成了别人活下来的那块板。"
         },
         bad_end: {
-          title: "没有走出草地",
-          lede: "草地没有尽头。"
+          title: "草地无归",
+          lede: "你没能走出草地。名册停在你划到的那一页，有些名字和你一起留在了那里。",
+          closing: "路还在向北。\n你留在了原地。"
         }
       },
       cards: [
@@ -2515,17 +2611,17 @@
         }
       },
       endings: {
-        door_excellent: { hint: "门板到了最后，队伍也到了。" },
-        door_grass_one: { hint: "有一块木板，留在了半路。" },
-        door_carry_two: { hint: "门板到了吴起，你也到了；不是每个人都到了。" },
-        door_grass_many: { hint: "门板没有到吴起，名字留在了名册上。" },
-        door_others: { hint: "有人替你走完了最后一段。" },
-        no_door_zero: { hint: "你空着手，走到了吴起。" },
-        no_door_one: { hint: "空着手，也救下了一个人。" },
-        no_door_two: { hint: "空着手，救下了两个人。" },
-        no_door_three: { hint: "空着手，救下了三个人；你还在。" },
-        no_door_three_excellent: { hint: "空着手，救下了三个人；你也还站得住。" },
-        bad_end: { hint: "草地没有尽头，名册没有翻到吴起。" }
+        door_excellent: { hint: "门板到了吴起，能一起应到的人却没剩几个。" },
+        door_grass_one: { hint: "门板留在草地，你到了吴起，像把一部分自己留在身后。" },
+        door_carry_two: { hint: "门板到了吴起，至少还有几个名字一起看见了陕北的天。" },
+        door_grass_many: { hint: "门板留在桥头，后来的人从它撑住的地方走了过去。" },
+        door_others: { hint: "你没能走出草地；点名时，有人替你应了一声。" },
+        no_door_zero: { hint: "你空着手到了吴起，名册翻到最后，能自己应到的人没剩几个。" },
+        no_door_one: { hint: "你空着手到了吴起，至少还有一个名字在身边应了一声。" },
+        no_door_two: { hint: "你空着手，把两个人带到了吴起。" },
+        no_door_three: { hint: "三个人都到了，你也还站着。" },
+        no_door_three_excellent: { hint: "娘说，家在人身上；你空着手，却把三个人都带到了吴起。" },
+        bad_end: { hint: "你没能走出草地，有些名字和你一起留在了那里。" }
       }
     },
     // v1.5.1 成就：48 条 = 17 个选择组 46 条 + 记名 done/skip 2 条。

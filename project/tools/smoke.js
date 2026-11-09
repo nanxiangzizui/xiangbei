@@ -176,7 +176,7 @@ check("S09", "九章元数据", function () {
   assertEqual(chapters.map(function (c) { return c.id; }), ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi", "coda", "badend"], "章节 id");
   assertEqual(chapters.map(function (c) { return c.order; }), [1, 2, 3, 4, 5, 6, 7, 8, 9], "顺序");
   assertEqual(chapters.map(function (c) { return c.playable; }), [true, true, true, true, true, true, true, true, true], "九章全部可玩");
-  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [89, 114, 118, 86, 120, 136, 78, 18, 8], "九章节点数");
+  assertEqual(chapters.map(function (c) { return c.nodes.length; }), [89, 115, 118, 86, 121, 144, 81, 18, 8], "九章节点数");
   assertEqual(chapters.map(function (c) { return c.hidden === true; }), [false, false, false, false, false, false, false, true, true], "只有 coda 与 badend 隐藏");
 });
 

@@ -399,6 +399,11 @@ function stamp() {
     check("十一章结局卡", await page.locator(".xb-branch-ending").count() === 11);
     check("十一章全锁", await page.locator(".xb-branch-ending.is-locked").count() === 11);
     check("七章全锁", await page.locator("#branch-chapters .xb-branch-chapter.is-locked").count() === 7);
+    const lockedLedes = await page.locator(".xb-branch-ending.is-locked .xb-branch-ending__lede").allInnerTexts();
+    check("未解锁卡不写未解锁", lockedLedes.length === 11 && lockedLedes.every((text) => text.trim() !== "未解锁"), lockedLedes.join(" | "));
+    check("带板未解锁给门板线索", lockedLedes.filter((text) => text.indexOf("门板还在不在") !== -1).length === 5, lockedLedes.join(" | "));
+    check("空手未解锁给名字线索", lockedLedes.filter((text) => text.indexOf("空着手") !== -1).length === 5, lockedLedes.join(" | "));
+    check("坏结局未解锁给草底线索", lockedLedes.filter((text) => text.indexOf("草地有没有尽头") !== -1).length === 1, lockedLedes.join(" | "));
     await shot("empty-map");
 
     await hit(page.locator('#branch-chapters [data-chapter="prologue"]'));
@@ -415,8 +420,15 @@ function stamp() {
     const routeTitle = await page.locator("#branch-detail-title").innerText();
     const routeText = await page.locator("#branch-detail-body").innerText();
     check("结局未解锁提示", routeTitle.indexOf("尚未抵达") !== -1, routeTitle);
-    check("结局未解锁只给模糊提示", routeText.indexOf("带上门板") === -1);
+    check("结局未解锁只给模糊提示", routeText.indexOf("带上门板") === -1 && routeText.indexOf("救下了一个人") === -1 && routeText.indexOf("救下了两个人") === -1 && routeText.indexOf("救下了三个人") === -1, routeText);
     await shot("empty-route");
+    await hit(page.locator("#branch-detail-close"));
+    await sleep(120);
+    await hit(page.locator('.xb-branch-ending[data-route="no_door_three"]'));
+    check("空手未解锁详情打开", await waitVisible("#branch-detail"));
+    const noDoorText = await page.locator("#branch-detail-body").innerText();
+    check("空手未解锁详情不泄露人数", noDoorText.indexOf("救下了一个人") === -1 && noDoorText.indexOf("救下了两个人") === -1 && noDoorText.indexOf("救下了三个人") === -1, noDoorText);
+    check("空手未解锁详情保留方向", noDoorText.indexOf("空着手") !== -1, noDoorText);
     await hit(page.locator("#branch-detail-close"));
     await sleep(120);
     await hit(page.locator("#branch-close"));

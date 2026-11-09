@@ -45,7 +45,8 @@
 - **第一步**（目标）：标题“请选择一个存档开始”；只列未完结档；已完结档不出现；“开启新档”保留。没有未完结档时可直接开新档，但**先不创建空档**，等第二步选定来源后再创建，避免中途退出留下孤儿档。
 - **第二步**（来源）：标题“对于你选择的章节前的剧情走向，你希望走哪条路线？”；只列已完结且拥有该章底片的存档；“开启新档/上次玩到/删除”隐藏，显示「返回」。
 - 回退：Esc 或「返回」从第二步回第一步并聚焦目标行/「开启新档」；再 Esc 关面板回章节详情，焦点回「从此开始」。不写档。
-- 入口：`renderBranchChapterStart(chapterId)` 在章节详情底部动态加「从此开始」。序章置灰；没有完成档写“完成一周目后”；没有该章底片写“已完结存档里还没有这一章的前情记录”；无未完结档且 20 档满写“存档已满”。
+- 入口：`renderBranchChapterStart(chapterId)` 在章节详情底部动态加「从此开始」。序章置灰；没有完成档写“完成一周目后”；没有该章底片写“已完结存档里还没有这一章的前情记录”；无未完结档且 40 档满写“存档已满”。
+- **默认来源快捷入口**：第一步底部加「用最近一周目开新档」（`#save-default-source`）；有可用已完结档时直接取最近一档，跳过第二步并新建普通档，从目标章第一句开始。第二步隐藏；没有来源或已 40 档时置灰。手动两步完全保留。
 - 章节详情的决定行仍只读；入口不改分支图的 7 章 / 17 决策组结构。
 
 ## 5. 拷贝语义
@@ -54,7 +55,7 @@
 
 1. 取来源档该章底片，`normalize`；不合法或版本不匹配则 toast 中止。
 2. `startChapter(copied, chapterId)` 定位本章首个可见节点；`ending=null`，保留当前设置。
-3. 目标档存在则覆盖 `state` 与 `updatedAt`；不存在则新建槽并置为 active。满 20 档中止。
+3. 目标档存在则覆盖 `state` 与 `updatedAt`；不存在则新建槽并置为 active。满 40 档中止。
 4. 清掉旧暂停/结局回顾，关闭存档面板与分支图，再换 `state`，避免 `closePause` 作用于新档。
 5. `historyCopyPrefix` 仅复制来源档目标章之前的回顾条目，checkpoint 截到该处；`chapterCopyPrefix` 清空目标槽底片，复制来源档目标章及之前的快照，目标章以后作废。
 6. 写存档列表、应用设置、进 VN、渲染；采集目标章底片后 `saveNow`，最后 toast 说明“已开新档/已覆盖这一档的后续进度”。
@@ -65,8 +66,8 @@
 
 ## 7. 改动文件
 
-- `project/engine.js`：`CHAPTERS_KEY` / 2MB 上限；底片 normalize/capture/copy/prune；`savePanelState` 两模式；`chapterReplayAvailability` / `openChapterTarget` / `chapterSaveBack`；`applyChapterStart`；分支详情「从此开始」；初始化、`?reset=1`、删档清理。
-- `project/index.html`：`#saves-kicker`、`#saves-back`、`#branch-detail-actions`；复用现有存档/分支弹窗。
+- `project/engine.js`：`CHAPTERS_KEY` / 2MB 上限；底片 normalize/capture/copy/prune；`savePanelState` 两模式；`chapterReplayAvailability` / `openChapterTarget` / `chapterSaveBack` / `save-default-source`；`applyChapterStart`；分支详情「从此开始」；初始化、`?reset=1`、删档清理。
+- `project/index.html`：`#saves-kicker`、`#saves-back`、`#save-default-source`、`#branch-detail-actions`；复用现有存档/分支弹窗。
 - `project/style.css`：章节重玩面板宽度/两列动作/置灰行、`.xb-branch-start`；移动 82 逻辑高与 34px 标题。
 - `project/tools/check-build.js`：C52（新键/2MB/两模式/文案/拷贝/清理/入口）与 REQUIRED_IDS。
 - `project/tools/_pw-step19.js`：basic/new/back/mobile/ending/full 六组用例，http/file 双协议。
@@ -80,8 +81,10 @@
 | `node project/tools/check-build.js` | 51/51（新增 C52） |
 | `node project/tools/smoke.js` | 47/47 |
 | `node project/tools/check-script.js docs/script` | 9 文件 OK |
-| `_pw-step19.js --url=http --case=all` | 56/56，0 console error / 0 失败请求 |
-| `_pw-step19.js --url=file --case=all` | 56/56，0 console error / 0 失败请求 |
+| `_pw-step19.js --url=http --case=basic` | 35/35（新增默认来源按钮断言） |
+| `_pw-step19.js --url=http --case=default` | 12/12：新建普通档、active 切换、湘江起、前情 rescues=1、p021 A 拷贝 |
+| `_pw-step19.js --url=http --case=all` | 68/68，0 console error / 0 失败请求 |
+| `_pw-step19.js --url=file --case=all` | 68/68，0 console error / 0 失败请求 |
 | 结局专项 | 12/12：目标档 ending、分支 run（含章前 p021）、成就档与结局快照 |
 | 真实一周目 | 14/14，217s：新档走完七章 → 泸定「从此开始」→ 开新档 → 章前旗标/底片拷贝，`ending=null` |
 | 移动 844×390 | 5/5：入口与两步行热区≥44 CSS px |
@@ -95,6 +98,7 @@
 
 - 旧版本已完结档没有章前底片，按钮置灰，不提供近似回溯；用户需再完整走一次新周目。
 - 暂停菜单发起章节重玩的路径没有专项浏览器用例；代码复用同一 `openChapterTarget`，但未单独计时/截图（P1）。
+- 默认来源快捷入口已随 http/file 的 all 68/68 覆盖（basic 35/35、default 12/12）；40 档写满只由 `SAVE_SLOT_MAX=40` 与 C43 代码检查覆盖，未做浏览器写满测试（P1）。
 - 移动端只验证两步行与入口热区，没有在 844×390 跑完整结局（P1）。
 - Chrome/Safari/真机、20 分钟全程、11 条结局各一次仍沿用既有 P1/P0 例外。
 - 本轮已打包并部署 v1.8.0-dev；两站线上均为 v1.8.0-dev。

@@ -90,15 +90,18 @@
         "route": "door_others",
         "routeIndex": 5,
         "routeLabel": "5",
-        "routeTitle": "空页",
-        "routeLede": "名册上多了一个名字，又划掉了。",
+        "routeTitle": "替你答到",
+        "routeLede": "你没能走出草地。门板和你的名字，被人带到了吴起；点名时，有人替你应了一声。",
+        "routeClosing": "你没有到。\n但你没有从名册上消失。",
         "fate": { "feimao": "alive", "zaowang": "alive", "dongsheng": "alive", "lin": "dead", "player": "dead" },
         "condition": 0,
         "rescues": 3,
         "doorOutcome": "others",
         "strain": 0,
         "recorded": true,
-        "achievements": ["p021-A", "p024-medicine", "j018-done", "l019-bridge", "g026x-A", "w013-A"]
+        "achievements": ["p021-A", "p024-medicine", "j018-done", "l019-bridge", "g026x-A", "w013-A"],
+        "lastChoice": "把门板留在吴起",
+        "chapterTitle": "终章 · 吴起 · 点名"
       }
     }
 
@@ -152,6 +155,7 @@
 | `help.used` | false | `setFlag`（第三人）/`settleGrass` | 三人帮助只用一次 |
 | `memory.help` | false | `setFlag`（第三人）/`settleGrass` | 无板路线 `g028h` 的三人援助文本 |
 | `memory.help_door` | false | `setFlag`（第三人） | 有板路线当场援助，供 `g026h–g026m` 文本 |
+| `memory.zaowang_leave` | false | `g018x` C | 你继续赶路、把灶王留在风口；区分“他牺牲”与“你没带他走”，供 `g020m`、`g143–g022` 跳过小锅线 |
 | `fate.player.dead` | false | 引擎 | 我是否死在草地；`condition=0` 或差状态未恢复 |
 | `fate.seven5` | false | `syncDerivedFlags` | 7(5)：`player.dead && had.door && rescues===3 && (doorOutcome==="others" 或门板仍在身上)`；桥板/吴起板不算 |
 | `fate.badend` | false | `syncDerivedFlags` | 坏结局：`player.dead && !fate.seven5` |
@@ -204,10 +208,12 @@
 - 判定顺序：初始 3 → 救人惩罚 → 草地 -1 → 三人帮助 → 差/0 → 门板/结局。
 - 三主角 `quality.*`：初始 3（良好）；泸定 `l001` 统一 2（勉强）；`l019/g018x/g026x` 出现时置 1（差）；救起后 2（勉强）或 3（良好）；死亡 0，不再显示“状态变为牺牲/倒下”。
 - 状态变化在画面顶部居中弹只读提示（最多三行，约 6s + 每多一行 0.7s）：玩家写“由于……，你的状态变为xx”，同伴写“由于……，飞毛腿/灶王/冬生的状态变为xx”；0 时同伴写“由于……，飞毛腿牺牲了。”，玩家写“由于……，你牺牲了。”；标题卡/物资/差警告/门板打开时排队，不打断当前操作。
+- HUD 的“我”标签在最近一次玩家状态变化后追加短原因（如“良好 · 肩伤未愈”）；原因只保留在内存 `statusEvents`，不写主档。
+- 暂停菜单“本周目状态记录”读同一内存队列，列最近 8 条（章 · 人物 · 原因），开新档/读档/章节重玩时清空；它不是存档字段，刷新后从当前局重新累计。
 
 ## 5. ending 快照
 
-固定 17 键（16 个既有键 + 可选的 `achievements`）：`stats/names/answered/missed/cards/route/routeIndex/routeLabel/routeTitle/routeLede/fate/condition/rescues/doorOutcome/strain/recorded/achievements`。
+固定 20 键（16 个既有键 + 可选的 `routeClosing/achievements/lastChoice/chapterTitle`）：`stats/names/answered/missed/cards/route/routeIndex/routeLabel/routeTitle/routeLede/routeClosing/fate/condition/rescues/doorOutcome/strain/recorded/achievements/lastChoice/chapterTitle`。`routeClosing` 是结局页两行收束句；`lastChoice` 记最后一条选择（超时前缀“超时：”），`chapterTitle` 记结局时章名，仅用于存档列表辨识；旧快照缺这些键不重算。
 
 - `stats` 固定 4 键，`companyEnd` 在 stats 内：普通 19；5/11、11/11 为 18。
 - `names` 只允许 0/7/8 项：坏结局 0，普通 7，空页 8；条目 `{id,name,status,answeredBy?}`；status 为 self/remote/player/missed；满崽 absent + answeredBy=dongsheng。
@@ -226,7 +232,7 @@
 1. 死：`had.door && doorOutcome==="others"` → 5/11 `door_others`；否则 11/11 `bad_end`（桥板/吴起板不算 5/11）。
 2. 无板：按 rescues 0/1/2/3 → 6/11–9/11；rescues=3 且 condition=4 → 10/11。
 3. 有板：`carried = doorOutcome ∈ {carried,wuqi,others}`；rescues≤1 → carried && condition=4 ? 1/11 : 2/11；rescues≥2 → carried ? 3/11 : 4/11。
-4. 2/11、4/11 且 `doorOutcome==="bridge"`（湘江 C 或泸定 A）显示“桥板/门板留在桥上”，否则“门板/门板留在草地”。
+4. 2/11、4/11 且 `doorOutcome==="bridge"`（湘江 C 或泸定 A）短描述写“门板留在了桥头”，否则写“门板留在了草地”；标题仍是“门落无声/板留人渡”。
 
 ## 6. 名册回廊
 
@@ -302,9 +308,9 @@
       "slots": [ { "id": "slot-...", "createdAt": "ISO", "updatedAt": "ISO", "state": { ...v2 11 键 } } ] }
 
 - `id`：`slot-` + `Date.now().toString(36)` + `-` + 5 位随机；`createdAt` 决定列表日期与倒序，`updatedAt` 只用于“上次玩到”和副行时间。
-- 上限 `SAVE_SLOT_MAX=20` 档、整包 `MAX_SAVES_BYTES=512KB`、单档仍 `MAX_SAVE_BYTES=4096B`；超限 toast“存档空间已满，请先删除旧存档”，不写坏档。
+- 上限 `SAVE_SLOT_MAX=40` 档、整包 `MAX_SAVES_BYTES=512KB`、单档仍 `MAX_SAVE_BYTES=4096B`；超限 toast“存档空间已满，请先删除旧存档”，不写坏档。
 - 坏列表 JSON / 结构不认识：备份 `xiangbei.saves.v1.bad` 后回空列表并 toast；单个坏槽在 `normalizeSlot` 里丢弃，不拖垮其它档。
-- 已完结由 `isFullEnding(slot.state.ending)` 现算，不存冗余字段；列表主行“YYYY年MM月DD日的存档（已完结/未完结）”，副行未完结写“章名 · 上次保存 MM-DD HH:mm”，已完结写“结局 N/11 · 路线名 · 已完结”。
+- 已完结由 `isFullEnding(slot.state.ending)` 现算，不存冗余字段。主行：已完结“结局 N/11 · 路线名”（旧档无路线名时回退“旧档结局”），未完结“章名 · 未完结”。副行：章名（已完结取 `ending.chapterTitle`）+ 可选的“最后：关键选择”（超时前缀“超时：”）+ `MM-DD HH:mm`（`updatedAt`）。不再显示“YYYY年MM月DD日的存档”。
 
 ### 10.2 写入时机
 
@@ -432,13 +438,14 @@
 - 序章：禁用，理由“序章没有前情；直接开新档即可。”
 - 没有已完结档：禁用，理由“完成一周目后，可从这一章重新开始。”
 - 有已完结档但没有这一章的底片（功能上线前的老档）：禁用档位并写“已完结存档里还没有这一章的前情记录。再走一次完整周目后可用。”
-- 没有未完结档且已 20 档：禁用，理由“存档已满，请先删除一个存档。”
+- 没有未完结档且已 40 档：禁用，理由“存档已满，请先删除一个存档。”
 
 两步都复用 `#saves-panel`，`savePanelState.mode` 为 `chapter-target` / `chapter-source`：
 
 1. 第一步标题逐字“请选择一个存档开始”，只列未完结槽（`!slotEnded`）；没有未完结档时给“开启新档”。新槽不在这一步创建，等第二步选定来源后再建，避免留下孤儿档。
 2. 第二步标题逐字“对于你选择的章节前的剧情走向，你希望走哪条路线？”，只列已完结槽（`slotEnded`）；只有 `chapterSnapshotState(slot.id, chapterId)` 存在的槽可选，其余 `aria-disabled=true` 且副行写“缺少这一章前情”。
 3. 第二步 Esc/返回回第一步并清掉已选目标；再 Esc 关面板，保留分支图。焦点回“从此开始”。
+4. 第一步底部有“用最近一周目开新档”快捷入口：有可用已完结档时直接取最近一档并新建普通槽，跳过第二步；第二步不显示该按钮；没有来源或已 40 档时置灰。手动两步仍保留。
 
 ### 12.5 拷贝语义
 
@@ -446,7 +453,7 @@
 
 1. 取来源档这一章的章首快照，`normalize` 校验；不合法直接 toast，不改任何档。
 2. 用快照状态 `startChapter(copied, chapterId)` 定位本章第一句；把目标章加入 `unlockedChapters`；`ending=null`、`settings` 取当前全局设置。
-3. 目标：第一步选中的未完结槽则覆盖其 `state`；第一步选“开启新档”则新建槽并 `unshift`。目标档的 `activeId` 切到该槽；20 档上限仍由 `SAVE_SLOT_MAX` 守。
+3. 目标：第一步选中的未完结槽则覆盖其 `state`；第一步选“开启新档”或“用最近一周目开新档”则新建槽并 `unshift`。目标档的 `activeId` 切到该槽；40 档上限仍由 `SAVE_SLOT_MAX` 守。
 4. `historyCopyPrefix(sourceId, targetId, chapterId)`：只把来源档本章之前的回顾条目拷到目标档，`checkpoint` 设为拷贝条数；目标档旧回顾不保留。
 5. `chapterCopyPrefix(sourceId, targetId, chapterId)`：把来源档 `index <= targetIndex` 的章首底片拷到目标槽；目标槽本章及以后的旧底片全部作废，避免旧后续状态混入。来源缺某些前章底片时只拷存在的；目标状态本身仍含完整前情。
 6. 先关旧暂停/结局回顾，再关存档面板与分支图，替换 `state`，写列表、应用设置、`showScene("vn")`、渲染、`chapterCapture`、`saveNow`。首句从目标章重新开始，不重播章前对话。

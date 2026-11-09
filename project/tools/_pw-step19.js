@@ -288,6 +288,8 @@ function stamp() {
       eq("第一步只列未完结档", targetRows, 1);
       eq("第一步列出目标档", await page.locator('#saves-list [data-id="slot-target"]').count(), 1);
       eq("第一步不列已完结档", await page.locator('#saves-list [data-id="slot-source"]').count(), 0);
+      eq("第一步默认来源按钮可见", await vis("#save-default-source"), true);
+      has("第一步默认来源文案", await text("#save-default-source"), "最近一周目");
       await shot("02-step-target");
 
       await click('#saves-list [data-id="slot-target"]');
@@ -324,6 +326,28 @@ function stamp() {
       eq("目标档有回顾", !!history.runs["slot-target"], true);
       eq("回顾只含前情", history.runs["slot-target"].entries.length >= 1, true);
       await shot("04-after-replay");
+    }
+
+    if (caseName === "all" || caseName === "default") {
+      await freshSeeded();
+      await openBranchChapter("xiangjiang");
+      await click('#branch-detail-actions [data-action="branch-start"]');
+      eq("默认来源按钮可见", await vis("#save-default-source"), true);
+      has("默认来源按钮文案", await text("#save-default-source"), "最近一周目");
+      const beforeDefault = await storeOf(SAVES_KEY);
+      await click("#save-default-source");
+      await page.waitForTimeout(520);
+      eq("默认来源回剧情", await vis("#scene-vn"), true);
+      eq("默认来源关存档面板", await vis("#saves-panel"), false);
+      eq("默认来源关分支图", await vis("#branch-map"), false);
+      const afterDefault = await storeOf(SAVES_KEY);
+      eq("默认来源新建一档", afterDefault.slots.length, beforeDefault.slots.length + 1);
+      const defaultSlot = afterDefault.slots.find((s) => s.id === afterDefault.activeId);
+      eq("默认来源成为当前档", !!defaultSlot && defaultSlot.id !== "slot-target", true);
+      eq("默认来源从湘江开始", defaultSlot && defaultSlot.state.chapterId, "xiangjiang");
+      eq("默认来源拷贝前情", defaultSlot && defaultSlot.state.flags.rescues, 1);
+      eq("默认来源保留前情选择", defaultSlot && defaultSlot.state.choices.some((c) => c.nodeId === "p021" && c.option === "A"), true);
+      await shot("05b-default-source");
     }
 
     if (caseName === "all" || caseName === "new") {

@@ -34,8 +34,8 @@
           at: 1762524000000,
           route: "door_excellent",
           routeIndex: 1,
-          routeTitle: "门板",
-          routeLede: "门板到了吴起。你也是。",
+          routeTitle: "门至人散",
+          routeLede: "门板到了吴起，你也到了。只是你背来的是一扇门，不是一路的人。",
           chapters: ["prologue", "xiangjiang", "zunyi", "jinsha", "luding", "grass", "wuqi"],
           choices: [
             { chapter: "prologue", nodeId: "p021", option: "A", text: "带上这块门板", timedOut: false }
@@ -106,6 +106,7 @@ finishChapter() 在 buildEnding(state) 之后、state.choices = [] 之前调用�
 1. 点「从此开始」→ 同一个 `#saves-panel`，标题逐字“请选择一个存档开始”，只列未完结存档。没有未完结档时给“开启新档”；新槽延迟到第二步选定来源后才建，避免留下空档。
 2. 选中目标后 → 第二步，标题逐字“对于你选择的章节前的剧情走向，你希望走哪条路线？”，只列已完结存档；没有这一章底片的已完结档 `aria-disabled=true`，副行写“缺少这一章前情”。
 3. 选中来源即执行拷贝，关闭面板与分支图，回到 VN 的目标章第一句；Esc 在第二步回第一步、第一步关面板，分支图与焦点保留。
+4. 第一步另有「用最近一周目开新档」快捷入口：有可用已完结档时直接取最近一档，跳过第二步，新建普通档并从目标章第一句开始；第二步隐藏该按钮；没有来源或已达 40 档时按钮置灰。
 
 ### 8.3 拷贝什么
 

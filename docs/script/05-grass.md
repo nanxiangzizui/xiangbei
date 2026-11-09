@@ -1,6 +1,6 @@
 # 第五章 · 草地
 - id: grass ｜ 史实注: grass ｜ 选择: g008、g018x（灶王）、g021、g026x（冬生）
-- 定稿: 1809 字 ｜ 118 beat ｜ 时长(B) 7:47
+- 定稿: 2026 字 ｜ 127 beat ｜ 时长(B) 8:43
 - bg: grass_marsh, grass_dawn ｜ sfx: wind_low, water_step, fire_miss, bugle_short
 - 演出: 黑草与水的横移 / 门板当床 / 火苗不起来
 - 注意: 不写具体减员数；不做血腥；死亡只用“蹲下没再站起来”和划名；青稞是行囊物资（item.barley），分给伤员即扣粮；到 g008b 药膏/绷带回赠时才 condition+1，提示原因“你与他人互相救助”（statusOnce: memory.grass_mutual，刷新不重复）；没有青稞时整个选择跳过；g027a 由引擎结算状态与门板，文本源只标记 settle
@@ -13,6 +13,7 @@
 【旁白】走进草地第三天，队伍开始有人掉队。
 【旁白】掉队的人不喊。他们蹲下去，像在系鞋带。
 【旁白】后面的人走过去，把他架起来。架不动，就两个人架。
+【旁白】草地第七天。干粮袋轻得能捏成一把。前面有人开始解皮带。
 [[if:item.door]]
 【旁白】背上的门板这时候是一张床。
 【旁白】伤员躺上去，比躺在泥里强。
@@ -123,10 +124,12 @@ B｜留给自己｜set: memory.grass_keep=true｜cost: 伤员看着你把青稞�
 >> 选项｜限时 16s｜默认 C｜记录到 choice.grass.zaowang
 A｜把青稞倒进锅里｜requires: item.barley｜set: item.barley=false, rescues=+1, quality.zaowang=2, fate.zaowang.dead=false, memory.zaowang_barley=true｜cost: 青稞倒进锅里，你和他都少一口
 B｜把家里的铁锅架上去｜requires: item.homepot｜set: item.homepot=false, rescues=+1, quality.zaowang=3, fate.zaowang.dead=false, memory.zaowang_pot=true｜cost: 家里的锅，换了这一锅热水
-C｜不救了，跟上队伍｜set: fate.zaowang.dead=true, memory.zaowang_leave=true｜cost: 火没起来。你走了。
+C｜继续赶路｜set: fate.zaowang.dead=true, memory.zaowang_leave=true｜cost: 你走在前头。他没有跟上来。
 
 [[if:fate.zaowang.dead]]
 【旁白】火没起来。他就在那儿蹲着，没再站起来。
+【旁白】风把火堆上的灰吹起来，落在他肩上。他坐着，没有掸。
+【旁白】我站着。后面的人在喊，声音隔着一层雾。我想说一句什么，喉咙里只有冷气。
 [[end]]
 [[if:!fate.zaowang.dead]]
 【旁白】火起来了。他站起来，膝盖响了一声。
@@ -138,36 +141,39 @@ C｜不救了，跟上队伍｜set: fate.zaowang.dead=true, memory.zaowang_leave
 【飞毛腿】知道。我扶着，你走。
 [[end]]
 [[end]]
-[[if:fate.zaowang.dead]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave]]
 【旁白】我把他埋在一个能看见太阳的地方。那天没有太阳。
 [[if:item.homepot]]
 【旁白】我把家里的铁锅擦了一遍，又擦一遍，像他擦他那口。
 [[end]]
 [[end]]
+[[if:fate.zaowang.dead && memory.zaowang_leave]]
+【旁白】收容队把他埋在一个能看见太阳的地方。那天没有太阳。
+[[end]]
 
-[[if:fate.zaowang.dead && !fate.feimao.dead]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && !fate.feimao.dead]]
 【旁白】飞毛腿把灶王的锅背起来。锅沿磕着他的肩胛骨。
 【飞毛腿】我替他背。到了吴起，我给他煮一顿。
 [[end]]
-[[if:fate.zaowang.dead && fate.feimao.dead && !fate.dongsheng.dead]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && fate.feimao.dead && !fate.dongsheng.dead]]
 【旁白】冬生把灶王的锅背起来。锅比他大，走一步，晃一下。
 [[end]]
 
-[[if:fate.zaowang.dead && item.homepot]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && item.homepot]]
 >> 选项｜限时 16s｜默认 A｜记录到 choice.grass.pot
 A｜背走小锅｜set: item.pot=true, load=+1｜cost: 背上的东西又多一件
 B｜把小锅留给他｜set: item.pot=false｜cost: 到了陕北，你没有锅
 [[end]]
-[[if:fate.zaowang.dead && !item.homepot]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && !item.homepot]]
 【旁白】我把小锅留在了火堆边。背着它，我也走不出去。
 [[end]]
-[[if:fate.zaowang.dead && item.pot && item.door]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && item.pot && item.door]]
 【旁白】我把小锅背上。锅沿磕着门板，一路响。
 [[end]]
-[[if:fate.zaowang.dead && item.pot && !item.door]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && item.pot && !item.door]]
 【旁白】我把小锅背上。锅沿硌着背，一路响。
 [[end]]
-[[if:fate.zaowang.dead && !item.pot]]
+[[if:fate.zaowang.dead && !memory.zaowang_leave && !item.pot]]
 【旁白】我把小锅放在他手边。
 【旁白】走出一段路，我还能看见那口锅在发亮。
 [[end]]
@@ -190,8 +196,13 @@ B｜把小锅留给他｜set: item.pot=false｜cost: 到了陕北，你没有锅
 >> 选项｜限时 12s｜默认 C｜记录到 choice.grass.dongsheng
 A｜把自己的布鞋脱给他｜requires: item.shoes｜set: item.shoes=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_shoes=true, inventory.giftBarley=true｜cost: 你把鞋脱给他，脚上只剩一层布
 B｜把雨布裹在他身上｜requires: item.raincloth｜set: item.raincloth=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_cloth=true, inventory.giftBarley=true｜cost: 雨布裹着他，雨落在你身上
-C｜不救，继续走｜set: fate.dongsheng.dead=true, memory.dongsheng_leave=true｜cost: 你走在前头。他没有跟上来。
+C｜继续赶路｜set: fate.dongsheng.dead=true, memory.dongsheng_leave=true｜cost: 你走在前头。他不会跟上来。
 
+[[if:fate.dongsheng.dead]]
+【旁白】我往前走了十几步。身后没有脚步声。
+【旁白】我想回头。后面的人流推着我，一直往前。
+【旁白】号声没有再响。草地很静，静得能听见自己的鞋底。
+[[end]]
 [[if:!fate.dongsheng.dead]]
 【旁白】冬生把一小袋青稞塞给我。他说，这个不占地方。
 [[end]]
@@ -227,6 +238,7 @@ C｜不救，继续走｜set: fate.dongsheng.dead=true, memory.dongsheng_leave=t
 【旁白】他背起名册，没回头。队伍没有停。
 [[end]]
 [[if:!fate.player.dead]]
+【旁白】离吴起还有三天。前面的人说，翻过最后一道梁，就能看见窑洞。
 【标题卡】终章 · 吴起
 [[end]]
 【史实注】grass

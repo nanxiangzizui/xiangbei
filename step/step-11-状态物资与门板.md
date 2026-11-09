@@ -575,6 +575,7 @@ const PACK_UNITS = PACK_SLOTS * 2; // 8
 | 2026-11-07 | T11.6–T11.10 | 序章 4 格、泸定/草地三次危机、草地结算、吴起/coda/badend；`docs/script` 00–08 逐句一致 | 完成 |
 | 2026-11-07 | T11.11–T11.12 | routes 123/123、crises 64/64、coda 20/20、pack 26/26、migration 21/21、refresh 15/15、mobile 13/13、flow http 12/12（150s）/file 12/12（149s）；check-build 39/39、smoke 46/46、check-script OK | 完成；T11-12 键盘专项、T11-13 真人计时为 P1 |
 | 2026-11-07 | 打包/部署 | `dist/` 未重打包；Netlify/GitHub Pages 仍 v1.1.1 | 按本步禁区，未做 |
+| 2026-11-09 | T11-26 草地尽头门板补给窗 | `_pw-step11.js --case=doorsupply` 44/44；`docs/evidence/step-11/doorsupply-e2e`；condition 3 + 锅 → 4 → `doorOutcome=carried`，随后连续实走 g028b→终章→吴起 w001–w040→w041→结局 1/11（点名 7、五卡 5、快照 `door_excellent`）；不用/补不到 4 → grass → 2/11；刷新重开窗口 | 完成；1/11 端到端可达，含结局截图 |
 
 ---
 
