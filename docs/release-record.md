@@ -249,10 +249,10 @@
 - **未做**：公网完整流程、四关、移动完整流程、96/96 全用例未在 Netlify 重跑；这些结果仍来自本地发布包。完整流程/公网四关不能写成“已通过”。
 - **维护**：Netlify 站点由用户账号持有；后续更新需用 Netlify 账号/CLI 重新上传 `dist/site`。GitHub Pages 备站仍为 https://nanxiangzizui.github.io/xiangbei/ （v1.1.1，部署提交 `88771d3`）。
 
-## 13. v1.7.0-dev 打包与部署（2026-11-08 打包；2026-11-09 部署 GitHub Pages）
+## 13. v1.7.0-dev 打包与部署（2026-11-08 打包；2026-11-09 部署 GitHub Pages 与 Netlify）
 
-- **触发**：用户 2026-11-08 要求“把当前项目工程打包，打 tag 并提交仓库”；当天只打本地包与本地提交、不部署。2026-11-08 用户核查手动上传并选择只推分支+tag，2026-11-09 再要求“先更新到线上”，遂把 `dist/site` 部署到 GitHub Pages（§13.2）。
-- **基线**：分支 `v1.4-dev`，步骤十六「剧情回顾」完成后；源码提交与 tag 见 §13.1，线上部署见 §13.2。
+- **触发**：用户 2026-11-08 要求“把当前项目工程打包，打 tag 并提交仓库”；当天只打本地包与本地提交、不部署。2026-11-08 用户核查手动上传并选择只推分支+tag，2026-11-09 再要求“先更新到线上”，遂把 `dist/site` 部署到 GitHub Pages（§13.2）；同日在 Netlify 后台登录后用 CLI 部署到 Netlify 生产（§13.3）。
+- **基线**：分支 `v1.4-dev`，步骤十六「剧情回顾」完成后；源码提交与 tag 见 §13.1，线上部署见 §13.2（GitHub Pages）与 §13.3（Netlify）。
 - **版本**：`project/tools/release.py` 的 `VERSION = "1.7.0-dev"`；离线包 README 改写为现行玩法（四段选择 + 三次危机、行囊 4 格/状态 0–4、11 条人物结局、存档列表 `xiangbei.saves.v1`、剧情分支/成就/回顾三个独立键），删除 v1.1.1 的“四个小游戏 / xiangbei.save.v1”描述。
 - **交付物**：
 
@@ -267,9 +267,9 @@
 
 - **门禁**：`check-build` 48/48、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` OK（站点与包逐文件一致、ZIP 条目与白名单一致、无外链、PDF 1 页含 ToUnicode）。
 - **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：http 与 file:// 共 21 项全绿，0 console error / pageerror / failed request。覆盖标题菜单（存档 / 史实图鉴 / 名册 / 剧情分支 / 解锁成就）、存档面板空态、开新档“是/否”确认、进入序章并推进 6 句、右上“回顾”入口与章节条目、暂停菜单、`xiangbei.saves.v1` 与 `xiangbei.history.v1` 落键、`file://` 字体与标题。证据 `docs/evidence/package-v1.7.0/`（gitignored）。
-- **未做**：Netlify 主站部署（仍 v1.1.1 四关版；本机无凭据）；20 分钟真人计时、11 条结局代表路线、Chrome/Safari/真机、844×390 打包冒烟、隐私模式均未在打包产物上重跑；设计说明 PDF 未按 v1.7 重制。
+- **未做**：20 分钟真人计时、11 条结局代表路线、Chrome/Safari/真机、844×390 打包冒烟、隐私模式均未在打包产物上重跑；设计说明 PDF 未按 v1.7 重制。
 - **仓库范围**：`.gitignore` 新增 `resource/`（134 MB 素材源库）、`.netlify/`、`docs/script.bak-expand/`、`project/story.js.bak-expand`、`project/tools/_pw-debug-*.js`；`dist/` 与 `*.zip` 原本即不入库。
-- **回滚**：本地包删除 `dist/xiangbei-v1.7.0-dev*` 与 `dist/site` 即可重建；线上把 `main` 指回 `d54cd61`（v1.1.1 旧站提交）即可，不影响 `v1.4-dev` 分支。
+- **回滚**：本地包删除 `dist/xiangbei-v1.7.0-dev*` 与 `dist/site` 即可重建；GitHub Pages 把 `main` 指回 `d54cd61`（v1.1.1 旧站提交），Netlify 在后台把 2026-11-05 的部署重新 Publish，均不影响 `v1.4-dev` 分支。
 ### 13.1 源码提交、tag 与推送（2026-11-08）
 
 - **本地提交**：`ef91f8e` "feat: 剧情回顾与 v1.7.0-dev 本地打包（步骤十六）"，父 `dfb1e5e`（v1.6.0-dev）；tag `step-16-done`（对象 `c5da9f5`）与 `v1.7.0-dev`（对象 `1a518b5`）均指向 `ef91f8e`。
@@ -283,6 +283,16 @@
 - **推送**：`d54cd61..376a175` fast-forward 到 `main`，`origin/main` = `376a175`。
 - **公网验证**：`index.html` 27,025 B、无 `minigames` 引用、3 个 script（art/story/engine）；`engine.js` 306,630 B、`style.css` 102,983 B（线上为 LF，本地 CRLF 315,055 / 107,592，内容一致）；`story.js` 155,452 B、`art.js` 56,065 B、`CREDITS.txt` 9,667 B、`design-note.pdf` 303,713 B 与本地一致；`minigames.js` → 404；字体与底图 200。
 - **线上冒烟**（`dist/_smoke-live.js`，playwright-core + Edge headless，1280×720，证据 `docs/evidence/live-v1.7.0/`，gitignored）：19/20 通过。唯一失败是自设的“负载耗时 < 20s”（实测 `loadMs=24,226`，属网络，不是应用错误）。通过项：标题菜单 5 项（saves/codex/roster-gallery/branch/achievements）、存档空态“还没有存档”、开新档确认、进入 VN、推进 6 句（首句“1934年10月17日，于都河上起雾。”）、回顾入口 + 面板 5 条目 + × 关闭、Esc 暂停 11 个 data-action、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、canvas 就位、字体 2 个、无 minigames 引用；0 console error / 0 pageerror / 0 failed request。
-- **Netlify 未更新**：仍是 v1.1.1（14,000 B、含 minigames.js）；`.netlify/state.json` 只有 siteId，无 netlify CLI、无 `NETLIFY_AUTH_TOKEN`，需用户账号/后台重新上传 `dist/site`。
+- **Netlify**：同日已用 CLI 部署到生产，见 §13.3。
 - **未在公网重跑**：完整流程、11 结局路线、844×390 移动、隐私模式、Chrome/Safari/真机。
+
+### 13.3 部署到 Netlify（2026-11-09）
+
+- **凭据与 CLI**：本机无 `NETLIFY_AUTH_TOKEN`、无 netlify CLI；用户 2026-11-09 在浏览器完成 `npx netlify-cli@27.16.2 login` 授权，凭据写入用户目录，不在仓库内。本机 `npm config get registry` 是淘宝镜像，缺 `@netlify/edge-functions-dev@2.0.7`（`npm error notarget`），运行前需设 `$env:npm_config_registry = "https://registry.npmjs.org"`。
+- **站点**：`xiangbei`，Project Id `f6b31432-8df1-4a96-b67b-9b391116323e`（与 `.netlify/state.json` 一致），账号 2922106294@qq.com / team nanxiangzizui's team。
+- **部署**：`netlify deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e --message "deploy v1.7.0-dev (2026-11-09)"`；deploy id `6af12cfd183ea39822016bc5`，Unique URL https://6af12cfd183ea39822016bc5--xiangbei.netlify.app ，73 文件（5 个新 blob，其余按哈希复用），build 6.2s。
+- **公网验证**：`index.html` 27,025 B（与 `dist/site` 一致，本次未注入托管注释）、`engine.js` 315,055 B、`style.css` 107,592 B、`story.js` 155,452 B、`art.js` 56,065 B、`CREDITS.txt` 9,667 B 均 200；`minigames.js` → 404。
+- **线上冒烟**（`dist/_smoke-live-netlify.js`，同脚本改 BASE，证据 `docs/evidence/live-v1.7.0-netlify/`，gitignored）：20/20，`loadMs=3,387`；通过项与 §13.2 相同（标题菜单 5 项、存档空态、开新档确认、进入 VN、推进 6 句、回顾入口 + 5 条目 + × 关闭、Esc 暂停 11 项、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、canvas、字体 2 个、无 minigames 引用）；0 console error / 0 pageerror / 0 failed request。
+- **未在 Netlify 重跑**：完整流程、11 结局路线、844×390 移动、隐私模式、Chrome/Safari/真机。
+- **回滚**：Netlify 后台 Deploys 选上一个成功部署（2026-11-05 v1.1.1）→ "Publish deploy"；或重新上传旧 `dist/site`。
 
