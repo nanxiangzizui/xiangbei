@@ -468,3 +468,54 @@
 - `README.md`：版本号、交付物表（站点 31,683,146 B / ZIP 30,891,205 B / SHA256 `C42FF0E9…EA46F`）、线上地址与部署提交、测试摘要、线上自检与清单同步到 v1.9.0-dev；v1.8.0-dev 记录标为历史。
 - `step/step-20-*.md` 与 `step/step-21-*.md`：头部标注已打包并部署，补部署提交与 deploy id。
 
+## 18. v1.9.1-dev 打包与部署（2026-11-09）
+
+- **触发**：用户 m00001「帮我把工作区内没提交的内容打包部署提交」。把工作区未提交的玩家反馈修复（草地尽头分次补状态、分享卡「最后一步」、状态 HUD）打包，覆盖 GitHub Pages 与 Netlify；两站此前为 v1.9.0-dev（`236b6e0` / `6af1b987…`）。
+- **基线**：分支 `v1.4-dev`；修复提交 `ad58268`「fix: 草地尽头物资窗分次补状态 + 分享卡/状态 HUD（v1.9.1-dev）」，9 files / 542 insertions / 29 deletions：`project/engine.js`（+86：`doorSupplyRecipes` 列全部可用配方并按补量降序、分享卡状态行与「最后一步」、新档首帧 `updateHud`、状态原因 6 秒收起、HUD 点击入口）、`project/index.html`（`data-action="status-log"`）、`project/style.css`、`docs/ending-routes.md`、`docs/state-schema.md`、`docs/test-cases.md`、`project/tools/_pw-feedback.js`（新增）、`project/tools/_pw-step11.js`、`.claude/CLAUDE.md`。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,685,529 B |
+| 离线包目录 | `dist/xiangbei-v1.9.1-dev/` | 73 文件 / 31,689,327 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.9.1-dev-offline.zip` | 74 条目 / 30,891,815 B / SHA256 `14CE955CD7BAA636494549F660BF38877630EF97F7AD9DD1F6A53D13A333684C` |
+| 设计说明 | `dist/design-note.pdf` | 303,713 B（沿用旧 PDF，未重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 9,667 B |
+
+- **release.py 同步**：`VERSION = "1.9.1-dev"`；离线 README 为现行玩法（四段选择 + 三次危机、行囊 4 格/状态 0–4、11 条人物结局、存档列表、分支/成就/回顾、分享卡/统计、40 档）。
+- **门禁**：`check-build` **51/51**、`smoke` **47/47**、`check-script` 9 文件 OK、`node --check` engine/story/art 通过、`release.py verify` / `hash` OK。
+- **反馈专项**：`_pw-feedback.js` http / file:// 各 **28/28**（草地尽头从状态 2 用布鞋到 3、再用青稞+药到 4，门板保留；真实新档全周目到 1/11「门至人散」；分享卡状态行与「最后一步」；新档 HUD 不残留草地原因；状态原因 6 秒收起与 HUD 点击展开）；`_pw-step11.js --case=doorsupply` **63/63**。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：`dist/site` 的 http 与 `file://` 共 **21/21**；解压 ZIP 根目录再跑 **21/21**；0 console error / pageerror / failed request。证据 `docs/evidence/package-v1.9.1/` 与 `package-v1.9.1-zip/`（gitignored）。
+
+### 18.1 部署到 GitHub Pages
+
+- **部署提交**：`821c4bd77feab105e697cf5b7bc948ce7468c462`「deploy: v1.9.1-dev 站点（草地尽头分次补状态 / 分享卡 / 状态 HUD）」，tree `2fa715eab29c45eb32c30a226973c4193400c608`，父 `236b6e0`。
+- **生成方式**：临时 index `dist/.deploy-index-191` → `git read-tree origin/main` → 对 `dist/site` 每个文件 `git hash-object -w --no-filters` + `git update-index --add --cacheinfo` → `git write-tree` → `git commit-tree <tree> -p 236b6e0 -F dist/_deploy-msg-191.txt`。站点仍为 72 文件，无删除路径；源文件与 `.nojekyll` 保留。
+- **树与 diff**：相对父提交仅 M `engine.js` / M `index.html` / M `style.css`（3 files / 78 insertions / 16 deletions）。
+- **一致性核对**：`git ls-tree -r 2fa715e` 与 `dist/site` 逐文件 `git hash-object --no-filters` 比对，checked=72、mismatches=0。
+- **推送**：`git push origin main` 首次输出被管道吞掉并返回 exit 1，但复查 `origin/main` 已是 `821c4bd`；复跑报 `Everything up-to-date`。
+- **哈希核对**：公网 index.html 33,581 B、engine.js 376,747 B、story.js 163,240 B、style.css 116,342 B、art.js 56,065 B；SHA256 五项均与 `dist/site` 一致。
+
+### 18.2 部署到 Netlify
+
+- **部署**：`npx --yes netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e --message "deploy v1.9.1-dev"`（registry 指向 npmjs；本机凭据在用户目录，不入仓库）。
+- **deploy id**：`6af1ccb8c02b415533323166`；生产 https://xiangbei.netlify.app ；CLI 报 73 文件、build 11.3s。
+- **哈希核对**：index.html 33,907 B（Netlify 在 `<meta charset>` 后偏移 68 注入 326 B 托管注释并加尾随换行）；按 `/<!-- This site is hosted on Netlify[\s\S]*?-->\n?/` 剥离后与 `dist/site` 一致；engine.js 376,747 B、story.js 163,240 B、style.css 116,342 B、art.js 56,065 B，SHA256 四项与 `dist/site` 全等。
+
+### 18.3 线上冒烟与未覆盖
+
+- **脚本**：`dist/_smoke-live-191.js`（本地、gitignored；playwright-core + Edge headless，1366×768）。先看标题，再开 `?dev=1` 测试面板，点 1/11 预置到结局页，检查分享卡与统计。
+- **检查点**：标题纯文本「向北」、首项「开始 / 继续」、普通标题无测试入口；`?dev=1` 才显示测试入口，7 章 + 11 条预置；预置 1/11 到结局「结局1/11（门至人散）」；`#ending-cards` 5 张 `.xb-ending__card` 均有文字、287×83，DOM 位于 `#ending-achievements` 之前；分享卡 canvas 1080×1440、保存 PNG 198,990 B；统计 7 段 / 5 同伴 / 7 点名 / 5 卡且无 `%`；线上 `engine.js` 含「可以分几次用」与「最后一步」，`index.html` 含 `data-action="status-log"`。
+- **结果**：GitHub Pages **32/32**、Netlify **32/32**；0 console error / pageerror / failed request。证据 `docs/evidence/live-v1.9.1/`（result.json + 两站截图，gitignored）。
+- **观察到但非本次回归**：1366×768 结局页五卡换行 3+2，第二行 bottom≈787 > 768，需要滚动；P1「`#ending-cards` 移到成就前」只保证 DOM 顺序，不保证像素首屏。
+- **未重跑**：20 分钟真人完整流程、11 条人物结局全量回归、844×390 移动完整结局、隐私模式、Chrome/Safari/真机；本次线上只验证测试模式、结局页、五卡顺序、分享卡与统计、HUD 入口与门板补给文案，不把两站写成“完整流程通过”。
+- **回滚**：GitHub Pages 把 `main` 指回 `236b6e0`；Netlify 后台 Publish 旧 deploy `6af1b987cdf3107f634a47de`（v1.9.0-dev）。均不影响 `v1.4-dev`。
+
+### 18.4 文档同步
+
+- `.claude/CLAUDE.md`：玩家反馈修复条目改为 `v1.9.1-dev` 已打包并部署；新增本轮打包部署条目（`ad58268`、交付物、`821c4bd`、`6af1ccb8…`、线上 32/32）；建议下一步改为线上 v1.9.1-dev 的回归清单。
+- `README.md`：版本号、交付物表（站点 31,685,529 B / ZIP 30,891,815 B / SHA256 `14CE955C…684C`）、线上地址与部署提交、测试摘要（`_pw-feedback` 28/28、打包冒烟 21/21×2、线上 32/32×2）、线上自检与清单同步到 v1.9.1-dev；v1.9.0-dev 记录标为历史。
+- `docs/test-cases.md`：标题补 `F01–F04` 与 v1.9.1-dev 反馈修复口径。
+
+

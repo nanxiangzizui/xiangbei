@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build, verify and hash the static release for 《向北》 v1.8.0-dev.
+"""Build, verify and hash the static release for 《向北》 v1.9.1-dev.
 
 Usage:
   python project/tools/release.py stage
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "project"
 DIST = ROOT / "dist"
-VERSION = "1.9.0-dev"
+VERSION = "1.9.1-dev"
 SITE = DIST / "site"
 PKG = DIST / f"xiangbei-v{VERSION}"
 ZIP = DIST / f"xiangbei-v{VERSION}-offline.zip"

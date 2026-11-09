@@ -1,24 +1,24 @@
 # 向北
 
 > 一块门板，两万五千里。
-> 16 岁红军文书，从于都走到吴起；七段路、三次救人危机、11 个人物结局（v1.9.0-dev 已部署到 GitHub Pages 与 Netlify），七张史实图鉴，一次点名。
+> 16 岁红军文书，从于都走到吴起；七段路、三次救人危机、11 个人物结局（v1.9.1-dev 已部署到 GitHub Pages 与 Netlify），七张史实图鉴，一次点名。
 
-《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 多选取舍 + 状态/物资（v1.9.0-dev 已部署到 GitHub Pages 与 Netlify）；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
+《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 多选取舍 + 状态/物资（v1.9.1-dev 已部署到 GitHub Pages 与 Netlify）；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
 
 **虚构人物，非史料人物。** 满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构；真实人物只进“史实注”，不进剧情对白。历史结局不可改：湘江必败、遵义必开、泸定必夺。
 
-> **v1.4.0-dev 已完成（2026-11-07，分支 `v1.4-dev`；现随 v1.9.0-dev 打包并部署 GitHub Pages 与 Netlify）**：行囊改 4 格（8 个半格），新增状态 0–4、三次救人危机和门板三条件；结局改为带门板 5 种 + 无门板 5 种 + 坏结局，共 11 条。林先生只在我死时死；没有全活，也不把牺牲做成分数。存档升到 `xiangbei.save.v2` 并保留 v1.3 旧档迁移。（当时 `main` 仍为 v1.3 / tag `step-10-done`；现 `main` 为 GitHub Pages 部署分支）执行卡见 `step/step-11-状态物资与门板.md`，实测见 `docs/evidence/step-11-*`。
+> **v1.4.0-dev 已完成（2026-11-07，分支 `v1.4-dev`；现随 v1.9.1-dev 打包并部署 GitHub Pages 与 Netlify）**：行囊改 4 格（8 个半格），新增状态 0–4、三次救人危机和门板三条件；结局改为带门板 5 种 + 无门板 5 种 + 坏结局，共 11 条。林先生只在我死时死；没有全活，也不把牺牲做成分数。存档升到 `xiangbei.save.v2` 并保留 v1.3 旧档迁移。（当时 `main` 仍为 v1.3 / tag `step-10-done`；现 `main` 为 GitHub Pages 部署分支）执行卡见 `step/step-11-状态物资与门板.md`，实测见 `docs/evidence/step-11-*`。
 >
-> **v1.2.0-dev 历史（2026-11-06）**：删除四关小游戏，改为行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名；v1.4 在其上重写了物资与结局；GitHub Pages 与 Netlify 均已于 2026-11-09 更新到 v1.9.0-dev。
+> **v1.2.0-dev 历史（2026-11-06）**：删除四关小游戏，改为行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名；v1.4 在其上重写了物资与结局；GitHub Pages 与 Netlify 均已于 2026-11-09 更新到 v1.9.1-dev。
 
 ## 交付物
 
 | 项 | 位置 | 状态 |
 |---|---|---|
-| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.9.0-dev 已上线**（Netlify，2026-11-09 用 CLI 重传 `dist/site`，deploy `6af1b987…`；73 文件）；线上冒烟 30/30，0 console error / 0 失败请求 |
-| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | **v1.9.0-dev 已上线**（GitHub Pages，2026-11-09，部署提交 `236b6e0`；`index.html` 28,581 B、无 minigames）；线上冒烟 30/30，0 console error / 0 失败请求 |
-| 发布站点 | `dist/site/` | v1.9.0-dev 已生成并验证；72 个文件，31,683,146 B；与 GitHub Pages / Netlify 站点同包 |
-| 离线 ZIP | `dist/xiangbei-v1.9.0-dev-offline.zip` | v1.9.0-dev 已生成并验证；74 个条目，30,891,205 B；SHA256 `C42FF0E9…EA46F`；根目录 `xiangbei-v1.9.0-dev/` |
+| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.9.1-dev 已上线**（Netlify，2026-11-09 用 CLI 重传 `dist/site`，deploy `6af1ccb8…`；73 文件）；线上冒烟 32/32，0 console error / 0 失败请求 |
+| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | **v1.9.1-dev 已上线**（GitHub Pages，2026-11-09，部署提交 `821c4bd`；`index.html` 33,581 B、无 minigames）；线上冒烟 32/32，0 console error / 0 失败请求 |
+| 发布站点 | `dist/site/` | v1.9.1-dev 已生成并验证；72 个文件，31,685,529 B；与 GitHub Pages / Netlify 站点同包 |
+| 离线 ZIP | `dist/xiangbei-v1.9.1-dev-offline.zip` | v1.9.1-dev 已生成并验证；74 个条目，30,891,815 B；SHA256 `14CE955C…684C`；根目录 `xiangbei-v1.9.1-dev/` |
 | 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
 | 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,667 B |
@@ -30,8 +30,8 @@
 
 ### 直接打开（离线）
 
-1. 解压 `dist/xiangbei-v1.9.0-dev-offline.zip`。
-2. 双击 `xiangbei-v1.9.0-dev/index.html`。
+1. 解压 `dist/xiangbei-v1.9.1-dev-offline.zip`。
+2. 双击 `xiangbei-v1.9.1-dev/index.html`。
 3. 没有网络也能玩。Edge 下 `file://` 的 `localStorage` 可用；若浏览器禁止，游戏会提示“本局无法存档”，仍可继续，不白屏。
 
 ### 本地静态服务（更接近线上）
@@ -46,9 +46,9 @@ python -m http.server 8080
 
 ### 线上地址与重新上传
 
-**线上（主，现为最新版）**：https://xiangbei.netlify.app/ （Netlify，2026-11-09 用 `netlify-cli` 重传 `dist/site` 73 文件，deploy `6af1b987cdf3107f634a47de`）。`index.html` 33,488 B（Netlify 另注入 326 B 托管注释）；`engine.js` / `style.css` 374,576 / 116,223 B；`minigames.js` 404。两站线上冒烟各 30/30，0 console error / 0 pageerror / 0 失败请求。
+**线上（主，现为最新版）**：https://xiangbei.netlify.app/ （Netlify，2026-11-09 用 `netlify-cli` 重传 `dist/site` 73 文件，deploy `6af1ccb8c02b415533323166`）。`index.html` 33,907 B（Netlify 另注入 326 B 托管注释，剥离后 33,581 B）；`engine.js` / `style.css` 376,747 / 116,342 B；`minigames.js` 404。两站线上冒烟各 32/32，0 console error / 0 pageerror / 0 失败请求。
 
-**线上（备，现为最新版）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.9.0-dev 部署提交 `236b6e0`，2026-11-09；旧 v1.8.0-dev `65beb46`、v1.7.2-dev `a120af0`、v1.7.1-dev `d0fe7e9`、v1.1.1 `88771d3`）。
+**线上（备，现为最新版）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.9.1-dev 部署提交 `821c4bd`，2026-11-09；旧 v1.9.0-dev `236b6e0`、v1.8.0-dev `65beb46`、v1.7.2-dev `a120af0`、v1.7.1-dev `d0fe7e9`、v1.1.1 `88771d3`）。
 
 重新上传：Netlify 主站用 `npx netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e`（本机已登录，凭据在用户目录，不在仓库；npm 源需设 `registry.npmjs.org`，淘宝镜像缺 `@netlify/edge-functions-dev@2.0.7`）。GitHub Pages 备站仍把 `dist/site/` 与 `.nojekyll` 更新到 `main` 自动重建。Cloudflare Pages 仍可作备选（Direct Upload，构建命令留空）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
@@ -66,7 +66,7 @@ python -m http.server 8080
 | 花名册 | 暂停 → 花名册 | 同上 |
 | 图鉴 | 标题 / 暂停 / 结局入口 | 同上 |
 
-选择段落（v1.9.0-dev 已打包并部署 GitHub Pages 与 Netlify）：
+选择段落（v1.9.1-dev 已打包并部署 GitHub Pages 与 Netlify）：
 
 - **行囊**：4 格 = 8 个半格。药/青稞各 0.5 格，布鞋 1 格，铁锅/雨布各 2 格，门板占 2 格且不能当物资使用；五件里按格数取舍，不带门板最多四件。
 - **弃物**：湘江边六样东西里带三样上船，门板另算；带什么写进后续台词。
@@ -77,7 +77,7 @@ python -m http.server 8080
 - **状态与物资**：左上角常驻“状态 良好/勉强/差”；“物资”面板显示 4 格用量与可用配方，限时选择期间不能开。状态“差”时草地结算会强制开面板；走到 0 就是坏结局。
 - **门板/记名**：门板要同时满足体力、存活人数与被救者状态三条中的一条，才能在吴起留下；否则草地会让玩家亲手舍弃。
 
-v1.1.1 的四个小游戏（门板/弃物/渡船/攀索）只存在于历史包与旧部署；GitHub Pages 与 Netlify 现均为 v1.9.0-dev，已无小游戏入口。手机请横屏；竖屏会提示“请横屏”，并提示用系统浏览器打开。
+v1.1.1 的四个小游戏（门板/弃物/渡船/攀索）只存在于历史包与旧部署；GitHub Pages 与 Netlify 现均为 v1.9.1-dev，已无小游戏入口。手机请横屏；竖屏会提示“请横屏”，并提示用系统浏览器打开。
 
 ## 一周目后·章节重玩（v1.9.0-dev）
 
@@ -87,7 +87,7 @@ v1.1.1 的四个小游戏（门板/弃物/渡船/攀索）只存在于历史包�
 - **后续**：照常走后面的剧情；触发结局时仍正常结算并写入存档、成就和剧情分支。旧版本留下的已完结存档没有章前记录，会置灰并提示再走一次完整周目。
 - **快捷入口**：第 1 步还有「用最近一周目开新档」，直接取最近一条已完结档作前情，仍创建一份正常新档，不走特殊标记。
 
-## 分享卡、本周目统计与测试模式（P3，v1.9.0-dev 已部署）
+## 分享卡、本周目统计与测试模式（P3，v1.9.0-dev 起，v1.9.1-dev 已部署）
 
 - **生成分享卡**：结局页点「生成分享卡」，Canvas 1080×1440 纸墨版式，写本周目的路线、门板去向、同伴与状态、五张精神卡；可保存为 `向北-结局N.png`。
 - **本周目统计**：结局页点「本周目统计」，只读列出七段、五名同伴、七条点名与五张精神卡；不做完成度百分比，不把牺牲当分数。
@@ -126,7 +126,19 @@ v1.4 暂按文本估算通过 20 分钟，尚未因超时裁剪；若真人计�
 
 ## 测试摘要
 
-### v1.9.0-dev 分享卡、统计、测试模式与文本细化（2026-11-09）
+### v1.9.1-dev 玩家反馈修复（2026-11-09）
+
+| 项 | 结果 |
+|---|---|
+| `check-build.js` / `smoke.js` / `check-script.js` | **51/51** / **47/47** / 9 剧本 OK |
+| `node --check` | engine / story / art 通过 |
+| 玩家反馈专项 `_pw-feedback.js`（http / file://） | 各 **28/28**：草地尽头分次补状态使 1/11 可达、分享卡状态行与「最后一步」、新档 HUD、状态原因 6 秒收起与点击入口 |
+| 打包冒烟（`dist/site` 与解压 ZIP） | 各 **21/21**（http + file://），0 console error / pageerror / failed request |
+| 线上冒烟（两站） | 各 **32/32**：5 个关键文件 SHA256 一致（Netlify `index.html` 剥离 326 B 托管注释后一致）、`?dev=1` 7 章 + 11 预置、1/11 结局、五卡、分享卡 PNG 198,990 B、统计 7/5/7/5 且无 `%`；0 错误 |
+
+已部署：GitHub Pages `821c4bd`、Netlify `6af1ccb8…`。未重跑：20 分钟真人计时、11 路线全量回归、移动完整结局、隐私模式、Chrome/Safari/真机。
+
+### v1.9.0-dev 分享卡、统计、测试模式与文本细化（2026-11-09，历史）
 
 | 项 | 结果 |
 |---|---|
@@ -270,8 +282,8 @@ project/
   tools/                    开发期脚本（不进运行时）
 dist/                       交付产物（默认不提交）
   site/                     上传用站点
-  xiangbei-v1.9.0-dev/      ZIP 根目录
-  xiangbei-v1.9.0-dev-offline.zip
+  xiangbei-v1.9.1-dev/      ZIP 根目录
+  xiangbei-v1.9.1-dev-offline.zip
   design-note.pdf
   SHA256SUMS.txt
 ```
@@ -281,11 +293,13 @@ dist/                       交付产物（默认不提交）
 制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
 完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
 
-## 线上自检（2026-11-05 v1.1.1；2026-11-09 v1.9.0-dev 双站）
+## 线上自检（2026-11-05 v1.1.1；2026-11-09 v1.9.1-dev 双站）
 
 > Netlify 主站（`https://xiangbei.netlify.app/`）做了标题/序章浏览器检查：标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；GitHub 备站做关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
 
-> **2026-11-09 v1.9.0-dev（双站）**：`dist/_smoke-live-190.js` 用 Edge headless 1366×768 两站各跑 **30/30**：标题纯文本、首项「开始 / 继续」、普通标题无测试入口；`?dev=1` 测试面板 7 章 + 11 条结局预置，预置 1/11 进结局页并核对「门至人散」短描述/命运句；分享卡 canvas 1080×1440、保存 PNG 198,481 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；四个关键文件 HTTP 200；线上 engine.js 含分享卡与结局三层代码。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.0/`（gitignored）。
+> **2026-11-09 v1.9.1-dev（双站）**：`dist/_smoke-live-191.js` 用 Edge headless 1366×768 两站各跑 **32/32**：5 个关键文件 SHA256 与 `dist/site` 一致（Netlify 的 `index.html` 多 326 B 托管注释，剥离后一致）；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到结局页，五卡 5 张且都在成就之前；分享卡 canvas 1080×1440、保存 PNG 198,990 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；线上 `engine.js` 含「可以分几次用」与分享卡「最后一步」，`index.html` 含 `data-action="status-log"`。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.1/`（gitignored）。
+
+> **2026-11-09 v1.9.0-dev（双站，历史）**：`dist/_smoke-live-190.js` 用 Edge headless 1366×768 两站各跑 **30/30**：标题纯文本、首项「开始 / 继续」、普通标题无测试入口；`?dev=1` 测试面板 7 章 + 11 条结局预置，预置 1/11 进结局页并核对「门至人散」短描述/命运句；分享卡 canvas 1080×1440、保存 PNG 198,481 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；四个关键文件 HTTP 200；线上 engine.js 含分享卡与结局三层代码。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.0/`（gitignored）。
 
 > **2026-11-09 v1.8.0-dev（双站，历史）**：`dist/_smoke-live-180.js` 用 Edge headless 1280×720 两站各跑 19/19；先 `?reset=1` 看标题，再注入一份已完结源档和一份未完结目标档，从剧情分支湘江章卡点「从此开始」，逐字核对两步标题、筛选、旧档置灰，选中后进入湘江并核对前情旗标/物资/章节底片已复制；线上 `engine.js` 含章节重玩代码。两站 0 console error / pageerror / 失败请求；GitHub Pages 的 index/engine/style/story/CREDITS 与 `dist/site` 逐字节一致，Netlify 仅 index.html 多 326 B 托管注释。证据 `docs/evidence/live-v1.8.0/`（gitignored）。
 
@@ -299,7 +313,7 @@ dist/                       交付产物（默认不提交）
 - [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
 - [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
 - [x] 本地 v1.4.0-dev：4 格物资、状态、三次危机、11 结局与名册回廊；证据见 `docs/evidence/step-11-*`。
-- [x] Netlify 与 GitHub Pages 均为 v1.9.0-dev：标题纯文本、开始/继续、章节重玩两步面板、`?dev=1` 测试模式、1/11 结局三层文案、分享卡 PNG 与本周目统计；线上 30/30；状态/物资面板与完整周目仍待公网复检。
+- [x] Netlify 与 GitHub Pages 均为 v1.9.1-dev：标题纯文本、开始/继续、章节重玩两步面板、`?dev=1` 测试模式、1/11 结局三层文案、分享卡 PNG 与本周目统计、草地尽头分次补状态、状态原因 6 秒收起与点击入口；线上 32/32；完整周目与移动仍待公网复检。
 - [x] 手机竖屏显示“请把手机横过来”与“在浏览器打开”；横屏 844×390 已本地测。
 - [x] Netlify 标题/序章：0 console error / 0 404；无外部请求。
 - [ ] 完整流程中 0 error / 0 404；硬刷新不缓存旧 JS（公网完整流程未跑）。
