@@ -3158,6 +3158,10 @@
   var statusNoticeOpen = false;
   var statusQueue = [];
   var statusRunLog = [];
+  // 状态原因只在变化后完整显示几秒，随后折叠成“状态 · 良好”；点 HUD 可看本周目记录。
+  var STATUS_REASON_MS = 6000;
+  var statusReasonUntil = 0;
+  var statusReasonTimer = 0;
   var stationsBuilt = false;
   var lastFocused = null;
   var artWarned = false;
@@ -6070,7 +6074,16 @@
       return row.name + (row.alive ? "到" : "未到");
     }).join("　");
     ctx.fillText("同伴：" + fateText, 92, 548);
-    ctx.fillText("状态：" + conditionLabel(ending.condition) + "　救 " + ending.rescues + " 人", 92, 596);
+    ctx.fillText("状态：" + conditionLabel(ending.condition) + " · 救下 " + ending.rescues + " 人", 92, 596);
+    var lastStep = String(ending.lastChoice || "").trim();
+    if (lastStep.length > 18) lastStep = lastStep.slice(0, 18) + "…";
+    if (lastStep) {
+      ctx.fillStyle = "#5C564D";
+      ctx.font = '400 24px "XB Zhuque", serif';
+      ctx.fillText("最后一步：" + lastStep, 92, 640);
+      ctx.fillStyle = "#1A1714";
+      ctx.font = '400 27px "XB Zhuque", serif';
+    }
 
     var byId = {};
     (ending.cards || []).forEach(function (card) {
@@ -6079,15 +6092,15 @@
     var defs = storyEnding.cards || [];
     var gap = 24;
     var cardW = (896 - gap) / 2;
-    var cardH = 200;
-    var top = 646;
+    var cardH = 190;
+    var top = 684;
     defs.forEach(function (def, index) {
       var snapshot = byId[def.id];
       if (!snapshot) return;
       var col = index % 2;
       var row = Math.floor(index / 2);
       var x = 92 + col * (cardW + gap);
-      var y = top + row * (cardH + 20);
+      var y = top + row * (cardH + 18);
       ctx.fillStyle = snapshot.lit ? "#F1EBDD" : "#E8E1D0";
       ctx.fillRect(x, y, cardW, cardH);
       ctx.strokeStyle = snapshot.lit ? "#A8322D" : "rgba(26, 23, 20, 0.28)";
@@ -8452,7 +8465,9 @@
     var condition = isFiniteNumber(state.flags.condition) ? state.flags.condition : 3;
     var label = XB.core.conditionLabel(condition);
     var reasonEvent = latestPlayerStatusEvent();
-    if (reasonEvent && reasonEvent.to === condition) label += " · " + shortStatusReason(reasonEvent.reason);
+    if (reasonEvent && reasonEvent.to === condition && Date.now() < statusReasonUntil) {
+      label += " · " + shortStatusReason(reasonEvent.reason);
+    }
     var text = els.vnCondition.querySelector("b");
     if (text) text.textContent = label;
     els.vnCondition.className = "vn-condition is-q" + condition;
@@ -8501,14 +8516,16 @@
     return recipes;
   }
 
-  // 草地尽头只列能把状态补到 4 的组合；补不到 4 的组合救不了门板，不放进来。
+  // 草地尽头：只要还有能用的一件/一组物资就列出来。状态可以分几次补，
+  // 不要求一次补满——两件 +1 也能把门板背出去。
   function doorSupplyRecipes() {
     if (!state || !state.flags) return [];
     var condition = isFiniteNumber(state.flags.condition) ? state.flags.condition : 3;
-    var missing = 4 - condition;
-    if (missing <= 0) return [];
+    if (condition >= 4) return [];
     return packRecipes().filter(function (recipe) {
-      return !recipe.disabled && recipe.delta >= missing;
+      return !recipe.disabled;
+    }).sort(function (a, b) {
+      return b.delta - a.delta;
     });
   }
 
@@ -8546,7 +8563,7 @@
 
     var head = document.createElement("p");
     head.className = "xb-pack__subhead";
-    head.textContent = door ? "能补到“优秀”的组合" : "可以这样用";
+    head.textContent = door ? "还能用的物资" : "可以这样用";
     els.packList.append(head);
     var recipes = door ? doorSupplyRecipes() : packRecipes();
     if (state.flags.condition >= 4) {
@@ -8557,7 +8574,7 @@
     } else if (!recipes.length) {
       var none = document.createElement("p");
       none.className = "xb-pack__empty";
-      none.textContent = door ? "没有能补到“优秀”的物资。" : "现在没有能用的组合。";
+      none.textContent = door ? "没有能用的物资了。" : "现在没有能用的组合。";
       els.packList.append(none);
     } else {
       var actions = document.createElement("div");
@@ -8575,11 +8592,11 @@
       els.packList.append(actions);
     }
     els.packNote.textContent = door
-      ? "门板还在你背上，但你的手已经握不住它。用一件能把你补回“优秀”的物资；不补，就只能把它放下。"
+      ? "门板还在你背上，但你的手已经握不住它。用物资把状态补回“优秀”；补不回来，就只能把它放下。"
       : warning
         ? "用物资把状态提回“勉强”以上；不用就走不出去。"
         : intro
-          ? "你当前的状态为良好。使用物资可以把状态提到优秀；草地尽头还要留一件能补回优秀的物资，门板才背得过去。"
+          ? "你当前的状态为良好。使用物资可以把状态提到优秀；草地尽头还要留够能把状态补回优秀的物资（可以分几次用），门板才背得过去。"
           : "使用物资会消耗它；状态到优秀后不再需要。";
     els.packClose.textContent = door ? "不补了，继续" : intro ? "不用，出发" : "关闭";
     els.packClose.hidden = warning;
@@ -8644,7 +8661,8 @@
         toast("状态回到优秀，门板还能背。");
         finishPackPanel();
       } else {
-        toast("状态还不够，门板背不过去。");
+        toast("状态回到" + XB.core.conditionLabel(state.flags.condition) +
+          "，还差 " + (4 - state.flags.condition) + " 格；还能再用。");
         renderPack();
       }
       return;
@@ -8814,6 +8832,7 @@
     chapterCapture(slot.id, "prologue");
     closeSaves(true);
     applySettings();
+    updateHud();
     showScene("vn");
     els.vnChapter.textContent = chapterById("prologue").title;
     els.vnText.textContent = "";
@@ -8844,6 +8863,17 @@
       return;
     }
     render();
+  }
+
+  // HUD 状态点开本周目状态记录；用暂停面板承载，不另做一层浮层。
+  function openStatusLogFromHud() {
+    if (!state || state.scene !== "vn" || state.paused) return;
+    openPause();
+    if (els.pauseStatusLog) {
+      els.pauseStatusLog.open = true;
+      var summary = els.pauseStatusLog.querySelector("summary");
+      if (summary) summary.focus();
+    }
   }
 
   function openPause() {
@@ -9122,7 +9152,8 @@
   function isControlFocused() {
     var active = document.activeElement;
     if (!active || active === document.body) return false;
-    if (["BUTTON", "A", "INPUT", "TEXTAREA", "SELECT"].indexOf(active.tagName) === -1) return false;
+    if (["BUTTON", "A", "INPUT", "TEXTAREA", "SELECT"].indexOf(active.tagName) === -1 &&
+        !active.hasAttribute("data-action")) return false;
     var rect = active.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0;
   }
@@ -9148,6 +9179,12 @@
   }
 
   function bindOverlays() {
+    els.vnCondition.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+      event.preventDefault();
+      event.stopPropagation();
+      openStatusLogFromHud();
+    });
     els.codexClose.addEventListener("click", function () {
       closeCodex();
     });
@@ -9490,6 +9527,9 @@
 
   function handleAction(action, target) {
     switch (action) {
+      case "status-log":
+        openStatusLogFromHud();
+        break;
       case "history":
         openHistory();
         break;
@@ -9793,6 +9833,9 @@
 
   function resetStatusRunLog() {
     statusRunLog = [];
+    statusReasonUntil = 0;
+    clearTimeout(statusReasonTimer);
+    statusReasonTimer = 0;
   }
 
   function renderStatusRunLog() {
@@ -9848,6 +9891,19 @@
     });
     statusRunLog = statusRunLog.slice(-20);
     statusQueue = statusQueue.concat(events).slice(-12);
+    var playerEvent = null;
+    events.forEach(function (event) {
+      if (event.kind === "player") playerEvent = event;
+    });
+    if (playerEvent) {
+      statusReasonUntil = Date.now() + STATUS_REASON_MS;
+      clearTimeout(statusReasonTimer);
+      statusReasonTimer = window.setTimeout(function () {
+        statusReasonTimer = 0;
+        statusReasonUntil = 0;
+        updateHud();
+      }, STATUS_REASON_MS);
+    }
     // HUD 的状态原因只认已经入队的本局记录；状态事件在 setFlag 之后才被抽走，
     // 结算处的 updateHud 会早一步，所以这里补一次。
     updateHud();

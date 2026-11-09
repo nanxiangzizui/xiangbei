@@ -3203,6 +3203,12 @@ a:focus-visible,
   color: var(--paper-a72);
   background: var(--scrim);
   border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.vn-condition:focus-visible {
+  outline: 2px solid var(--paper-hi);
+  outline-offset: 2px;
 }
 
 .vn-condition b {
