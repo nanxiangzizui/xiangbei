@@ -1,327 +1,209 @@
 # 向北
 
 > 一块门板，两万五千里。
-> 16 岁红军文书，从于都走到吴起；七段路、三次救人危机、11 个人物结局（v1.9.1-dev 已部署到 GitHub Pages、Netlify 与 Cloudflare Pages），七张史实图鉴，一次点名。
 
-《向北》是原生 HTML5 + CSS3 + JavaScript 的网页互动叙事游戏。固定 1280×720 舞台，视觉小说 + 限时抉择 + 多选取舍 + 状态/物资（v1.9.1-dev 已部署到 GitHub Pages、Netlify 与 Cloudflare Pages）；没有框架、构建链、后端、登录、排行榜。v1.1.0 起图像、字体与音频随包（CC/PD/OFL/CC0/CC-BY，逐项见 `CREDITS.txt`），不依赖 CDN；剧情仍内联，离线 ZIP 双击可玩。
+《向北》是一款原生 HTML5 的网页互动叙事游戏。你扮演长征途中红一方面军某连的 16 岁文书，从于都出发，背着一块从自家门上锯下的木板，走到吴起。
 
-**虚构人物，非史料人物。** 满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构；真实人物只进“史实注”，不进剧情对白。历史结局不可改：湘江必败、遵义必开、泸定必夺。
+七段路，四段核心选择，三次救人危机，十一条人物结局。历史终点不变；你能改变的是带什么、救谁、记住谁，以及最后是谁走到吴起。
 
-> **v1.4.0-dev 已完成（2026-11-07，分支 `v1.4-dev`；现随 v1.9.1-dev 打包并部署 GitHub Pages、Netlify 与 Cloudflare Pages）**：行囊改 4 格（8 个半格），新增状态 0–4、三次救人危机和门板三条件；结局改为带门板 5 种 + 无门板 5 种 + 坏结局，共 11 条。林先生只在我死时死；没有全活，也不把牺牲做成分数。存档升到 `xiangbei.save.v2` 并保留 v1.3 旧档迁移。（当时 `main` 仍为 v1.3 / tag `step-10-done`；现 `main` 为 GitHub Pages 部署分支）执行卡见 `step/step-11-状态物资与门板.md`，实测见 `docs/evidence/step-11-*`。
->
-> **v1.2.0-dev 历史（2026-11-06）**：删除四关小游戏，改为行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名；v1.4 在其上重写了物资与结局；GitHub Pages 与 Netlify 已于 2026-11-09、Cloudflare Pages 已于 2026-11-15 更新到 v1.9.1-dev。
+`v1.9.1-dev` · 原生 HTML / CSS / JavaScript · 运行时无框架 · 无构建链 · 无后端 · 可离线
 
-## 交付物
+![《向北》标题画面：背着门板的年轻红军战士站在于都河边](docs/images/readme/01-title.jpg)
 
-| 项 | 位置 | 状态 |
+## 在线游玩
+
+| 站点 | 地址 | 说明 |
 |---|---|---|
-| 公网链接（主） | https://xiangbei.netlify.app/ | **v1.9.1-dev 已上线**（Netlify，2026-11-09 用 CLI 重传 `dist/site`，deploy `6af1ccb8…`；73 文件）；线上冒烟 32/32，0 console error / 0 失败请求 |
-| 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | **v1.9.1-dev 已上线**（GitHub Pages，2026-11-09，部署提交 `821c4bd`；`index.html` 33,581 B、无 minigames）；线上冒烟 32/32，0 console error / 0 失败请求 |
-| 公网链接（Cloudflare） | https://xiangbei-vn.pages.dev/ | **v1.9.1-dev 已上线**（Cloudflare Pages，2026-11-15 Direct Upload，初始 deployment `ff305def…`、commit `6c544c9c…`；现行标题底图修复 `5bfb5a1d…`；72 文件）；线上冒烟 32/32、序章 14/14、移动 7/7，0 console error / 0 失败请求 |
-| 发布站点 | `dist/site/` | v1.9.1-dev 已生成并验证；72 个文件，31,686,684 B；与 Cloudflare Pages 站点同包（GitHub Pages / Netlify 为 2026-11-09 的 31,685,529 B 版本） |
-| 离线 ZIP | `dist/xiangbei-v1.9.1-dev-offline.zip` | v1.9.1-dev 已生成并验证；74 个条目，30,891,815 B；SHA256 `14CE955C…684C`；根目录 `xiangbei-v1.9.1-dev/` |
-| 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
-| 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
-| 制作名单 | `project/CREDITS.txt` + 标题页“制作名单” | 刘子政；UTF-8，9,667 B |
-| 字体清单 | `docs/credits.md` + `project/assets/fonts/OFL-*.txt` | v1.1.1 随包两份 OFL 1.1 子集（约 552 KB）；公网 v1.1.1 同步包含 |
+| 主站（Netlify） | **[xiangbei.netlify.app](https://xiangbei.netlify.app/)** | 通常最快 |
+| 备用（Cloudflare Pages） | [xiangbei-vn.pages.dev](https://xiangbei-vn.pages.dev/) | 与主站同版本 |
+| 备用（GitHub Pages） | [nanxiangzizui.github.io/xiangbei](https://nanxiangzizui.github.io/xiangbei/) | 仓库 `main` 分支自动发布 |
 
-> `dist/` 是交付产物，默认不提交到 Git；仓库保留可复现的 `project/tools/release.py` 与文档。
+- 建议使用桌面浏览器；手机请横屏，竖屏会提示转屏。
+- 声音在第一次点击后才会启用。
+- 进度只存在当前浏览器的 `localStorage`，不上传服务器。
+- 标题页第一项「开始 / 继续」打开存档面板；第一次玩选「开启新档」。
 
-## 怎么运行
+## 故事
 
-### 直接打开（离线）
+一九三四年十月十七日，于都河上起雾。
 
-1. 解压 `dist/xiangbei-v1.9.1-dev-offline.zip`。
-2. 双击 `xiangbei-v1.9.1-dev/index.html`。
-3. 没有网络也能玩。Edge 下 `file://` 的 `localStorage` 可用；若浏览器禁止，游戏会提示“本局无法存档”，仍可继续，不白屏。
+娘把家里的门板锯下来，给你背上。门板可以铺桥、可以写字、可以当床板；它占掉行囊的一半，也压着后面的每一段路。
 
-### 本地静态服务（更接近线上）
+湘江、遵义、金沙江、泸定、草地、吴起。历史的大事件不会因为你改变：湘江必败，遵义会议必开，泸定桥必夺，队伍必须走到吴起。能改变的是代价——谁被留下，谁被记住，谁最后替你答到。
 
-在解压目录运行：
+> 虚构人物，非史料人物。满崽、老周、何指导员、张老幺、飞毛腿、灶王、冬生等均为虚构；真实人物只进「史实图鉴」，不进剧情对白。
 
-```powershell
-python -m http.server 8080
-```
+## 玩法
 
-浏览器打开本机 8080 端口。不要用 `fetch` 或 ES module 方式加载剧情；本项目全部剧情内联在 `story.js`。
+| 段落 | 你要做的选择 |
+|---|---|
+| 序章·于都 | 行囊四格怎么装；门板占两格，带不带 |
+| 一·湘江 | 六样东西里弃三样；回头，还是按命令走 |
+| 二·遵义 | 三条自我批评，认不认 |
+| 三·金沙江 | 先渡主力、伤员还是炊事班；记不记船工的名字 |
+| 四·泸定 | 门板铺桥、用药，还是抱板走（12 秒） |
+| 五·草地 | 青稞给谁；救不救灶王（16 秒）、冬生（12 秒） |
+| 终章·吴起 | 门板留不留；替谁答到 |
 
-### 线上地址与重新上传
+- **行囊四格 = 八个半格。** 药、青稞各半格；布鞋一格；铁锅、雨布、门板各两格。带门板，就只剩两格。
+- **状态 0–4。** 优秀 / 良好 / 勉强 / 差 / 死。救人、挨饿、受伤都会改变状态；状态不是分数，是后面每段路的底气。
+- **门板不是道具。** 它不能在物资栏里「使用」；铺在桥上就留在桥上，背到吴起才能放下。
+- **没有 Game Over。** 坏结局是叙事结算，不是重开惩罚；失败只改变代价。
+- **没有全活。** 十一条人物结局：带门板五种，无门板五种，坏结局一种。救的人越多，你自己越可能倒在草地。
+- **五张精神卡。** 只改亮度与一句文案，不改变历史终点；全灰也合法。
 
-**线上（主，现为最新版）**：https://xiangbei.netlify.app/ （Netlify，2026-11-09 用 `netlify-cli` 重传 `dist/site` 73 文件，deploy `6af1ccb8c02b415533323166`）。`index.html` 33,907 B（Netlify 另注入 326 B 托管注释，剥离后 33,581 B）；`engine.js` / `style.css` 376,747 / 116,342 B；`minigames.js` 404。三站线上冒烟各 32/32，0 console error / 0 pageerror / 0 失败请求。
+### 五张精神卡落在哪里
 
-**线上（备，现为最新版）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.9.1-dev 部署提交 `821c4bd`，2026-11-09；旧 v1.9.0-dev `236b6e0`、v1.8.0-dev `65beb46`、v1.7.2-dev `a120af0`、v1.7.1-dev `d0fe7e9`、v1.1.1 `88771d3`）。
+| 卡 | 机制 |
+|---|---|
+| 理想信念 | 于都：你带走的火种与门板 |
+| 不怕牺牲 | 湘江：谁留在江东岸；草地尽头：谁把自己留下 |
+| 独立自主、实事求是 | 遵义：错误卡上，你认不认自己走错的那一步 |
+| 顾全大局、严守纪律 | 金沙江：主力先过江，你排到最后 |
+| 依靠人民、艰苦奋斗 | 金沙江：记住船工的名字；草地：分粮、背锅、救人 |
 
-**线上（备二，现为最新版）**：https://xiangbei-vn.pages.dev/ （Cloudflare Pages，项目 `xiangbei-vn`，production branch `main`，2026-11-15 Direct Upload `dist/site` 72 文件；初始 deployment `ff305def-ff96-49f2-978f-7f08a16d22c9`、commit `6c544c9c25bea6396dcc561e7d7e62207bf942ae`；2026-11-15 标题底图修复 deployment `5bfb5a1d…`）。五个关键文件 SHA256 与 `dist/site` 全等；`minigames.js` 404。
+> 不喊口号。精神落在动作和代价上，结尾不总结「长征精神是什么」。
 
-重新上传：Netlify 主站用 `npx netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e`（本机已登录，凭据在用户目录，不在仓库；npm 源需设 `registry.npmjs.org`，淘宝镜像缺 `@netlify/edge-functions-dev@2.0.7`）。GitHub Pages 备站仍把 `dist/site/` 与 `.nojekyll` 更新到 `main` 自动重建。Cloudflare Pages 备二站用 `npx --yes wrangler@4 pages deploy dist/site --project-name xiangbei-vn --branch main --commit-dirty=true`（Direct Upload，构建命令留空；凭据用 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 环境变量，不入仓库）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
+### 结局之后
+
+- **点名与数字。** 七名同伴，有人应到，有人未应，有人替你答到；虚构连队 104 人出发，到吴起 19 人（空页与坏结局 18 人），中央红军 86,000 余人出发、到陕北 7,000 余人（史实）。
+- **五张精神卡。** 亮与灰都保留在本周目记录里。
+- **剧情分支图。** 19 组决策、22 个结构节点、11 条结局；已抵达的路线标纸白，未抵达的保持灰锁，不提前泄露选项。
+- **史实图鉴。** 七张，120–220 字，逐条注明出处；有争议的细节写「有不同说法」。
+- **成就。** 48 条选择成就（46 条选择 + 2 条记名），未解锁只显示灰框。
+- **回顾与存档。** 右上「回顾」按存档槽记录本周目台词与选择；40 个存档位；只在章末、暂停保存或开新档时落档。
+- **一章重走。** 完成任意结局后，可从剧情分支图选择一章「从此开始」，沿用该章之前的路线与状态。
+- **分享卡。** 结局页可生成 1080×1440 PNG；「本周目统计」只读列出七段、五名同伴、七条点名与五张精神卡，不做完成度百分比。
+
+## 截图
+
+| 序章·于都 | 行囊四格 |
+|---|---|
+| ![于都河上起雾](docs/images/readme/02-prologue.jpg) | ![娘把五样东西摆在桌上，行囊四格](docs/images/readme/03-bag.jpg) |
+| **一九三四年十月十七日，于都河上起雾。** | **带什么，丢什么；门板占两格。** |
+
+| 门板 | 结局 |
+|---|---|
+| ![娘把锯子搁下，等你说](docs/images/readme/04-choice.jpg) | ![结局 1/11：门至人散，点名与数字](docs/images/readme/05-ending.jpg) |
+| **「带上这块门板」还是「只带花名册」。** | **路线、点名、数字；五卡在下方。** |
+
+![五张精神卡与本周目入口](docs/images/readme/06-cards.jpg)
+
+> 五张精神卡：理想信念、不怕牺牲、独立自主、顾全大局、依靠人民。灰卡不扣分，也不会被系统提示「走错了」。
 
 ## 操作
 
 | 动作 | 键鼠 | 触摸 |
 |---|---|---|
 | 推进对话 | 点击 / 空格 / Enter | 点对话框 |
-| 选择 | 1–3 单选；多选 1–9 切换、Enter 确认 | 点选项/整卡 |
-| 暂停 | Esc | 右上角暂停按钮（Logic 96×96；手机 52 CSS px） |
-| 开始 / 继续 | 标题页第一项 → 存档面板 | 点标题页第一项 |
-| 设置 | 标题右上“设置” / 暂停 → 设置 | 点标题右上“设置” / 暂停 → 设置 |
-| 初始化 | 标题“设置”→“危险操作”→“初始化游戏”（二次确认） | 同上 |
-| 文字速度 / 字号 / 总音量 / 配乐 / 环境音 / 静音 / 减少动效 / 跳读已读 | 暂停 → 设置 | 暂停 → 设置 |
-| 花名册 | 暂停 → 花名册 | 同上 |
-| 图鉴 | 标题 / 暂停 / 结局入口 | 同上 |
+| 单选 | 1–3 或点击 | 点选项整卡 |
+| 多选 | 1–9 切换，Enter 确认 | 点整卡，再点「系好行囊」 |
+| 暂停 | `Esc` | 右上角暂停按钮 |
+| 回顾 | 右上「回顾」 | 同上 |
+| 自动 / 跳过 | 右上工具条；跳过只对已读生效 | 同上 |
+| 设置 | 标题右上「设置」/ 暂停 → 设置 | 同上 |
+| 关闭弹层 | `Esc` / `X` | 点 `X` |
 
-选择段落（v1.9.1-dev 已打包并部署 GitHub Pages、Netlify 与 Cloudflare Pages）：
+字号、文字速度、总音量、配乐、环境音、静音、减少动效都在设置里；`prefers-reduced-motion` 会被尊重。
 
-- **行囊**：4 格 = 8 个半格。药/青稞各 0.5 格，布鞋 1 格，铁锅/雨布各 2 格，门板占 2 格且不能当物资使用；五件里按格数取舍，不带门板最多四件。
-- **弃物**：湘江边六样东西里带三样上船，门板另算；带什么写进后续台词。
-- **先渡谁**：金沙江先渡主力、伤员还是炊事班；不改变 37 名船工与 7 天 7 夜的史实数字。
-- **泸定·飞毛腿**：门板铺桥 / 用药 / 抱板走；有板 12 秒、无板 12 秒，默认“抱板走/继续走”。救他记状态消耗，铺桥会把门板留在桥上。
-- **草地·灶王**：青稞 / 铁锅 / 不救；16 秒，默认“不救”。救他降一级状态。
-- **草地·冬生**：布鞋 / 雨布 / 不救；12 秒，默认“不救”。救他后得到一袋不占格的青稞，可当场和药/青稞同用。
-- **状态与物资**：左上角常驻“状态 良好/勉强/差”；“物资”面板显示 4 格用量与可用配方，限时选择期间不能开。状态“差”时草地结算会强制开面板；走到 0 就是坏结局。
-- **门板/记名**：门板要同时满足体力、存活人数与被救者状态三条中的一条，才能在吴起留下；否则草地会让玩家亲手舍弃。
+## 技术
 
-v1.1.1 的四个小游戏（门板/弃物/渡船/攀索）只存在于历史包与旧部署；GitHub Pages、Netlify 与 Cloudflare Pages 现均为 v1.9.1-dev，已无小游戏入口。手机请横屏；竖屏会提示“请横屏”，并提示用系统浏览器打开。
+- **原生 HTML5 + CSS3 + ES6。** 没有 React/Vue、没有 Vite/Webpack、没有 npm 运行时依赖、没有后端、没有登录。
+- **固定 1280×720 舞台**，等比缩放；Canvas 2D 按 `devicePixelRatio` 放大，程序化版画与照片底图叠加。
+- **剧情内联在 `story.js`。** 经典 `<script>` + 全局 `window.XB`，不用 `fetch`/XHR/ES module，保证 `file://` 离线 ZIP 可玩。
+- **存档在本地。** 键 `xiangbei.saves.v1`，最多 40 档；单档仍为 v2 结构，保留 v1 迁移；读写包 `try/catch`，隐私模式降级提示「本局无法存档」，不白屏。
+- **音频在首次手势后启动。** 5 条 CC0 环境循环 + 8 首 CC0/CC-BY 现代配乐 + Web Audio 合成床与五音动机；没有假造的历史录音。
+- **字体随包。** 得意黑（标题）与朱雀仿宋（正文）的 OFL 1.1 子集；加载失败回退宋体。
+- **只用相对路径**，不依赖 CDN；三站均为纯静态托管。
 
-## 一周目后·章节重玩（v1.9.0-dev）
+## 本地运行
 
-- **入口**：完成任意一条人物结局后，标题 → 剧情分支 → 点章卡（序章除外）→ 章卡详情底部「从此开始」。
-- **第 1 步「请选择一个存档开始」**：只列未完结存档，或选「开启新档」；新档在最终确认后才创建，不会留下空档。
-- **第 2 步「对于你选择的章节前的剧情走向，你希望走哪条路线？」**：只列已完结且留有该章前情记录的存档；选中后，把那一章之前的 11 键状态、剧情回顾和章前快照复制到目标档，保留目标档设置，清空旧结局，从该章开头继续。
-- **后续**：照常走后面的剧情；触发结局时仍正常结算并写入存档、成就和剧情分支。旧版本留下的已完结存档没有章前记录，会置灰并提示再走一次完整周目。
-- **快捷入口**：第 1 步还有「用最近一周目开新档」，直接取最近一条已完结档作前情，仍创建一份正常新档，不走特殊标记。
+```powershell
+# 直接打开（file:// 可跑）
+Start-Process ".\project\index.html"
 
-## 分享卡、本周目统计与测试模式（P3，v1.9.0-dev 起，v1.9.1-dev 已部署）
+# 或本地静态服务（更接近线上）
+python -m http.server 8080 --directory project
+# 浏览器打开 http://localhost:8080
+```
 
-- **生成分享卡**：结局页点「生成分享卡」，Canvas 1080×1440 纸墨版式，写本周目的路线、门板去向、同伴与状态、五张精神卡；可保存为 `向北-结局N.png`。
-- **本周目统计**：结局页点「本周目统计」，只读列出七段、五名同伴、七条点名与五张精神卡；不做完成度百分比，不把牺牲当分数。
-- **测试模式**：仅在地址后加 `?dev=1` 时出现「测试」入口，可跳转七章或预置 11 条结局路线；跳转不写档，走到章末仍按正常规则结算。它不是正式入口，不随正常游玩暴露。
-- 结局页五个入口已改为可换行，1280×720 与手机横屏不再把「生成分享卡」「本周目统计」挤出面板。
+开发期自检：
 
-## 七段、三次危机、11 结局、七图鉴、五卡
+```powershell
+node --check project/engine.js
+node --check project/story.js
+node project/tools/check-build.js
+node project/tools/smoke.js
+node project/tools/check-script.js docs/script
+```
 
-| 段 | 史实锚点（详见 `docs/sources.md`） | 玩家动作 |
-|---|---|---|
-| 序章·于都 | 1934.10 于都河；8.6 万余人出发；门板/床板/寿材架桥 | 锯门板；行囊多选 |
-| 一·湘江 | 1934.11 末–12 初；8.6 万→3 万余人；红 34 师断后 | 弃物；回头 / 断后 |
-| 二·遵义 | 1935.1.15–17；约 3.7 万人 | 复盘，承认错误 |
-| 三·金沙江 | 1935.5 皎平渡；6 条船（有 7 条说）；37 船工；7 天 7 夜 | 先渡谁；记名字（v1.2.0 起无渡船调度） |
-| 四·泸定 | 1935.5.29；22 人；13 根铁索；240 余里 | 门板铺桥/药/抱板走；记名 |
-| 五·草地 | 1935.8 松潘→班佑；7 天；近 800 人（王平回忆录） | 分炒面；灶王/冬生两次危机；草地结算 |
-| 终章·吴起 | 1935.10.19；到陕北 7000 余人 | 点名；看五卡；空页/坏结局另走隐藏终章 |
+打包离线版：
 
-- 七张史实图鉴：A1–A7，120–220 字，含“有不同说法”的争议标注。
-- 五张精神卡：理想信念（火种）、不怕牺牲（断后）、独立自主/实事求是（复盘）、顾全大局/严守纪律（先渡）、依靠人民/艰苦奋斗（船工）。五卡只改亮度与文案，不改变唯一结局；全灰合法。
-- 历史终点固定为“到吴起、点名、放门板/空页”；数字：虚构连队 104 → 19（空页与坏结局 18），中央红军 86,000 → 7,000（史实）。人物结局 11 条，没有全活：带门板 7(1)–7(5)，无门板 8(1)–8(5)，外加坏结局。
-- 11 条不是“攻略路线”，是同一场行军的代价账本：救人越多，自己越可能倒在草地；门板能不能留下，取决于状态与被救者，而不是一个好感度分数。
+```powershell
+python project/tools/release.py
+```
 
-## 20 分钟口径（v1.4 估算）
-
-| 口径 | 数值 | 说明 |
-|---|---|---|
-| 设计上限 | **20:00** | 硬验收 |
-| v1.4 文本源 | 5,391 字 / 292 beat | 九个剧本文件；含互斥分支，不等于单周目 |
-| v1.4 单周目 | 约 3.1–3.9k 字 | 按分支取舍；B 口径估算约 13–17 分钟，未逐条精算 |
-| 真人首玩（v1.1.1 历史） | 04:52 / 06:42 / 07:36 / 08:33 | 2026-11-02 记录；版本注记缺失（X7），不能直接当 v1.4 数据 |
-| v1.4 自动化完整流程 | 150 秒 / 244 步 | 快速点击证据，**不是真人首玩计时** |
-| v1.4 真人四路线 | **未做（P1）** | 11 条结局由 seed 自动跑过；真人计时与隐私模式待补 |
-
-v1.4 暂按文本估算通过 20 分钟，尚未因超时裁剪；若真人计时超限，仍按“草地 → 金沙江 → 遵义改纯对话”的顺序裁，保留序章/湘江/泸定/点名。
-
-## 测试摘要
-
-### v1.9.1-dev 玩家反馈修复（2026-11-09）
-
-| 项 | 结果 |
-|---|---|
-| `check-build.js` / `smoke.js` / `check-script.js` | **51/51** / **47/47** / 9 剧本 OK |
-| `node --check` | engine / story / art 通过 |
-| 玩家反馈专项 `_pw-feedback.js`（http / file://） | 各 **28/28**：草地尽头分次补状态使 1/11 可达、分享卡状态行与「最后一步」、新档 HUD、状态原因 6 秒收起与点击入口 |
-| 打包冒烟（`dist/site` 与解压 ZIP） | 各 **21/21**（http + file://），0 console error / pageerror / failed request |
-| 线上冒烟（三站） | 各 **32/32**：5 个关键文件 SHA256 一致（Netlify `index.html` 剥离 326 B 托管注释后一致；Cloudflare 五项全等）、`?dev=1` 7 章 + 11 预置、1/11 结局、五卡、分享卡 PNG 198,990 B、统计 7/5/7/5 且无 `%`；0 错误 |
-
-已部署：GitHub Pages `821c4bd`、Netlify `6af1ccb8…`、Cloudflare Pages `5bfb5a1d…`（2026-11-15 标题底图修复；初始 `ff305def…`）。未重跑：20 分钟真人计时、11 路线全量回归、移动完整结局、隐私模式、Chrome/Safari/真机。
-
-### v1.9.0-dev 分享卡、统计、测试模式与文本细化（2026-11-09，历史）
-
-| 项 | 结果 |
-|---|---|
-| `check-build.js` / `smoke.js` / `check-script.js` | **51/51** / **47/47** / 9 剧本 OK |
-| `node --check` | engine / story / art 通过 |
-| 步骤二十 分享卡 / 统计 / 测试模式（Edge headless，http） | **27/27**：仅 `?dev=1` 有测试入口、7 章跳转、11 条结局预置、分享卡 1080×1440 PNG、统计 7/5/7/5 且无 `%`、Esc 焦点回收 |
-| 步骤二十一 文本与信息层（http / file:// / 844×390） | 各 **33/33**：超时迟疑 2 秒、成就「代价」、存档主副行、结局三层文案 |
-| 草地尽头补给专项（http） | **44/44**：门板补给窗使 1/11 可达；断言已改用新结局名「门至人散 / 门落无声」 |
-| 打包冒烟（`dist/site` 与解压 ZIP） | 各 **21/21**（http + file://），0 console error / pageerror / failed request |
-| 线上冒烟（两站） | 各 **30/30**：测试模式 7 章 + 11 预置、结局 1/11 三层文案、分享卡 PNG 198,481 B、统计 7/5/7/5、关键文件 200；0 错误 |
-
-已部署：GitHub Pages `236b6e0`、Netlify `6af1b987…`。未重跑：20 分钟真人计时、11 路线全量回归、移动完整结局、隐私模式、Chrome/Safari/真机。
-
-### v1.8.0-dev 章节重玩、P3 与发布（2026-11-09，历史）
-
-| 项 | 结果 |
-|---|---|
-| `check-build.js` / `smoke.js` / `check-script.js` | **51/51** / **47/47** / 9 剧本 OK（新增 C52 章节重玩契约） |
-| 章节重玩专项（Edge headless，http / file://） | 两轮各 **68/68**：入口、两步面板逐字、未完结/已完结过滤、旧档置灰、默认前情快捷入口、前情状态/回顾/章节底片拷贝、新档、Esc 回退 |
-| 完整周目 + 章节重玩 | **14/14**，217 秒；从泸定重开、前情旗标一致、结局仍正常结算 |
-| 移动 844×390 | 面板与入口 **5/5**；未重跑完整结局 |
-| 步骤十八回归 | **34/34**，标题入口/门板唯一状态未回退 |
-| P3 分享卡 / 统计 / 测试模式（Edge headless） | http / file:// / 移动 844×390 各 **27/27**；PNG 183,513 B / 1080×1440；统计 7 章/5 同伴/7 点名/5 卡且无 `%`；`?dev=1` 7 章 + 11 预置 |
-| 打包冒烟（`dist/site` 与解压 ZIP） | 各 **21/21**（http + file://），0 console error / pageerror / failed request |
-| 线上冒烟（两站） | 各 **19/19**：从真实分支章卡走完两步存档面板，复制前情后进入湘江；0 错误 |
-
-### v1.4.0-dev 本地回归（2026-11-07，分支 `v1.4-dev`，未打包/未部署）
-
-| 项 | 结果 |
-|---|---|
-| `node --check` | engine / story / art / `_pw-step11` 通过 |
-| `check-build.js` / `smoke.js` / `check-script.js` | **39/39** / **46/46** / OK（9 剧本、禁用词 0、真实人物 0、requires 合法） |
-| 11 条人物结局（Edge headless，http） | routes **123/123**：7(1)–7(5)、8(1)–8(5)、坏结局各一次；路线行/名册 0·7·8 名/五卡/companyEnd 18·19/快照 route/routeIndex/fate.player/recorded 全部断言 |
-| 隐藏终章与三次危机 | coda **20/20**；crises **64/64**（飞毛腿有板三选/无药两选/无板两选；灶王、冬生各三选；三人帮助；差警告；门板舍弃；7(5) 与坏结局入口） |
-| 物资与状态 | pack **26/26**（带板 4/4、无板四件 4/4、配方到优秀、超重拒绝） |
-| 旧档与刷新 | migration **21/21**（v1 wuqi / grass / kongye）；refresh **15/15**（g027a 幂等、消耗不复活） |
-| 移动 844×390 | mobile **13/13**；选项/确认/面板关闭 ≥44 CSS px |
-| 完整流程 | http flow **12/12**（150 秒 / 244 步，路线 7(2) 桥板，7 名）；file:// flow **12/12**（149 秒 / 244 步，同路线） |
-| file:// 关键项 | routes **123/123**、coda **20/20** |
-| 运行错误 | 全部 0 console error / 0 pageerror / 0 失败请求 / 0 HTTP 错误 / 0 外部请求 |
-
-证据在 `docs/evidence/step-11-routes`、`-coda`、`-crises`、`-pack`、`-migration`、`-refresh`、`-mobile`、`-flow`、`-file-flow`、`-file-routes`、`-file-coda`（各含 `run.log`、`result.json`、截图）。自动化 150 秒是快速点击证据；v1.4 真人计时、Chrome/Safari、真机触摸、隐私模式与公网完整流程仍未做。
-
-### v1.0.0 发布包（2026-11-03）
-
-| 项 | 结果 |
-|---|---|
-| `node --check` 四个 JS | 通过 |
-| `check-build.js` | **38/38** 全绿 |
-| `smoke.js` | **46/46** 全绿 |
-| `check-script.js docs/script` | OK：7 个剧本；禁用词 0；真实人物 0；结构完整 |
-| `release.py verify` | OK：site 8 文件 / package 9 文件 / ZIP 10 条目 / PDF 1 页 / CREDITS 2,025 B |
-| 发布站点 http 完整流程 | Edge 156 headless；191.1 秒 / 407 行；四关均有结果；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求 |
-| 离线 ZIP file:// 完整流程 | 断网 + `file://`；191.1 秒 / 408 行；四关均有结果；0 console error / pageerror / 404 / 外部请求 |
-| 发布站点全用例 | 96/96（smoke / save / gallery / ending / minigames / viewport / mobile / privacy / audio / keyboard） |
-| 发布专项（桌面/移动） | 各 22/22；CREDITS 可打开、键盘焦点、字体回退、PDF 可访问 |
-| fps | 桌面标题 60.0 / 攀索 60.0；移动标题 60.0 / 攀索 48.7（最低 29.9，p95 33.4ms） |
-| 移动 844×390 | 标题、对话、ending、制作名单、四关独立入口与触摸 通过；发布包只改标题页链接与 style.css，未改六运行时逻辑；完整移动流程沿用步骤七 200.9 秒 / 406 行 |
-
-### v1.2.0-dev 本地回归（2026-11-06，历史；未打包/未部署）
-
-| 项 | 结果 |
-|---|---|
-| `node --check` 三个 JS | engine / story / art 通过（`minigames.js` 已删除） |
-| `check-build.js` / `smoke.js` / `check-script.js` | **37/37** / **46/46** / OK（7 剧本、禁用词 0、真实人物 0） |
-| 四段选择专项（Edge 156 headless，http） | target 34/34、segments 19/19、migration 19/19 |
-| 桌面完整流程 | http 71s / 432 line（flow.lines 对话推进计数）；file:// 72s；2 个多选 + 11 个单选；5 卡 / 7 名；0 console error/pageerror/请求失败/HTTP 错误/外部请求 |
-| 844×390 触摸 | full flow 78s；target 37/37；确认按钮 51.99 CSS px、选项 44.42 CSS px；五卡/七名/0 错误 |
-| 无小游戏残留 | `minigames.js` 不存在、不加载；`?minigame=` 不再进关卡；页面无小游戏 canvas/HUD |
-| 旧档迁移 | j010/j011→j012、l013/l014→l015；toast 各一次；旧 inventory 回填 item.*、abandoned 反推 take.* |
-
-自动化 71–78 秒是快速点击证据，**不是真人首玩计时**；v1.2.0-dev 未重做真人 20 分钟计时。
-
-### v1.1.1 发布包（2026-11-05，已部署）
-
-| 项 | 结果 |
-|---|---|
-| `node --check` 四个 JS | 通过 |
-| `check-build.js` / `smoke.js` | **38/38** / **46/46** |
-| 慢网底图 | 480×270 WebP 占位图先出（本地 32ms；公网首页 1.75s 进入 `is-photo is-placeholder`），1600×900 WebP 随后替换（公网 3.28s 全图）；12 场景逐一验证 |
-| 竖屏 | 390×844 显示“请把手机横过来”与“在浏览器打开”；844×390 正常进入 693×390 舞台 |
-| 七场景 | 于都 / 湘江 / 遵义 / 金沙江 / 泸定 / 草地 / 吴起均到 `is-photo`；0 console error / failed request |
-| 公网 | 标题页 1.74s 可交互；占位图 1.75s / 全图 3.28s；7 个关键文件 HTTP 200 + SHA256 一致；0 console error / pageerror / 404 |
-| `release.py verify` | OK：site 73 文件 / package 74 文件 / ZIP 75 条目 / PDF 1 页 / CREDITS 9,667 B |
-
-`dist/SHA256SUMS.txt` 覆盖 149 个文件。公网只做了标题页 / 竖屏 / 关键文件与 7 个文件哈希，**没有重跑公网完整流程、四关或 96/96**。
-
-### v1.1.0 发布包（2026-11-04，历史）
-
-| 项 | 结果 |
-|---|---|
-| `node --check` 四个 JS | 通过 |
-| `check-build.js` / `smoke.js` | **38/38** / **46/46** |
-| 阅读层专项 | Edge http **21/21**；照片卡、图鉴缩略图/年代说明、三档音量、花名册、file:// 标题/字体/图 |
-| Edge http 完整流程 | 201.585 秒 / 405 行；四关均有结果；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求；证据 `docs/evidence/step-07/edge-http-20261104-181721` |
-| Edge http 四关 | **20/20**；门板 0.1 秒、弃物 1.0 秒、渡船 89.3 秒（12/18 趟，37 船工）、攀索 29.9 秒（16 过 / 6 暗）；均有结果、无评分、可再玩；证据 `docs/evidence/step-07/edge-http-20261104-minigames-unique` |
-| Edge file:// 完整流程 | 197.639 秒 / 406 行；门板 0.1 / 弃物 1.0 / 渡船 90.0 / 攀索 29.9 秒；5 卡 / 4 亮 / 7 名 / 0 划名；0 console error / pageerror / 404 / 外部请求；证据 `docs/evidence/step-07/edge-file-20261104-182136` |
-| Edge 844×390 触摸完整流程 | 207.978 秒 / 405 行；门板 0.4 / 弃物 1.5 / 渡船 89.7 / 攀索 31.6 秒；5 卡 / 4 亮 / 7 名 / 0 划名；0 错误；证据 `docs/evidence/step-07/edge-http-20261104-182136-mobile` |
-| 844×390 阅读层专项 | 标题、章首卡、图鉴、花名册均在舞台内；7 张图鉴缩略图全部加载；花名册 7 行 + 返回可见；0 console error / pageerror / 404；证据 `docs/evidence/step-07/edge-mobile-20261104-feature` |
-| 六张章节卡 | 湘江地图、遵义、金沙江、泸定、草地、吴起均 `has-photo`，地点与底图匹配；0 console error / 404；证据 `docs/evidence/step-07/edge-http-20261104-titlecards` |
-| `release.py verify` | OK：site 47 文件 / package 48 文件 / ZIP 49 条目 / PDF 1 页 / CREDITS 9,438 B |
-
-`dist/SHA256SUMS.txt` 覆盖 149 个文件（PDF、ZIP、site 与 package）。`dist/site` 与 v1.1.1 ZIP 与本次线上部署文件一致；公网只做了关键文件 HTTP 200 + SHA256 比对，**没有重跑公网完整流程**。
-
-### 已知例外（不写成通过）
-
-- **Chrome 未安装、Safari 无设备**：P0 环境例外，2026-11-02 用户接受；本版未补测。
-- **真机触摸**：只做 844×390 触摸模拟；真机未验（X3）。
-- **音频听感 / 真实后台/锁屏**：Web Audio 路由、9 床/12 cue、暂停 duck、visibility 模拟通过；真机耳机听感与真实切后台仍 carry（X4/X5）。
-- **字体**：v1.1.1 公网随包 OFL 1.1 子集（`XB Smiley` / `XB Zhuque`，约 552 KB），仍保留系统回退；v1.0.0 的“不打包”记录只作历史。
-- **制作名单移动热区**：逻辑 100×44，桌面实测 45 逻辑 / 48 CSS px；844×390 缩放下物理 41.2×24.4 CSS px，低于 44，按步骤七 B16 同类例外记录，不重排标题（X12）。
-- **X7 计时版本**：四次真人计时中 C/D 的版本注记缺失；不把自动化 191 秒当真人。
-- **X8 访谈**：试玩为联合访谈，用户已接受 P0 例外；不写成 3 份独立问卷。
-- **X10 遵义第三刀**：未超 20 分钟，不裁剪；保留 carry。
-- **X11 fps**：已补测标题 + 攀索各 10 秒；移动最低帧 29.9，接近 30，不写成“稳定 60”。
-
-完整例外见 `docs/release-record.md` §6 与 `docs/test-record.md`。
-
-## 字体、素材、史料
-
-- **字体（2026-11-04 素材增强）**：随包 OFL 1.1 子集；大标题/印章用得意黑 Smiley Sans（`XB Smiley`），章节/正文/图鉴用朱雀仿宋 Zhuque Fangsong（`XB Zhuque`）；回退 Microsoft YaHei / Songti SC / SimSun。授权原文在 `project/assets/fonts/OFL-*.txt`。
-- **图像**：程序化版画 + 12 张双色调场景底图（1600×900 WebP + 480×270 占位图，JPEG 兜底；CC BY / CC BY-SA / PD / CC0；湘江地图作第一章标题卡）+ 1 张豆包 Seedream 生成的标题插画（虚构红军小战士与于都河渡口，非史料人物/现场）；逐张署名与“不是 1935 年现场”说明见 `docs/credits.md`。不使用未授权影视/游戏素材。
-- **音频**：既有 Web Audio 合成 9 张环境床、12 个短 cue、原创五音动机 D4–F4–G4–A4–C5；新增 5 条 CC0 环境录音与 8 首 CC0/CC-BY 现代配乐；无历史录音冒充，不自动播放，首次点击后解锁。
-- **素材版状态**：代码与 `project/assets/` 已接入；v1.1.1 `dist/site`、离线 ZIP 与设计说明已生成、`release.py verify` 通过；2026-11-05 已部署到 GitHub Pages（`88771d3`）。Edge headless 的 `http://` 与 `file://` 已验证字体/背景/音频/照片卡/图鉴/花名册；公网已验证标题占位图/全图与竖屏提示。
-- **史料**：A1–A7 / S1–S15 见 `docs/sources.md`；每条至少 2 个出处，2026-11-03 复核链接。争议（X 光机、22 勇士姓名/牺牲人数、金沙江船数、于都渡口数、草地减员、夹金山高度）标注“有不同说法”。《七根火柴》《金色的鱼钩》是小说，不作为史料。
+`dist/` 是本地打包产物，默认不入库；线上三站均由 `dist/site/` 的静态文件部署（GitHub Pages 发布到 `main` 根目录）。
 
 ## 目录
 
 ```text
-向北-项目计划书.md          唯一权威计划
-.claude/CLAUDE.md           当前进度/步骤表/红线
-docs/                       剧本源、史料、设定、测试记录、发布记录
-step/                       分步骤执行卡（step-00 … step-11）
-project/
-  index.html                舞台/UI 入口
-  style.css                 令牌、版式、组件、纸纹
-  engine.js                 状态机、阅读层、存档、音频、fx
-  story.js                  九章剧情（含隐藏终章/坏结局）、选项、图鉴（内联）
-  art.js                    程序化版画
-  CREDITS.txt               制作名单/字体/素材/虚构声明
-  tools/                    开发期脚本（不进运行时）
-dist/                       交付产物（默认不提交）
-  site/                     上传用站点
-  xiangbei-v1.9.1-dev/      ZIP 根目录
-  xiangbei-v1.9.1-dev-offline.zip
-  design-note.pdf
-  SHA256SUMS.txt
+project/                游戏运行代码与资源
+  index.html            舞台、UI 层、脚本入口
+  style.css             版式、配色、纸墨组件
+  engine.js             状态机、输入、存档、转场、音频
+  story.js              九章剧情、选项、旗标、史实注
+  art.js                Canvas 程序化版画与照片层
+  assets/               底图、音频、字体与授权文件
+  tools/                开发期自检、打包与预览脚本
+docs/                   设定、史料、剧本源、结局账本、测试
+step/                   分步骤执行卡
+向北-项目计划书.md        范围、排期与验收
 ```
 
-## 制作名单
+## 文档
 
-制作 / 程序 / 剧本 / 美术 / 测试 / 史料核对：**刘子政**。
-完整名单、字体授权与素材说明见 [project/CREDITS.txt](project/CREDITS.txt) 与 [docs/credits.md](docs/credits.md)。游戏标题页右下“制作名单”可直接打开 CREDITS.txt。
+| 文档 | 内容 |
+|---|---|
+| [项目计划书](向北-项目计划书.md) | 范围、七段结构、排期与验收底线 |
+| [故事设定](docs/story-bible.md) | 人物、名册、道具、分幕、五卡、决策记录 |
+| [史实锚点与出处](docs/sources.md) | A1–A7 锚点、S1–S15 出处、争议与停用项 |
+| [史实图鉴](docs/codex.md) | 游戏内七张图鉴定稿 |
+| [结局路线](docs/ending-routes.md) | 11 条人物结局、条件与账本 |
+| [状态与存档](docs/state-schema.md) | 存档 JSON、旗标、迁移 |
+| [成就](docs/achievements.md) | 48 条成就、描述模板与测试 |
+| [剧情分支图](docs/branch-map.md) | 19 组决策、22 个结构节点、收纳契约 |
+| [测试用例](docs/test-cases.md) | 主流程、危机、移动端、存档与回顾 |
+| [发布记录](docs/release-record.md) | 打包、部署、线上冒烟与已知例外 |
 
-## 线上自检（2026-11-05 v1.1.1；2026-11-09 v1.9.1-dev 双站；2026-11-15 Cloudflare 三站）
+## 史实与虚构
 
-> Netlify 主站（`https://xiangbei.netlify.app/`）做了标题/序章浏览器检查：标题约 2.0s 出 480 占位图，开始→序章文本正确，0 console error / 0 404；GitHub 备站做关键文件 HTTP 200 + SHA256 比对（7/7：index、标题占位图、标题大图、朱雀字体、配乐、CREDITS、PDF）与标题页/竖屏检查（占位 1.75s / 全图 3.28s，0 error）；v1.0.0 的 live smoke 16/16 保留为历史。完整流程、四关与 96/96 用例在本地发布包跑过，**未在公网重跑**；以下保留人工复检清单。
+- 大事件结局不可改：湘江必败、遵义会议必开、泸定桥必夺、必须走到吴起。
+- 不虚构真实领导人的对话；真实人物只进「史实图鉴」，不进剧情。
+- 争议细节标注「有不同说法」：X 光机情形、22 勇士牺牲人数、金沙江船数等。
+- 严格区分史实 / 回忆录 / 文学；《七根火柴》《金色的鱼钩》等小说不作为史料。
+- 每条史实注都注明出处；完整表见 [docs/sources.md](docs/sources.md)。
+- 死亡用「名字被划掉」和留白表现，不做血腥特写，不把牺牲做成分数。
+- 敌人不脸谱化；不写「打鬼子」关卡。
 
-> **2026-11-09 v1.9.1-dev（双站）**：`dist/_smoke-live-191.js` 用 Edge headless 1366×768 两站各跑 **32/32**：5 个关键文件 SHA256 与 `dist/site` 一致（Netlify 的 `index.html` 多 326 B 托管注释，剥离后一致）；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到结局页，五卡 5 张且都在成就之前；分享卡 canvas 1080×1440、保存 PNG 198,990 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；线上 `engine.js` 含「可以分几次用」与分享卡「最后一步」，`index.html` 含 `data-action="status-log"`。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.1/`（gitignored）。
+## 制作与授权
 
-> **2026-11-15 v1.9.1-dev（Cloudflare Pages）**：`dist/_smoke-live-cf.js` 用 Edge headless 1366×768 跑 **32/32**：五个关键文件 SHA256 与 `dist/site` 全等；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到「结局1/11（门至人散）」、五卡 5 张在成就前；分享卡 1080×1440、保存 PNG 198,990 B；统计 7 段/5 同伴/7 点名/5 卡且无 `%`。另跑序章实走 **14/14**（存档面板→新档→正文 6 句→回顾 5 条→Esc 暂停；写入 `xiangbei.saves.v1` / `xiangbei.history.v1`）与 844×390 触摸 **7/7**（舞台 693.3×390、设置热区 91×44.4）；均 0 console error / pageerror / 失败请求。2026-11-15 标题底图修复另验证：阻断 `engine.js` 时 `#scene-title` 静态层显示 full+480 占位、canvas 无 `is-photo`；阻断 full WebP 时先显示 17,054 B 占位而非纸纹；正常时 canvas `is-photo`、scene `background:none`，保留 28s 推拉；deployment `5bfb5a1d…`，32/32、844×390 7/7，0 error。证据 `docs/evidence/cloudflare-pages*`（gitignored）。
+- 制作、程序、剧本、美术、测试、史料核对：**刘子政**。
+- 图像：12 张版画化场景底图，改编自 Wikimedia Commons 的 CC BY / CC BY-SA / PD / CC0 素材；标题插画由豆包 Seedream 生成（虚构场景，非史料照片）。
+- 音频：5 条 CC0 环境循环、8 首 CC0/CC-BY 现代配乐，另有 Web Audio 合成床与五音动机。
+- 字体：Smiley Sans、Zhuque Fangsong 的 OFL 1.1 子集；未打包任何未授权字体。
+- 本仓库是课程作业，非商业项目；未附开源许可证，代码与剧作文本版权归作者。第三方素材逐项授权见 [project/CREDITS.txt](project/CREDITS.txt)。
 
-> **2026-11-09 v1.9.0-dev（双站，历史）**：`dist/_smoke-live-190.js` 用 Edge headless 1366×768 两站各跑 **30/30**：标题纯文本、首项「开始 / 继续」、普通标题无测试入口；`?dev=1` 测试面板 7 章 + 11 条结局预置，预置 1/11 进结局页并核对「门至人散」短描述/命运句；分享卡 canvas 1080×1440、保存 PNG 198,481 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；四个关键文件 HTTP 200；线上 engine.js 含分享卡与结局三层代码。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.0/`（gitignored）。
+## 版本状态
 
-> **2026-11-09 v1.8.0-dev（双站，历史）**：`dist/_smoke-live-180.js` 用 Edge headless 1280×720 两站各跑 19/19；先 `?reset=1` 看标题，再注入一份已完结源档和一份未完结目标档，从剧情分支湘江章卡点「从此开始」，逐字核对两步标题、筛选、旧档置灰，选中后进入湘江并核对前情旗标/物资/章节底片已复制；线上 `engine.js` 含章节重玩代码。两站 0 console error / pageerror / 失败请求；GitHub Pages 的 index/engine/style/story/CREDITS 与 `dist/site` 逐字节一致，Netlify 仅 index.html 多 326 B 托管注释。证据 `docs/evidence/live-v1.8.0/`（gitignored）。
+`v1.9.1-dev` · 2026-11-15
 
-> **2026-11-09 v1.7.2-dev（双站，历史）**：`dist/_smoke-live-172.js` 用 Edge headless 1280×720 两站各跑 22/22；标题 h1 纯文本「向北」且无 button、首项「开始 / 继续」、旧 `.title-main__button` 不存在、标题设置打开后暂停菜单隐藏/危险操作可见/焦点到 `set-speed`、初始化确认含清空范围与“不可撤销”、选否回设置且焦点回 `settings-init-game`、Esc 回标题且焦点回 `.title-settings`、开始/继续打开 `#saves-panel`、关键文件 HTTP 200；0 console error / pageerror / 失败请求。证据 `docs/evidence/live-v1.7.2/`（gitignored）。
+- 三站均已上线：Netlify、Cloudflare Pages、GitHub Pages。
+- 最近一次自动检查（2026-11-09）：`check-build` 51/51、`smoke` 47/47、`check-script` 9 个剧本文件 OK；反馈专项 http/file 各 28/28。
+- 已测：主流程、三次危机、存档迁移、剧情回顾、章节重玩、移动端横屏模拟、`file://` 离线。
+- 待复测：真人 20 分钟计时、11 条路线全量回归（v1.9.1 文本改动后）、Chrome/Safari/真机、隐私模式。
+- `main` 是 GitHub Pages 部署分支；开发在 `v1.4-dev`。`?dev=1` 是测试模式，可跳七章或预置 11 条路线，不写存档，不是正式入口。
 
-> **2026-11-09 v1.7.0-dev（GitHub Pages，历史）**：`dist/_smoke-live.js` 用 Edge headless 1280×720 跑 19/20；唯一失败项是自设的“负载耗时 < 20s”（实测 24,226 ms，属网络，不是应用错误）。标题菜单 5 项、存档空态、开新档、序章 6 句、剧情回顾 5 条、暂停 11 项、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、字体 2 个、无 minigames 引用均通过；0 console error / 0 pageerror / 0 失败请求。截图见 `docs/evidence/live-v1.7.0/`（gitignored）。
+> 娘说，家在人身上。
 
-> **2026-11-09 v1.7.0-dev（Netlify，历史）**：同一脚本改 BASE 后跑 20/20（`loadMs=3,387`）：标题菜单 5 项、存档空态、开新档确认、序章 6 句、剧情回顾 5 条与 × 关闭、Esc 暂停 11 项、`xiangbei.saves.v1` / `xiangbei.history.v1` 落键、canvas 与 2 个字体、无 minigames 引用；0 console error / 0 pageerror / 0 失败请求。截图见 `docs/evidence/live-v1.7.0-netlify/`（gitignored）。
-
-- [x] 根 URL 打开是标题；版本行“试玩版 · 人物虚构，非史料人物”。
-- [x] “制作名单”链接可见、可点、打开 CREDITS.txt；`/design-note.pdf` 可打开。
-- [ ] 一次完整流程到点名：5 张精神卡、7 个名字、两组数字。
-- [x] 本地 v1.4.0-dev：4 格物资、状态、三次危机、11 结局与名册回廊；证据见 `docs/evidence/step-11-*`。
-- [x] Netlify、GitHub Pages 与 Cloudflare Pages 均为 v1.9.1-dev：标题纯文本、开始/继续、章节重玩两步面板、`?dev=1` 测试模式、1/11 结局三层文案、分享卡 PNG 与本周目统计、草地尽头分次补状态、状态原因 6 秒收起与点击入口；三站线上 32/32；Cloudflare 另有序章 14/14、移动 7/7；完整周目与移动完整结局仍待公网复检。
-- [x] 手机竖屏显示“请把手机横过来”与“在浏览器打开”；横屏 844×390 已本地测。
-- [x] Netlify 标题/序章：0 console error / 0 404；无外部请求。
-- [ ] 完整流程中 0 error / 0 404；硬刷新不缓存旧 JS（公网完整流程未跑）。
-- [ ] 不暴露 docs/、step/、tools/、.git/、evidence。
-
-自检结果填回 `docs/release-record.md` §10/§5；未做的项写“未验证”，不写“通过”。
+**[从于都出发 →](https://xiangbei.netlify.app/)**
