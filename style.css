@@ -369,6 +369,24 @@ a:focus-visible,
 }
 
 /* ---------- 标题画面 ---------- */
+/* 标题底图走静态层：Cloudflare/慢网下即使 engine.js 还没到，也先显示照片，
+   不再让纸纹 fallback 冒充“旧版界面”。大图在上、480 占位在下，谁先到谁先画。 */
+#scene-title {
+  background-color: var(--paper);
+  background-image:
+    url("./assets/backgrounds/webp/plate_title.webp"),
+    url("./assets/backgrounds/placeholders/plate_title.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* art.js 画好照片后把画面交还给画布，保留标题的 28s 推拉；
+   脚本/照片未到时仍由上面的静态层先顶住，不露出纸纹 fallback。 */
+#stage-art.is-photo + #scene-title {
+  background: none;
+}
+
 .title-main {
   position: absolute;
   left: 120px;
