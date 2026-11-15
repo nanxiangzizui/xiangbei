@@ -1,9 +1,10 @@
 # 《向北》制作名单、字体与素材授权
 
-> 版本 v1.1.1 · 2026-11-05 · 课程项目，非商业使用。
-> 本文件与 `project/CREDITS.txt`、`docs/design-note.md`、`README.md` 的口径一致；发布记录见 `docs/release-record.md`。
+> 版本 v1.9.1-dev · 2026-11-15 · 课程项目，非商业使用。
+> 本文件与 `project/CREDITS.txt`、`README.md` 的口径一致；`docs/design-note.md` / `dist/design-note.pdf` 仍为 v1.1.1 历史交差稿（描述四关小游戏），待按现行玩法重写；发布记录见 `docs/release-record.md`。
 > 2026-11-04 素材增强：12 张场景/地图底图 + 1 张 AI 标题插画、朱雀/得意黑 OFL 子集、5 条环境录音 + 8 首配乐；同日已部署到 GitHub Pages（`f8b2045`）。
 > 2026-11-05 慢网/竖屏适配：480 WebP 占位图先出、1600 WebP 替换、JPEG 兜底；竖屏提示“在浏览器打开”；公网更新为 v1.1.1（部署提交见 README.md）。同日另部署 Netlify 主站 https://xiangbei.netlify.app/（`dist/site` 静态直传；GitHub Pages 保留备用）。
+> 2026-11-06 至 2026-11-15（v1.2.0–v1.9.1-dev）：删除四关小游戏，改为行囊四格/弃物多选/先渡谁/门板记名 + 三次救人危机；加入状态 0–4、11 条人物结局、分支图、48 条成就、存档、回顾、章节重玩、分享卡与本周目统计。三站同版本：GitHub Pages `821c4bd`、Netlify `6af1ccb8`、Cloudflare Pages `5bfb5a1d`（标题底图首屏修复）。
 
 ## 1. 字体
 
@@ -16,7 +17,7 @@
 | 回退 | 系统宋体/黑体 | — | — | title/body: Songti SC / SimSun / Noto Serif CJK SC；display: Microsoft YaHei / PingFang SC / Noto Sans CJK SC |
 
 - 字体名：`XB Smiley` / `XB Zhuque`；`font-display: swap`；`?fonts=fallback` 强制对照。
-- 子集字符集：1,318 个字符，覆盖 `story.js`、`index.html`、`engine.js`、`minigames.js`、`art.js`、`tools/ui-preview.html` 与 `docs/script/` 的全部用字；943 个独立汉字缺字 0。
+- 子集字符集：1,318 个字符，覆盖 `story.js`、`index.html`、`engine.js`、`art.js`、`tools/ui-preview.html` 与 `docs/script/` 的全部用字（生成时还含已删除的 `minigames.js`）；943 个独立汉字缺字 0。
 - 授权：OFL 1.1 允许嵌入/子集化/随游戏分发；已改名以避开保留字体名；OFL 原文见 `OFL-Smiley.txt` / `OFL-Zhuque.txt`。
 - 上游：得意黑 <https://github.com/atelier-anchor/smiley-sans>；朱雀仿宋 <https://github.com/TrionesType/zhuque>。
 - 未使用来源不明字体；没有把未授权字体打进包。
@@ -137,7 +138,7 @@
 - 编辑器：VS Code；浏览器：Edge 156（步骤七实测）；Chrome/Safari 为环境例外。
 - 本地服务：`python -m http.server 8080 --directory project`；离线：直接打开 `index.html`。
 - 测试：Node 24 + Playwright 1.64（仅测试，不进运行时）；静态检查 `check-build.js` / `smoke.js` / `check-script.js`。
-- 部署：GitHub Pages（main / root）；v1.0.0 于 2026-11-03 上线（`7dbe2b4`），v1.1.0 于 2026-11-04 上线（`f8b2045`），v1.1.1 于 2026-11-05 上线（`88771d3`）。2026-11-05 另部署 Netlify 主站 https://xiangbei.netlify.app/（用户认领 `xiangbei`；`dist/site` 静态直传，未走 Git）；GitHub Pages 保留为备用。
+- 部署：GitHub Pages（main / root）v1.0.0（2026-11-03，`7dbe2b4`）→ v1.9.1-dev（2026-11-09，`821c4bd`）；Netlify 主站 https://xiangbei.netlify.app/（2026-11-05 起静态直传 `dist/site`；v1.9.1-dev 部署 `6af1ccb8`）；Cloudflare Pages https://xiangbei-vn.pages.dev/（2026-11-15 Direct Upload，`5bfb5a1d` 标题底图首屏修复）。三站同版本，GitHub Pages 备用。
 - 版本：Git，`main`；每步 tag；不提交 ZIP/MP4/完整字体/密钥。
 
 ## 6. 制作名单
@@ -161,7 +162,8 @@
 - [x] 音频逐条署名/授权；明确现代录音，不冒充历史。
 - [x] 无外部 CDN/网络请求；`file://` 与 `http://` 实测。
 - [x] 游戏内制作名单入口：标题页“制作名单”链接 → `project/CREDITS.txt`。
-- [x] 素材版 v1.1.0 / 慢网竖屏版 v1.1.1 已部署；每次部署前均获用户明确确认。
+- [x] 制作名单版本号与 `release.py` 的 `VERSION` 同步（check-build C37 / release.py 均校验）。
+- [x] v1.9.1-dev 已部署三站（2026-11-09 / 2026-11-15）；每次部署前均获用户明确确认。
 - [ ] 真机耳机听感、真机触摸、Chrome/Safari 仍需在交差前补测或如实列为例外。
 
 ## 8. 交付入口

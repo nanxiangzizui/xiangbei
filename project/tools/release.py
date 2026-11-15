@@ -205,6 +205,9 @@ def check_sources() -> None:
     for name in RUNTIME + ["CREDITS.txt"]:
         if not (PROJECT / name).is_file():
             fail(f"缺 project/{name}")
+    credits = (PROJECT / "CREDITS.txt").read_text(encoding="utf-8")
+    if f"版本 v{VERSION}" not in credits:
+        fail(f"CREDITS.txt 版本行未同步到 v{VERSION}")
     for relative in REQUIRED_ASSETS:
         if not (PROJECT / relative).is_file():
             fail(f"缺 project/{relative}")
@@ -305,7 +308,9 @@ def verify() -> None:
     if "http://" in index or "https://" in index:
         fail("index.html 含外部 URL")
     for reference in sorted(set(re.findall(r'(?:href|src)="(\./[^"]+)"', index))):
-        if not (SITE / reference[2:]).is_file():
+        # index.html 用 ?v=... 做缓存刷新，查文件时要去掉查询串/锚点。
+        target = reference[2:].split("?", 1)[0].split("#", 1)[0]
+        if not (SITE / target).is_file():
             fail(f"index.html 引用不存在：{reference}")
 
     # 只允许制作名单写授权来源 URL；运行时代码与 README 不得联网。

@@ -550,3 +550,29 @@
 - **部署**：`npx --yes wrangler@4 pages deploy dist/site --project-name xiangbei-vn --branch main --commit-dirty=true --commit-message=v1.9.1-dev-static-title-handoff2` → 1 file uploaded（71 already），2.83s；deployment `5bfb5a1d`（wrangler 输出短 id；生产别名 https://xiangbei-vn.pages.dev/）。`dist/site` 72 文件 / 31,686,684 B；index 33,990 B、style.css 117,088 B；五个关键文件 SHA256 与 `dist/site` 全等。
 - **线上验证**：`dist/_diag-title3.js` 阻断 `engine.js`：`goto` 40.8s，`#scene-title` 背景为 full+placeholder，canvas 无 `is-photo`，占位图 17,054 B 已到、full 175,426 B；阻断 full 图：占位图 17,054 B / 约 0.95s，页面显示人物底图而不是纸纹。正常：canvas `is-photo`、scene `background:none`，full 175,426 B / 约 18.8s，0 console error。`_smoke-live-cf.js` 32/32、`_smoke-live-cf-mobile.js` 844×390 7/7，0 error。
 - **证据**：`docs/evidence/cloudflare-pages-title/`（title-normal / title-placeholder / title-blocked / run.log，gitignored）。
+
+## 20. 制作名单版本号修复与重打包（2026-11-15，v1.9.1-dev）
+
+- **反馈**：用户 m00001「检查制作名单的内容是否更新？我测试时点开看版本号是旧版本」。
+- **诊断**：`project/CREDITS.txt` 自 2026-11-05 起未再更新，标题页「制作名单」直接打开该文件，版本行仍为 v1.1.1；`release.py` 原样复制 CREDITS，没有版本同步校验，所以 v1.2.0–v1.9.1-dev 的每个包和三次线上部署都带着旧名单。三站实测均返回同一份 9,667 B、版本 v1.1.1 的 CREDITS。字体/图像/音频授权内容本身没有过期，过期的是版本行和玩法说明。
+- **修复**：
+  - `project/CREDITS.txt`：版本改为 `v1.9.1-dev · 2026-11-15`；新增【版本说明】（七章、四段选择 + 三次危机、行囊四格 / 状态 0–4 / 门板去向、11 条人物结局、分支/成就/存档/回顾/章节重玩/分享卡；v1.2.0 起删除四关），并补三站地址。字体/图像/音频授权与虚构声明未改。
+  - `docs/credits.md`：头部版本、部署记录、字体覆盖说明、交差检查同步到 v1.9.1-dev；并注明设计说明随本轮按现行玩法重写。
+  - 防回归：`project/tools/release.py` 的 `check_sources()` 校验 CREDITS 版本行含 `v{VERSION}`；`project/tools/check-build.js` C37 读取 release.py 的 `VERSION` 并校验同一行。
+  - 顺带修 `project/tools/release.py` 的引用检查：`index.html` 的 `./style.css?v=20261115-title` 带查询串，原逻辑把查询串当文件名，2026-11-15 标题修复后 `verify` 会误报；改为去掉 `?`/`#` 再查文件。
+- **重打包（初版）**：`python project/tools/release.py all` → site 72 文件 / 31,690,626 B；package 73 文件 / 31,694,424 B；ZIP 74 条目 / 30,892,696 B（SHA256 `F5FC065DE228C4790D380731E8B8517FABD71095A482CC5084AE4669F65655E3`）；`SHA256SUMS.txt` 147 行；`verify` OK，CREDITS 10,304 B。site 比 §19.2 多 3,942 B：CREDITS +637、index.html +544、story.js +2,761；后两者是工作区 CRLF 与旧部署 LF 的换行差异，内容未变（`git status` 干净，HEAD `cee17fd`）。
+- **检查**：check-build 51/51（C37 覆盖版本同步）、smoke 47/47、check-script 9 剧本 OK；本地 HTTP `GET /CREDITS.txt` 200 / 10,304 B / 版本行 `v1.9.1-dev`，标题页 `./CREDITS.txt` 链接在 DOM 中。
+### 20.1 设计说明重写与重打包（2026-11-15，v1.9.1-dev）
+
+- **重写**：`docs/design-note.md` 与 `project/tools/design-note.html` 按现行玩法重写，删除四关小游戏描述；改为四段选择 + 三次危机、行囊 8 半格 / 状态 0–4 / 门板去向、11 条人物结局、点名 0/7/8、五卡实际条件（fire ≥ 60；湘江回头或我死在草地；admit ≥ 2；priority === "main"；trust ≥ 3 且 memory.zhang）、分支/成就/存档/回顾/章节重玩/分享卡。
+- **20 分钟口径**：设计上限仍为 20:00；v1.0 真人首玩 04:52–08:33 只作四关旧版历史参考；v1.9.1-dev 自动流程 256s/255s（http/file，路线 1/11，最快推进）不是真人阅读；文本扩写后真人计时未重做（P1），设计说明明确不写“20 分钟已通过”。
+- **PDF**：`msedge --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf=dist/design-note.pdf file:///.../project/tools/design-note.html`；PDF 337,573 B，1 页，含 `/ToUnicode`，`release.py verify` 通过。
+- **重打包**：site 72 文件 / 31,724,486 B；package 73 文件 / 31,728,284 B；ZIP 74 条目 / 30,893,314 B（SHA256 `29a7600abe9fffeff110fd1fc2f8e39b4892429e1ca9cf47b8b722bab6e322df`）；`SHA256SUMS.txt` 147 行；`verify`/`hash` OK。
+- **检查**：check-build 51/51、smoke 47/47、check-script 9 剧本 OK。
+
+### 20.2 三站部署（2026-11-15，v1.9.1-dev）
+
+- **GitHub Pages**：从 `origin/main`（`517add6`）建临时 worktree，覆盖 `dist/site`；提交 `33b6bf6`（父 `517add6`，4 files / +35 −3：`index.html`、`style.css`、`CREDITS.txt`、`design-note.pdf`），推送 `main`。线上 `CREDITS.txt` 200 / 10,304 B / `版本 v1.9.1-dev · 2026-11-15`；`design-note.pdf` 200 / 337,573 B；index 含 `style.css?v=20261115-title`，标题底图修复一并上线。
+- **Netlify**：`npx --yes netlify-cli@17 deploy --prod --dir=dist/site --site=f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.9.1-dev CREDITS + design note 2026-11-15"` → deploy `6af9d3497acd68bdd2970de2`，5 files uploaded，Deploy is live。线上 `CREDITS.txt` 200 / 10,304 B / v1.9.1-dev；`design-note.pdf` 200 / 337,573 B；index 含 title fix。
+- **Cloudflare Pages**：`wrangler@4 whoami` 未登录；进程 / 用户 / 机器级 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 均未设置，本轮未部署。线上代码仍为 v1.9.1-dev，但 `CREDITS.txt` 是 9,667 B / v1.1.1、`design-note.pdf` 是旧 303,713 B。需用户提供 Pages Edit token 或完成 `wrangler login` 后补传。
+- **未重跑**：20 分钟真人计时、11 条路线全量、移动完整结局、隐私模式、Chrome/Safari/真机；本轮只验证三站关键文件、CREDITS 与 PDF。

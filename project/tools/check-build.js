@@ -1251,6 +1251,13 @@ function checkCredits() {
     return;
   }
   var credits = fs.readFileSync(creditsPath, "utf8");
+  var releasePath = path.join(PROJECT_DIR, "tools", "release.py");
+  if (!fs.existsSync(releasePath)) fail("C37", "缺 project/tools/release.py，无法校验版本号");
+  var versionMatch = fs.readFileSync(releasePath, "utf8").match(/^VERSION = "([^"]+)"/m);
+  if (!versionMatch) fail("C37", "release.py 缺 VERSION 常量");
+  if (credits.indexOf("版本 v" + versionMatch[1]) === -1) {
+    fail("C37", "CREDITS.txt 版本行未同步到 v" + versionMatch[1]);
+  }
   var html = readProject("index.html");
   if (html.indexOf('href="./CREDITS.txt"') === -1) fail("C37", "index.html 缺 ./CREDITS.txt 链接");
   if (!/刘子政/.test(credits)) fail("C37", "CREDITS.txt 缺制作署名");
@@ -1261,7 +1268,7 @@ function checkCredits() {
   ["OFL", "Wikimedia Commons", "CC BY-SA", "OpenGameArt"].forEach(function (needle) {
     if (credits.indexOf(needle) === -1) fail("C37", "CREDITS.txt 缺素材授权字段 " + needle);
   });
-  notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、字体/图像/音频授权、./CREDITS.txt 链接");
+  notes.push("C37 OK CREDITS.txt " + credits.length + " 字符 / " + creditsBytes + " 字节、刘子政署名、虚构声明、字体/图像/音频授权、版本 v" + versionMatch[1] + " 与 release.py 同步、./CREDITS.txt 链接");
 }
 
 // C39：v1.4 十一条结局账本与结局快照
