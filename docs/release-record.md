@@ -1,6 +1,6 @@
-# 《向北》发布记录（v1.0.0 历史 + v1.1.0 / v1.1.1 已部署）
+# 《向北》发布记录（v1.0.0 历史 + v1.1.0–v1.9.1 已部署）
 
-> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强与部署见 §10。
+> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强见 §10，v1.1.1–v1.9.1 打包部署见 §11–§18，2026-11-15 Cloudflare Pages 上线见 §19。
 > 状态源仍是 `.claude/CLAUDE.md`；测试历史见 `docs/test-record.md`，本文件不覆盖步骤七结论。
 
 ## 1. 版本与基线
@@ -518,4 +518,23 @@
 - `README.md`：版本号、交付物表（站点 31,685,529 B / ZIP 30,891,815 B / SHA256 `14CE955C…684C`）、线上地址与部署提交、测试摘要（`_pw-feedback` 28/28、打包冒烟 21/21×2、线上 32/32×2）、线上自检与清单同步到 v1.9.1-dev；v1.9.0-dev 记录标为历史。
 - `docs/test-cases.md`：标题补 `F01–F04` 与 v1.9.1-dev 反馈修复口径。
 
+## 19. Cloudflare Pages 上线（2026-11-15，v1.9.1-dev）
 
+- **触发**：用户 m00001「能不能将此项目在Cloudflare Pages上也发布线上版」。此前 §1/§2 记录的 Cloudflare 备选因 OAuth 未完成未部署；本轮改用 API Token（仅命令环境变量，未写仓库）Direct Upload，不依赖 OAuth。
+- **基线**：`dist/site` v1.9.1-dev，72 文件 / 31,685,529 B；`dist/SHA256SUMS.txt` 的 72 条 site 记录逐文件校验 72/72 匹配。源分支 `v1.4-dev`，部署内容未改一行代码。
+- **项目**：`npx --yes wrangler@4 pages project create xiangbei-vn --production-branch main` → Success；subdomain `xiangbei-vn.pages.dev`；创建 2026-11-15T14:14:14.693391Z。`xiangbei.pages.dev` 已被第三方占用（HTTP 200，标题「中国征兵网」），未使用。
+- **部署**：`npx --yes wrangler@4 pages deploy dist/site --project-name xiangbei-vn --branch main --commit-dirty=true --commit-message="v1.9.1-dev Cloudflare Pages first deploy"` → 72/72 上传，11.02s；deployment `ff305def-ff96-49f2-978f-7f08a16d22c9`，environment=production，url `https://ff305def.xiangbei-vn.pages.dev`，created 2026-11-15T14:14:44.458805Z，branch `main`，commit `6c544c9c25bea6396dcc561e7d7e62207bf942ae`。生产 URL https://xiangbei-vn.pages.dev/ 可用。
+- **哈希核对**：index.html 33,581 B、engine.js 376,747 B、story.js 163,240 B、style.css 116,342 B、art.js 56,065 B；SHA256 五项与 `dist/site` 全等；Content-Type 正常。
+- **线上冒烟**（`dist/_smoke-live-cf.js`，Edge headless 1366×768）：**32/32**，0 console error / pageerror / failed request / HTTP error。检查标题纯文本「向北」、首项「开始 / 继续」、`?dev=1` 7 章 + 11 预置、预置 1/11「门至人散」、五卡 5 张（287×83，位于成就前）、分享卡 1080×1440 保存 PNG 198,990 B、统计 7/5/7/5 且无 `%`。
+- **序章实走**（`dist/_smoke-live-cf-flow.js`，Edge 1280×720）：**14/14**，0 error。标题→存档面板→开新档确认→VN→正文至少 6 句（首句「一九三四年十月十七日，于都河上起雾。」）→回顾层 5 条→Esc 暂停；`localStorage` 写入 `xiangbei.saves.v1` 与 `xiangbei.history.v1`。
+- **移动冒烟**（`dist/_smoke-live-cf-mobile.js`，844×390 @2x touch）：**7/7**，0 error。舞台 693.3×390 居中、16:9，设置热区 91×44.4 CSS px，初始化 44.4，存档面板可开。首次 `goto` 用 `waitUntil:"load"` 60s 超时，改 `"domcontentloaded"` 后通过；站点本身 fetch 200/1.1s，属 load 事件等待，不是应用失败。
+- **证据**：`docs/evidence/cloudflare-pages/`、`docs/evidence/cloudflare-pages-flow/`、`docs/evidence/cloudflare-pages-mobile/`（均 gitignored）。
+- **未重跑**：20 分钟真人完整流程、11 条人物结局全量回归、844×390 移动完整结局、隐私模式、Chrome/Safari/真机；本次线上只验证桌面测试模式/结局页/分享卡/统计、序章实走与移动入口，不写成“三站完整流程通过”。
+- **回滚**：Cloudflare 后台 Deployments 选上一版本重新发布，或 `wrangler pages deployment rollback`；本项目为首次部署，暂无旧版本。GitHub Pages / Netlify 未改动。
+- **安全**：API Token 只在命令环境变量中使用，未写入仓库、文档或 `dist/`；部署完成后建议用户在 Cloudflare Dashboard 撤销/轮换该 token。
+
+### 19.1 文档同步
+
+- `.claude/CLAUDE.md`：步骤表新增「八·九 Cloudflare Pages」；新增本轮部署条目；建议下一步补 Cloudflare URL；技术栈的部署行与常用命令改为三站口径。
+- `README.md`：标题摘要、v1.4 说明、交付物表、线上地址与重新上传、选择段落、测试摘要、线上自检与清单同步到三站；v1.9.0-dev 及更早的“双站”记录保留为历史。
+- `docs/quality-bar.md`：交付链接改为 Netlify / GitHub Pages / Cloudflare Pages 三站。

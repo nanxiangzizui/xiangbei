@@ -39,5 +39,6 @@ docs/script.bak-expand/
 project/story.js.bak-expand
 project/tools/_pw-debug-*.js
 
-# Netlify 本地站点状态
+# Netlify / Wrangler 本地站点状态
 .netlify/
+.wrangler/
