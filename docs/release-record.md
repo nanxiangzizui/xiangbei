@@ -575,4 +575,5 @@
 - **GitHub Pages**：从 `origin/main`（`517add6`）建临时 worktree，覆盖 `dist/site`；提交 `33b6bf6`（父 `517add6`，4 files / +35 −3：`index.html`、`style.css`、`CREDITS.txt`、`design-note.pdf`），推送 `main`。线上 `CREDITS.txt` 200 / 10,304 B / `版本 v1.9.1-dev · 2026-11-15`；`design-note.pdf` 200 / 337,573 B；index 含 `style.css?v=20261115-title`，标题底图修复一并上线。
 - **Netlify**：`npx --yes netlify-cli@17 deploy --prod --dir=dist/site --site=f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.9.1-dev CREDITS + design note 2026-11-15"` → deploy `6af9d3497acd68bdd2970de2`，5 files uploaded，Deploy is live。线上 `CREDITS.txt` 200 / 10,304 B / v1.9.1-dev；`design-note.pdf` 200 / 337,573 B；index 含 title fix。
 - **Cloudflare Pages**：`wrangler@4 whoami` 未登录；进程 / 用户 / 机器级 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 均未设置，本轮未部署。线上代码仍为 v1.9.1-dev，但 `CREDITS.txt` 是 9,667 B / v1.1.1、`design-note.pdf` 是旧 303,713 B。需用户提供 Pages Edit token 或完成 `wrangler login` 后补传。
+- **源码**：`v1.4-dev` 提交 `d2ac54e`（8 files / +136 −87），已推 `origin/v1.4-dev`；临时 GitHub Pages worktree 已清理。
 - **未重跑**：20 分钟真人计时、11 条路线全量、移动完整结局、隐私模式、Chrome/Safari/真机；本轮只验证三站关键文件、CREDITS 与 PDF。
