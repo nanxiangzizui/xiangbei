@@ -1,6 +1,6 @@
 # 《向北》发布记录（v1.0.0 历史 + v1.1.0–v1.9.1 已部署）
 
-> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强见 §10，v1.1.1–v1.9.1 打包部署见 §11–§18，2026-11-15 Cloudflare Pages 上线见 §19。
+> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强见 §10，v1.1.1–v1.9.1 打包部署见 §11–§18，2026-11-15 Cloudflare Pages 上线与标题底图首屏修复见 §19。
 > 状态源仍是 `.claude/CLAUDE.md`；测试历史见 `docs/test-record.md`，本文件不覆盖步骤七结论。
 
 ## 1. 版本与基线
@@ -11,7 +11,7 @@
 | 交付日期 | 2026-11-03 |
 | RELEASE_BASE（步骤七 tag 提交） | `4bb389098511407a9a4a39e1f218a9b76ad7883f`（step-7-done） |
 | 发布提交 | 项目仓库 `d6c17e728fce1335d81474bffa80987c865b280e`（`step-8-done`）；公网部署提交 `7dbe2b48ff43da6be191d3b521e638540291f306`（GitHub Pages） |
-| 平台 | **GitHub Pages**（`main` / root，2026-11-03 上线）；Cloudflare Pages Direct Upload 备选（OAuth 未完成，未部署） |
+| 平台 | **GitHub Pages**（`main` / root，2026-11-03 上线）；Cloudflare Pages Direct Upload 备选（2026-11-15 已上线，见 §19） |
 | 公网 URL | **https://nanxiangzizui.github.io/xiangbei/** |
 | 浏览器基线 | Edge 156.0.4314.58（步骤七 + 步骤八发布包实测）；Chrome/Safari 例外见 §6 |
 | 项目名/URL 前缀 | xiangbei |
@@ -89,7 +89,7 @@
 | X12 | 制作名单移动物理热区 <44 | **本步记录** | 逻辑 100×44；桌面 45 逻辑 / 48 CSS px；844×390 下 41.2×24.4 CSS px；按 B16 同类例外，不重排标题 |
 | — | 演示视频 | **用户取消** | 不视为未完成；不生成 MP4 |
 | — | 公网链接 | **已上线（GitHub Pages）** | https://nanxiangzizui.github.io/xiangbei/；2026-11-03；部署提交 `7dbe2b4` |
-| — | Cloudflare Pages | **未部署** | OAuth 三次均超时（authorization_pending / 网络超时）；不写成已部署 |
+| — | Cloudflare Pages | **已上线（2026-11-15）** | OAuth 三次均超时；2026-11-15 改用 API Token Direct Upload 上线，见 §19 |
 
 ## 7. 发布回归（2026-11-03）
 
@@ -538,3 +538,15 @@
 - `.claude/CLAUDE.md`：步骤表新增「八·九 Cloudflare Pages」；新增本轮部署条目；建议下一步补 Cloudflare URL；技术栈的部署行与常用命令改为三站口径。
 - `README.md`：标题摘要、v1.4 说明、交付物表、线上地址与重新上传、选择段落、测试摘要、线上自检与清单同步到三站；v1.9.0-dev 及更早的“双站”记录保留为历史。
 - `docs/quality-bar.md`：交付链接改为 Netlify / GitHub Pages / Cloudflare Pages 三站。
+
+### 19.2 标题底图首屏修复（2026-11-15，v1.9.1-dev）
+
+- **反馈**：用户 m00227「网站一打开还是卡在旧版界面好一会，这个问题能解决吗？可以有卡顿或延迟，但至少界面得是新的啊」。
+- **诊断**：Cloudflare 响应头 `Cache-Control: public, max-age=0, must-revalidate`，无 `cf-cache-status`/`age`，不是旧 HTML 被长期缓存。慢网下 `engine.js`/`style.css` 到达前，标题照片只由 `art.js` 画布绘制；纸纹 fallback 先露出，看起来像旧版。线上 `goto(domcontentloaded)` 约 21s，`engine.js` curl 总耗时 19.7s（TTFB 12.9s）；title full webp 从 21,069ms 开始、28,442ms 完成。
+- **修复**：
+  - `project/style.css:371-388`：`#scene-title` 改用静态 `background-image`，full WebP 在上、480 占位在下；`#stage-art.is-photo + #scene-title { background: none; }`，画布照片就绪后交还画布，保留 28s 推拉。
+  - `project/index.html:8-17`：保留/新增 full WebP preload；内联占位底图；`style.css` 改用 `?v=20261115-title`。
+- **本地验证**：check-build 51/51、smoke 47/47；阻断 `engine.js` 时 `#scene-title` computed background 为 full+placeholder 两层、canvas 无 `is-photo`；正常本地 canvas `is-photo`、scene `background:none`；截图 `dist/_title-local.png` / `_title-no-engine.png`。
+- **部署**：`npx --yes wrangler@4 pages deploy dist/site --project-name xiangbei-vn --branch main --commit-dirty=true --commit-message=v1.9.1-dev-static-title-handoff2` → 1 file uploaded（71 already），2.83s；deployment `5bfb5a1d`（wrangler 输出短 id；生产别名 https://xiangbei-vn.pages.dev/）。`dist/site` 72 文件 / 31,686,684 B；index 33,990 B、style.css 117,088 B；五个关键文件 SHA256 与 `dist/site` 全等。
+- **线上验证**：`dist/_diag-title3.js` 阻断 `engine.js`：`goto` 40.8s，`#scene-title` 背景为 full+placeholder，canvas 无 `is-photo`，占位图 17,054 B 已到、full 175,426 B；阻断 full 图：占位图 17,054 B / 约 0.95s，页面显示人物底图而不是纸纹。正常：canvas `is-photo`、scene `background:none`，full 175,426 B / 约 18.8s，0 console error。`_smoke-live-cf.js` 32/32、`_smoke-live-cf-mobile.js` 844×390 7/7，0 error。
+- **证据**：`docs/evidence/cloudflare-pages-title/`（title-normal / title-placeholder / title-blocked / run.log，gitignored）。

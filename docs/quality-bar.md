@@ -57,8 +57,8 @@
 - 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:11 当真人。
 - 字体：v1.1.1 **随包**两份 OFL 1.1 子集（约 552KB），`@font-face` 用相对路径；失败回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体/CDN 请求。
 - 发布包：`dist/site` 与离线 ZIP 只含六运行时、`assets/`（底图/字体/音频）、CREDITS.txt、design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
-- 链接与视频：GitHub Pages 主站 https://nanxiangzizui.github.io/xiangbei/ （v1.9.1-dev，`main` / root，部署提交 `821c4bd`）；Netlify 备站 https://xiangbei.netlify.app/ （v1.9.1-dev，deploy `6af1ccb8…`）；Cloudflare Pages 备二站 https://xiangbei-vn.pages.dev/ （v1.9.1-dev，2026-11-15 Direct Upload 72 文件，deployment `ff305def…`，commit `6c544c9c…`）；演示视频经用户 2026-11-03 明确取消，不列为缺口。
-- 三站线上自检：GitHub Pages 与 Netlify 各 32/32（2026-11-09）；Cloudflare 32/32、序章 14/14、移动 7/7（2026-11-15）；5 个关键文件 SHA256 与 `dist/site` 全等；0 console error / pageerror / 失败请求；未重跑 20 分钟真人计时、11 路线全量、移动完整结局、隐私、Chrome/Safari/真机。
+- 链接与视频：GitHub Pages 主站 https://nanxiangzizui.github.io/xiangbei/ （v1.9.1-dev，`main` / root，部署提交 `821c4bd`）；Netlify 备站 https://xiangbei.netlify.app/ （v1.9.1-dev，deploy `6af1ccb8…`）；Cloudflare Pages 备二站 https://xiangbei-vn.pages.dev/ （v1.9.1-dev，2026-11-15 Direct Upload 72 文件；初始 deployment `ff305def…`，现行标题底图修复 `5bfb5a1d…`）；演示视频经用户 2026-11-03 明确取消，不列为缺口。
+- 三站线上自检：GitHub Pages 与 Netlify 各 32/32（2026-11-09）；Cloudflare 32/32、序章 14/14、移动 7/7（2026-11-15），另验证阻断 `engine.js` 时标题静态层先显示人物底图、阻断 full WebP 时先显示 480 占位（2026-11-15 标题修复）；5 个关键文件 SHA256 与 `dist/site` 全等；0 console error / pageerror / 失败请求；未重跑 20 分钟真人计时、11 路线全量、移动完整结局、隐私、Chrome/Safari/真机。
 - v1.2.0-dev：4 段选择可玩（行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名），每段 60–90s；单选/多选都没有 Game Over、没有评分；v1.1.1 的四关（?minigame=…）作为历史回归，不再作为 v1.2.0 验收项。
 - 7 张史实注可解锁；结局点名 + 7000 + 五卡。
 - 手机横屏可玩；断网 ZIP 可玩；Edge 完整流程通过；Chrome/Safari 为 P0 环境例外，经用户 2026-11-02 接受（不记为通过）。

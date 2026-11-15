@@ -7,7 +7,14 @@
   <link rel="icon" href="data:,">
   <!-- 片头占位图先发：慢网下先给构图，再由 1600 WebP 替换 -->
   <link rel="preload" as="image" href="./assets/backgrounds/placeholders/plate_title.webp" type="image/webp" fetchpriority="high">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="preload" as="image" href="./assets/backgrounds/webp/plate_title.webp" type="image/webp" fetchpriority="high">
+  <!-- 首屏静态底图：脚本未到时也先看到新版标题照片，而不是纸纹 fallback。 -->
+  <style>
+    #scene-title {
+      background: var(--paper) url("./assets/backgrounds/placeholders/plate_title.webp") center / cover no-repeat;
+    }
+  </style>
+  <link rel="stylesheet" href="./style.css?v=20261115-title">
 </head>
 <body>
   <!-- 固定 1280×720 舞台：所有坐标都是舞台坐标（docs/ui-layout.md） -->

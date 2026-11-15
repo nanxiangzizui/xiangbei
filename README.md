@@ -17,8 +17,8 @@
 |---|---|---|
 | 公网链接（主） | https://xiangbei.netlify.app/ | **v1.9.1-dev 已上线**（Netlify，2026-11-09 用 CLI 重传 `dist/site`，deploy `6af1ccb8…`；73 文件）；线上冒烟 32/32，0 console error / 0 失败请求 |
 | 公网链接（备） | https://nanxiangzizui.github.io/xiangbei/ | **v1.9.1-dev 已上线**（GitHub Pages，2026-11-09，部署提交 `821c4bd`；`index.html` 33,581 B、无 minigames）；线上冒烟 32/32，0 console error / 0 失败请求 |
-| 公网链接（Cloudflare） | https://xiangbei-vn.pages.dev/ | **v1.9.1-dev 已上线**（Cloudflare Pages，2026-11-15 Direct Upload，deployment `ff305def…`、commit `6c544c9c…`；72 文件）；线上冒烟 32/32、序章 14/14、移动 7/7，0 console error / 0 失败请求 |
-| 发布站点 | `dist/site/` | v1.9.1-dev 已生成并验证；72 个文件，31,685,529 B；与 GitHub Pages / Netlify / Cloudflare Pages 站点同包 |
+| 公网链接（Cloudflare） | https://xiangbei-vn.pages.dev/ | **v1.9.1-dev 已上线**（Cloudflare Pages，2026-11-15 Direct Upload，初始 deployment `ff305def…`、commit `6c544c9c…`；现行标题底图修复 `5bfb5a1d…`；72 文件）；线上冒烟 32/32、序章 14/14、移动 7/7，0 console error / 0 失败请求 |
+| 发布站点 | `dist/site/` | v1.9.1-dev 已生成并验证；72 个文件，31,686,684 B；与 Cloudflare Pages 站点同包（GitHub Pages / Netlify 为 2026-11-09 的 31,685,529 B 版本） |
 | 离线 ZIP | `dist/xiangbei-v1.9.1-dev-offline.zip` | v1.9.1-dev 已生成并验证；74 个条目，30,891,815 B；SHA256 `14CE955C…684C`；根目录 `xiangbei-v1.9.1-dev/` |
 | 一页设计说明 | `dist/design-note.pdf` | A4 一页，303,713 B；源文件 `docs/design-note.md` / `project/tools/design-note.html` |
 | 演示视频 | — | **本版不录**（用户 2026-11-03 明确取消，不列为缺口）；`docs/demo-script.md` 保留作现场演示稿 |
@@ -51,7 +51,7 @@ python -m http.server 8080
 
 **线上（备，现为最新版）**：https://nanxiangzizui.github.io/xiangbei/ （GitHub Pages，仓库 `nanxiangzizui/xiangbei`，main / root；v1.9.1-dev 部署提交 `821c4bd`，2026-11-09；旧 v1.9.0-dev `236b6e0`、v1.8.0-dev `65beb46`、v1.7.2-dev `a120af0`、v1.7.1-dev `d0fe7e9`、v1.1.1 `88771d3`）。
 
-**线上（备二，现为最新版）**：https://xiangbei-vn.pages.dev/ （Cloudflare Pages，项目 `xiangbei-vn`，production branch `main`，2026-11-15 Direct Upload `dist/site` 72 文件，deployment `ff305def-ff96-49f2-978f-7f08a16d22c9`，commit `6c544c9c25bea6396dcc561e7d7e62207bf942ae`）。五个关键文件 SHA256 与 `dist/site` 全等；`minigames.js` 404。
+**线上（备二，现为最新版）**：https://xiangbei-vn.pages.dev/ （Cloudflare Pages，项目 `xiangbei-vn`，production branch `main`，2026-11-15 Direct Upload `dist/site` 72 文件；初始 deployment `ff305def-ff96-49f2-978f-7f08a16d22c9`、commit `6c544c9c25bea6396dcc561e7d7e62207bf942ae`；2026-11-15 标题底图修复 deployment `5bfb5a1d…`）。五个关键文件 SHA256 与 `dist/site` 全等；`minigames.js` 404。
 
 重新上传：Netlify 主站用 `npx netlify-cli@27.16.2 deploy --prod --dir dist/site --site f6b31432-8df1-4a96-b67b-9b391116323e`（本机已登录，凭据在用户目录，不在仓库；npm 源需设 `registry.npmjs.org`，淘宝镜像缺 `@netlify/edge-functions-dev@2.0.7`）。GitHub Pages 备站仍把 `dist/site/` 与 `.nojekyll` 更新到 `main` 自动重建。Cloudflare Pages 备二站用 `npx --yes wrangler@4 pages deploy dist/site --project-name xiangbei-vn --branch main --commit-dirty=true`（Direct Upload，构建命令留空；凭据用 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 环境变量，不入仓库）。不要上传仓库根目录、`docs/`、`step/`、`project/tools/`、`.git/` 或测试证据；这些不在 `dist/site/` 内。
 
@@ -139,7 +139,7 @@ v1.4 暂按文本估算通过 20 分钟，尚未因超时裁剪；若真人计�
 | 打包冒烟（`dist/site` 与解压 ZIP） | 各 **21/21**（http + file://），0 console error / pageerror / failed request |
 | 线上冒烟（三站） | 各 **32/32**：5 个关键文件 SHA256 一致（Netlify `index.html` 剥离 326 B 托管注释后一致；Cloudflare 五项全等）、`?dev=1` 7 章 + 11 预置、1/11 结局、五卡、分享卡 PNG 198,990 B、统计 7/5/7/5 且无 `%`；0 错误 |
 
-已部署：GitHub Pages `821c4bd`、Netlify `6af1ccb8…`、Cloudflare Pages `ff305def…`（2026-11-15）。未重跑：20 分钟真人计时、11 路线全量回归、移动完整结局、隐私模式、Chrome/Safari/真机。
+已部署：GitHub Pages `821c4bd`、Netlify `6af1ccb8…`、Cloudflare Pages `5bfb5a1d…`（2026-11-15 标题底图修复；初始 `ff305def…`）。未重跑：20 分钟真人计时、11 路线全量回归、移动完整结局、隐私模式、Chrome/Safari/真机。
 
 ### v1.9.0-dev 分享卡、统计、测试模式与文本细化（2026-11-09，历史）
 
@@ -302,7 +302,7 @@ dist/                       交付产物（默认不提交）
 
 > **2026-11-09 v1.9.1-dev（双站）**：`dist/_smoke-live-191.js` 用 Edge headless 1366×768 两站各跑 **32/32**：5 个关键文件 SHA256 与 `dist/site` 一致（Netlify 的 `index.html` 多 326 B 托管注释，剥离后一致）；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到结局页，五卡 5 张且都在成就之前；分享卡 canvas 1080×1440、保存 PNG 198,990 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；线上 `engine.js` 含「可以分几次用」与分享卡「最后一步」，`index.html` 含 `data-action="status-log"`。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.1/`（gitignored）。
 
-> **2026-11-15 v1.9.1-dev（Cloudflare Pages）**：`dist/_smoke-live-cf.js` 用 Edge headless 1366×768 跑 **32/32**：五个关键文件 SHA256 与 `dist/site` 全等；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到「结局1/11（门至人散）」、五卡 5 张在成就前；分享卡 1080×1440、保存 PNG 198,990 B；统计 7 段/5 同伴/7 点名/5 卡且无 `%`。另跑序章实走 **14/14**（存档面板→新档→正文 6 句→回顾 5 条→Esc 暂停；写入 `xiangbei.saves.v1` / `xiangbei.history.v1`）与 844×390 触摸 **7/7**（舞台 693.3×390、设置热区 91×44.4）；均 0 console error / pageerror / 失败请求。证据 `docs/evidence/cloudflare-pages*`（gitignored）。
+> **2026-11-15 v1.9.1-dev（Cloudflare Pages）**：`dist/_smoke-live-cf.js` 用 Edge headless 1366×768 跑 **32/32**：五个关键文件 SHA256 与 `dist/site` 全等；标题纯文本、「开始 / 继续」、`?dev=1` 7 章 + 11 条预置；预置 1/11 到「结局1/11（门至人散）」、五卡 5 张在成就前；分享卡 1080×1440、保存 PNG 198,990 B；统计 7 段/5 同伴/7 点名/5 卡且无 `%`。另跑序章实走 **14/14**（存档面板→新档→正文 6 句→回顾 5 条→Esc 暂停；写入 `xiangbei.saves.v1` / `xiangbei.history.v1`）与 844×390 触摸 **7/7**（舞台 693.3×390、设置热区 91×44.4）；均 0 console error / pageerror / 失败请求。2026-11-15 标题底图修复另验证：阻断 `engine.js` 时 `#scene-title` 静态层显示 full+480 占位、canvas 无 `is-photo`；阻断 full WebP 时先显示 17,054 B 占位而非纸纹；正常时 canvas `is-photo`、scene `background:none`，保留 28s 推拉；deployment `5bfb5a1d…`，32/32、844×390 7/7，0 error。证据 `docs/evidence/cloudflare-pages*`（gitignored）。
 
 > **2026-11-09 v1.9.0-dev（双站，历史）**：`dist/_smoke-live-190.js` 用 Edge headless 1366×768 两站各跑 **30/30**：标题纯文本、首项「开始 / 继续」、普通标题无测试入口；`?dev=1` 测试面板 7 章 + 11 条结局预置，预置 1/11 进结局页并核对「门至人散」短描述/命运句；分享卡 canvas 1080×1440、保存 PNG 198,481 B；本周目统计 7 段/5 同伴/7 点名/5 卡且无 `%`；四个关键文件 HTTP 200；线上 engine.js 含分享卡与结局三层代码。0 console error / pageerror / 失败请求；证据 `docs/evidence/live-v1.9.0/`（gitignored）。
 
