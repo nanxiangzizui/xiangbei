@@ -1,6 +1,6 @@
-# 《向北》发布记录（v1.0.0 历史 + v1.1.0–v1.9.1 已部署）
+# 《向北》发布记录（v1.0.0 历史 + v1.1.0–v1.9.2 已部署）
 
-> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强见 §10，v1.1.1–v1.9.1 打包部署见 §11–§18，2026-11-15 Cloudflare Pages 上线与标题底图首屏修复见 §19。
+> 本文件记录步骤八（打包与交差）的版本、基线、交付物、门禁与例外；v1.0.0 历史见 §1–§9，v1.1.0 素材/阅读增强见 §10，v1.1.1–v1.9.1 打包部署见 §11–§18，2026-11-15 Cloudflare Pages 上线与标题底图首屏修复见 §19，2026-11-16 v1.9.2-dev 打包部署见 §21。
 > 状态源仍是 `.claude/CLAUDE.md`；测试历史见 `docs/test-record.md`，本文件不覆盖步骤七结论。
 
 ## 1. 版本与基线
@@ -577,3 +577,47 @@
 - **Cloudflare Pages**：用用户提供的 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 直传 `dist/site`，deployment `580044ea-9f25-4848-ac6d-1914c483a325`（Production / `main` / source `4b82025`，上传 4 个新文件，68 个已存在），线上 https://xiangbei-vn.pages.dev/ 。线上 `CREDITS.txt` 200 / 10,304 B / `版本 v1.9.1-dev · 2026-11-15`；`design-note.pdf` 200 / 337,573 B；`index.html` 200 / 34,534 B 且含 `title-credits` 与 `style.css?v=20261115-title`；四文件 SHA256 与 `dist/site` 全等。
 - **源码**：`v1.4-dev` 提交 `d2ac54e`（8 files / +136 −87），已推 `origin/v1.4-dev`；临时 GitHub Pages worktree 已清理。
 - **未重跑**：20 分钟真人计时、11 条路线全量、移动完整结局、隐私模式、Chrome/Safari/真机；本轮只验证三站关键文件、CREDITS 与 PDF。
+
+## 21. v1.9.2-dev 打包与部署（2026-11-16）
+
+- **触发**：用户 m00697「把这个和物资消耗提示一起打包部署提交」；把步骤二十二「物资消耗提示」与步骤二十三「慢网画面兜底」一并提交、打包，覆盖 GitHub Pages 与 Netlify。
+- **基线**：分支 `v1.4-dev`，起点 `3825470`；`project/tools/release.py` 的 `VERSION` 升为 `1.9.2-dev`；`project/CREDITS.txt` 10,540 B；README、credits、design-note、quality-bar、test-cases 同步 v1.9.2；设计说明 PDF 由 Edge 打印，`dist/design-note.pdf` 343,106 B / 1 页 / 含 `/ToUnicode`。
+- **提交与 tag**：commit `49edea8`「feat: 物资消耗提示与慢网画面兜底（v1.9.2-dev）」，25 files changed / 1,933 insertions / 97 deletions；tag `v1.9.2-dev`、`step-22-done`、`step-23-done` 均指向该提交；已推 `origin/v1.4-dev` 与三个 tag。提交前删除一次性 `project/tools/_pw-artload-live.js`；保留 `_pw-artload.js`、`_pw-lqip-gen.js`、`_pw-step22.js`。
+- **交付物**：
+
+| 项 | 路径 | 结果 |
+|---|---|---|
+| 发布站点 | `dist/site/` | 72 文件 / 31,845,649 B |
+| 离线包目录 | `dist/xiangbei-v1.9.2-dev/` | 73 文件 / 31,849,626 B（比站点多 README.txt） |
+| 离线 ZIP | `dist/xiangbei-v1.9.2-dev-offline.zip` | 74 条目 / 30,968,396 B / SHA256 `7D0D07AF180006EFCE80C6F6E2D364A3FFE726A2906C8DAFC6B73C728D1E147B` |
+| 设计说明 | `dist/design-note.pdf` | 343,106 B（按现行玩法重制） |
+| 校验清单 | `dist/SHA256SUMS.txt` | 147 行 |
+| 制作名单 | `project/CREDITS.txt` | 10,540 B |
+
+- **门禁**：`check-build` 52/52、`smoke` 47/47、`check-script` 9 文件 OK、`release.py verify` / `hash` OK。
+- **打包冒烟**（`dist/_smoke-package.js`，仅本地、不入库）：`dist/site` 21/21、解压 ZIP 根目录 21/21；0 console error / pageerror / failed request。证据 `docs/evidence/package-v1.9.2/`、`package-v1.9.2-zip/`（gitignored）。
+
+### 21.1 部署到 GitHub Pages
+
+- **第一版**：worktree 提交 `da5da80`（父 `33b6bf6`）用普通 `git add`，`index.html`/`story.js` 被 autocrlf 转成 LF，与 `dist/site` 的 CRLF 字节不一致。
+- **修复**：用 `git hash-object -w --no-filters` + `git update-index` + `git commit-tree` 在 `da5da80` 上补提交 `6324e5a`「deploy: v1.9.2-dev 站点（恢复 CRLF 字节一致）」，push `origin HEAD:main`；最终 `main = 6324e5a`，父 `da5da80`，父 `33b6bf6`。
+- **哈希核对**：线上 `index.html` 35,395 B、`story.js` 166,445 B 与 `dist/site` 字节全等；`engine.js` 391,763 B、`style.css` 120,516 B、`art.js` 151,710 B。
+
+### 21.2 部署到 Netlify
+
+- **部署**：`npx --yes netlify-cli@17 deploy --prod --dir=dist/site --site=f6b31432-8df1-4a96-b67b-9b391116323e --message "v1.9.2-dev supply notices + slow-network fallback"`。
+- **deploy id**：`6afa93e24486d62de7d32370`，7 files uploaded，Deploy is live；生产 https://xiangbei.netlify.app/ 。
+- **哈希核对**：`engine.js` / `story.js` / `style.css` / `art.js` 与本地逐字节一致；`index.html` 线上 35,721 B（Netlify 注入 879 B 多行注释，原 CRLF 中一处 CR 被替换），剥离注释并 CRLF→LF 归一后与本地内容相等。
+
+### 21.3 线上冒烟与慢网专项
+
+- **脚本**：`dist/_smoke-live-192.js`（gitignored；playwright-core + Edge headless，1280×720），由 v1.9.1 版本复制，改 `v=192`，新增 art LQIP 与 CREDITS 版本检查。
+- **结果**：GitHub Pages 34/34、Netlify 34/34；0 console error / pageerror / failed request / HTTP error。覆盖 5 个关键文件哈希、标题、开始/继续、`?dev=1` 7 章 + 11 预置、1/11「门至人散」、五卡 5 张（287×83，在成就前）、分享卡 1080×1440 / 198,990 B、统计 7/5/7/5 且无 `%`、art 含 `PLATE_LQIP`/`is-lqip`/`PLATE_RETRY_DELAYS`、CREDITS 为 v1.9.2-dev。证据 `docs/evidence/live-v1.9.2/result.json`。
+- **慢网专项**：`dist/_live-lqip-192.js` 延迟全部 `/assets/backgrounds/**` 8s，打开 `?chapter=grass&node=g001&debug=1`。Netlify t0 1.77s、t1 3.32s 均为 `stage-art is-lqip`、`scene=grass_marsh`、`data:image/webp`、`bgBytes=3750`；GitHub t0 30.77s、t1 31.97s 仍为 `is-lqip`（冷加载慢，但未回退程序化）；0 console / pageerror / failed。截图 `docs/evidence/live-lqip-192/github-t0.png`（sha256 `970474fb…c802671e`）、`netlify-t0.png`（sha256 `14a1fc56…b8c11`）均为模糊照片草地，不是旧版平涂程序化。
+
+### 21.4 Cloudflare Pages 与未覆盖
+
+- **Cloudflare 未部署**：当前 shell 与用户级/机器级环境均无 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`，无 `~/.wrangler` 配置；`npx wrangler@4 whoami` 报 “You are not authenticated. Please run wrangler login.”。项目 `xiangbei-vn` 仍停在 v1.9.1-dev deployment `5bfb5a1d…`，不能声称三站同版本。
+- **文档回写**：README、credits、release-record、步骤二十二/二十三执行卡与 `.claude/CLAUDE.md` 均改为 GitHub Pages / Netlify 已上线 v1.9.2-dev、Cloudflare 待凭据，随本轮文档提交入库。
+- **未重跑**：20 分钟真人计时、11 条路线全量、移动完整结局、隐私模式、Chrome/Safari/真机；线上只验证关键文件、结局、分享卡与慢网 LQIP。
+- **回滚**：GitHub Pages 把 `main` 指回 `33b6bf6`；Netlify 后台 Publish 旧 deploy `6af9d3497acd68bdd2970de2`（v1.9.1-dev）。均不影响 `v1.4-dev`。

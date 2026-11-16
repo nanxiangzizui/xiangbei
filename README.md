@@ -15,7 +15,7 @@
 | 站点 | 地址 | 说明 |
 |---|---|---|
 | 主站（Netlify） | **[xiangbei.netlify.app](https://xiangbei.netlify.app/)** | 通常最快 |
-| 备用（Cloudflare Pages） | [xiangbei-vn.pages.dev](https://xiangbei-vn.pages.dev/) | 与主站同版本 |
+| 备用（Cloudflare Pages） | [xiangbei-vn.pages.dev](https://xiangbei-vn.pages.dev/) | 暂为 v1.9.1-dev，待凭据补部署 |
 | 备用（GitHub Pages） | [nanxiangzizui.github.io/xiangbei](https://nanxiangzizui.github.io/xiangbei/) | 仓库 `main` 分支自动发布 |
 
 - 建议使用桌面浏览器；手机请横屏，竖屏会提示转屏。
@@ -198,7 +198,7 @@ step/                   分步骤执行卡
 
 `v1.9.2-dev` · 2026-11-16
 
-- 三站均已上线：Netlify、Cloudflare Pages、GitHub Pages。
+- GitHub Pages 与 Netlify 已上线 v1.9.2-dev；Cloudflare Pages 仍为 v1.9.1-dev，待 Cloudflare 凭据后补部署。
 - 最近一次自动检查（2026-11-16）：`check-build` 52/52、`smoke` 47/47、`check-script` 9 个剧本文件 OK、`textpass` 33/33；物资提示专项 http/file/移动各 78/78、草地补给 63/63；打包冒烟 `dist/site` 与解压 ZIP 各 21/21。
 - 已测：主流程、三次危机、物资消耗提示、慢网/断图 LQIP 兜底与重试（normal / 8s 延迟 / abort / 恢复 / `file://` / 844×390 / CPU 6× / 标题首屏）、存档迁移、剧情回顾、章节重玩、移动端横屏模拟、`file://` 离线。
 - 待复测：真人 20 分钟计时、11 条路线全量回归、Chrome/Safari/真机、隐私模式。
