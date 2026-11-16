@@ -23,6 +23,7 @@
   --ink: #1A1714;
   --cinnabar: #A8322D;
   --ember: #D97A2B;
+  --ember-a16: rgba(217, 122, 43, 0.16);
   --night: #1B2430;
 
   /* 派生色 */
@@ -372,7 +373,8 @@ a:focus-visible,
 /* 标题底图走静态层：Cloudflare/慢网下即使 engine.js 还没到，也先显示照片，
    不再让纸纹 fallback 冒充“旧版界面”。大图在上、480 占位在下，谁先到谁先画。 */
 #scene-title {
-  background-color: var(--paper);
+  /* 透明底色：静态占位图未到时，让 #stage-art 的内联 LQIP 透出来；图到了仍先由静态层显示。 */
+  background-color: transparent;
   background-image:
     url("./assets/backgrounds/webp/plate_title.webp"),
     url("./assets/backgrounds/placeholders/plate_title.webp");
@@ -1227,6 +1229,11 @@ a:focus-visible,
 
 .xb-choice.is-unavailable .xb-choice__cost {
   color: var(--ink-a30);
+}
+
+/* 缺少物资的选项：原因写在代价行里，不用灰到看不见。 */
+.xb-choice.is-unavailable .xb-choice__cost.is-lack {
+  color: var(--cinnabar);
 }
 
 .xb-choice.is-unavailable .xb-choice__timer > i {
@@ -3290,6 +3297,88 @@ a:focus-visible,
   .xb-status-notice { animation: none; }
 }
 
+/* 物资消耗提示：底边 y=532，落在人名（y=540）与对话框（y=560）上方，不压正文。 */
+.xb-pack-notice {
+  top: auto;
+  bottom: 188px;
+  border-left-color: var(--ember);
+}
+
+/* 对话框右侧的最近一次物资变化；与人名左右对称，不占正文。 */
+.vn-pack-used {
+  position: absolute;
+  top: -20px;
+  right: 24px;
+  min-height: 30px;
+  max-width: 300px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  background: var(--paper-hi);
+  border: var(--border) solid var(--ink);
+  border-left: 3px solid var(--ember);
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 var(--shadow);
+  cursor: pointer;
+  z-index: 41;
+}
+
+.vn-pack-used[data-kind="gained"] {
+  border-left-color: var(--cinnabar);
+}
+
+.vn-pack-used:hover,
+.vn-pack-used:focus-visible {
+  color: var(--cinnabar);
+  border-color: var(--cinnabar);
+  outline: none;
+}
+
+.xb-pack-detail {
+  position: absolute;
+  right: 24px;
+  bottom: calc(100% + 38px);
+  width: 520px;
+  max-height: 260px;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  overflow: auto;
+  color: var(--paper-hi);
+  background: var(--ink);
+  border-left: 3px solid var(--ember);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--shadow);
+  text-align: left;
+  z-index: 42;
+  pointer-events: none;
+}
+
+.xb-pack-detail__summary {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--paper-a72);
+}
+
+.xb-pack-detail__item {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--paper-hi);
+}
+
+.xb-pack-detail__item b {
+  color: var(--cinnabar);
+}
+
 .vn-pack-button {
   position: absolute;
   left: 726px;
@@ -3612,6 +3701,31 @@ a:focus-visible,
   align-items: baseline;
   padding: var(--space-2) 0;
   border-bottom: var(--border) dashed var(--ink-a30);
+}
+
+.xb-pack__item.is-pack-used,
+.xb-pack__item.is-pack-gained {
+  box-shadow: inset 3px 0 0 var(--ember);
+  animation: xb-pack-row-flash 900ms var(--ease-out) both;
+}
+
+.xb-pack__item.is-pack-gained {
+  box-shadow: inset 3px 0 0 var(--cinnabar);
+}
+
+.xb-pack__item.is-pack-used .xb-pack__item-name,
+.xb-pack__item.is-pack-used .xb-pack__item-units {
+  color: var(--ink-muted);
+}
+
+@keyframes xb-pack-row-flash {
+  from { background: var(--ember-a16); }
+  to { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xb-pack__item.is-pack-used,
+  .xb-pack__item.is-pack-gained { animation: none; }
 }
 
 .xb-pack__item-name {
@@ -5026,4 +5140,26 @@ html.reduce-motion .fx-layer.is-flashing .fx-flash {
   .xb-save-confirm .xb-door { width: 760px; }
   .xb-save-confirm .xb-door__body { font-size: 26px; }
   .xb-save-confirm .xb-danger__actions .xb-btn { min-height: 82px; font-size: 22px; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  /* 手机横屏：标识抬到对话框上沿，底边 584 仍不压正文（正文从 586 起）。 */
+  .vn-pack-used {
+    top: -40px;
+    right: 20px;
+    min-height: 64px;
+    max-width: 420px;
+    padding: 4px 12px;
+    font-size: 20px;
+    border-left-width: 4px;
+  }
+  .xb-pack-detail {
+    right: 20px;
+    bottom: calc(100% + 50px);
+    width: 620px;
+    max-height: 320px;
+    padding: 16px 20px;
+  }
+  .xb-pack-detail__summary { font-size: 18px; }
+  .xb-pack-detail__item { font-size: 20px; }
 }

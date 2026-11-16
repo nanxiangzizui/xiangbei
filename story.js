@@ -1238,6 +1238,7 @@
                 text: "先给他上药",
                 value: false,
                 requires: "item.medicine",
+                lackText: "没有药，飞毛腿背上的血止不住。",
                 statusReason: "你把药敷在他背上",
                 set: {
                   "item.medicine": false,
@@ -1280,6 +1281,7 @@
                 text: "把药敷在他背上",
                 value: false,
                 requires: "item.medicine",
+                lackText: "没有药，飞毛腿背上的血止不住。",
                 statusReason: "你把药敷在他背上",
                 set: {
                   "item.medicine": false,
@@ -1677,6 +1679,7 @@
                 text: "把青稞倒进锅里",
                 value: "A",
                 requires: "item.barley",
+                lackText: "没有青稞，锅里还是空的。",
                 statusReason: "你把青稞倒进锅里",
                 set: {
                   "item.barley": false,
@@ -1692,6 +1695,7 @@
                 text: "把家里的铁锅架上去",
                 value: "B",
                 requires: "item.homepot",
+                lackText: "没有铁锅，雪水只能凉着喝。",
                 statusReason: "你把家里的铁锅架了上去",
                 set: {
                   "item.homepot": false,
@@ -1880,6 +1884,7 @@
                 text: "把自己的布鞋脱给他",
                 value: "A",
                 requires: "item.shoes",
+                lackText: "没有布鞋，冬生只能赤脚踩在泥里。",
                 statusReason: "你把布鞋脱给他",
                 set: {
                   "item.shoes": false,
@@ -1896,6 +1901,7 @@
                 text: "把雨布裹在他身上",
                 value: "B",
                 requires: "item.raincloth",
+                lackText: "没有雨布，雨只能落在冬生身上。",
                 statusReason: "你把雨布裹在他身上",
                 set: {
                   "item.raincloth": false,

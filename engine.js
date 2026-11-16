@@ -209,6 +209,21 @@
   var CHOICE_LOG_LIMIT = 64;
   var STATUS_EVENT_LIMIT = 32;
   var statusEvents = [];
+  // 物资消耗与状态变化分开记：状态弹窗说“人怎么样”，物资弹窗说“少了什么”。
+  // 事件只在内存里排队，不写档；读档不会把上一步的消耗再播一遍。
+  var PACK_EVENT_LIMIT = 32;
+  var PACK_EVENT_NAMES = {
+    medicine: "药",
+    barley: "青稞",
+    pot: "铁锅",
+    raincloth: "雨布",
+    shoes: "布鞋",
+    giftBarley: "冬生的青稞"
+  };
+  var packEvents = [];
+  // 面板高亮与对话框右侧标识都只活在本次会话里；不写档，读档不会重播上一局的“已消耗”。
+  var packFlash = {};
+  var packBadge = null;
   var TEXT_SCALES = [1, 1.15, 1.3];
 
   function isPlainObject(value) {
@@ -339,6 +354,65 @@
     if (flag) state.flags[flag] = false;
   }
 
+  function packItemName(id) {
+    return PACK_EVENT_NAMES[id] || String(id);
+  }
+
+  // 一次选择可能同时扣几件（青稞+药），只记一条，弹窗里并成“青稞、药”。
+  function recordPackEvent(items, reason, sourcePath) {
+    if (!Array.isArray(items)) return false;
+    var cleaned = items.filter(function (id, index, list) {
+      return typeof id === "string" && id !== "" && list.indexOf(id) === index;
+    });
+    var why = typeof reason === "string" ? reason.trim() : "";
+    if (!cleaned.length || !why) return false;
+    packEvents.push({ items: cleaned, reason: why, source: sourcePath || "" });
+    if (packEvents.length > PACK_EVENT_LIMIT) {
+      packEvents = packEvents.slice(-PACK_EVENT_LIMIT);
+    }
+    cleaned.forEach(function (id) {
+      packFlash[id] = { kind: "used", reason: why };
+    });
+    packBadge = { kind: "used", items: cleaned.slice(), reason: why, at: Date.now() };
+    return true;
+  }
+
+  function takePackEvents() {
+    var events = packEvents.slice();
+    packEvents = [];
+    return events;
+  }
+
+  function notePackGain(id, reason) {
+    if (typeof id !== "string" || id === "") return;
+    var why = typeof reason === "string" && reason.trim() ? reason.trim() : "你把它装进了行囊";
+    var now = Date.now();
+    packFlash[id] = { kind: "gained", reason: why };
+    // 一次多选会连续写好几件；500ms 内合并成“获得：药、青稞”，
+    // 隔了场景的两次获得仍各显各的，不把旧事混进新提示。
+    if (packBadge && packBadge.kind === "gained" && now - packBadge.at < 500) {
+      if (packBadge.items.indexOf(id) === -1) packBadge.items.push(id);
+      packBadge.reason = why;
+      packBadge.at = now;
+      return;
+    }
+    packBadge = { kind: "gained", items: [id], reason: why, at: now };
+  }
+
+  function packBadgeInfo() {
+    if (!packBadge) return null;
+    return { kind: packBadge.kind, items: packBadge.items.slice(), reason: packBadge.reason };
+  }
+
+  function clearPackFlash() {
+    packFlash = {};
+  }
+
+  function resetPackFeedback() {
+    packFlash = {};
+    packBadge = null;
+  }
+
   // 剧本用 item.* 表示“用掉了/拿到了”，物资栏与 packUsage 读 inventory.items。
   // 旗标是权威，清单只是镜像：写旗标时同步，免得药喂给飞毛腿后面板里还挂着一包。
   function mirrorPackItem(state, flag, value) {
@@ -379,17 +453,29 @@
     else if (key === "barley+medicine") recipe = { delta: 1, items: ["barley", "medicine"], label: "青稞和药" };
     else if (key === "barley+giftBarley") recipe = { delta: 2, items: ["barley", "giftBarley"], label: "青稞" };
     else if (key === "giftBarley+medicine") recipe = { delta: 1, items: ["giftBarley", "medicine"], label: "冬生的青稞和药" };
-    if (!recipe) return { ok: false, reason: "不认识这组物资。" };
-    if (recipe.items.indexOf("raincloth") !== -1 && state.chapterId !== "grass") {
-      return { ok: false, reason: "雨布只能在草地使用。" };
+    if (!recipe) {
+      return { ok: false, missing: [], reason: "由于这组物资凑不成一份补给，什么也没用上。" };
     }
-    if (state.flags.condition >= 4) return { ok: false, reason: "状态已足够。" };
-    for (var i = 0; i < recipe.items.length; i += 1) {
-      if (!hasPackItem(state, recipe.items[i])) return { ok: false, reason: "行囊里没有这件东西。" };
+    if (recipe.items.indexOf("raincloth") !== -1 && state.chapterId !== "grass") {
+      return { ok: false, missing: [], reason: "雨布只能在草地用，这一份补给暂时用不上。" };
+    }
+    if (state.flags.condition >= 4) {
+      return { ok: false, missing: [], reason: "你的状态已经优秀，再用物资也补不上去。" };
+    }
+    var missing = recipe.items.filter(function (id) {
+      return !hasPackItem(state, id);
+    });
+    if (missing.length) {
+      return {
+        ok: false,
+        missing: missing,
+        reason: "由于行囊里没有" + missing.map(packItemName).join("、") + "，这份补给用不了。"
+      };
     }
     recipe.items.forEach(function (id) {
       consumePackItem(state, id);
     });
+    recordPackEvent(recipe.items, recipe.items.length > 1 ? "你拿它们补充体力" : "你拿它补充体力", "pack");
     setFlag(state, "condition", "+" + recipe.delta, "你用了" + recipe.label);
     state.flags.load = packUsage(state);
     syncDerivedFlags(state);
@@ -1531,6 +1617,12 @@
     }
 
     var current = state.flags[path];
+    // 只有“本来在行囊里、这一步变成 false”才算消耗；p024 重装时多选会先置 false，
+    // 但那条路径不带 reason，recordPackEvent 会拒绝，不会把挑东西误报成消耗。
+    // 反向的 false→true 是“捡到/装进行囊”，面板高亮与右侧标识同样需要知道。
+    var packItemId = INVENTORY_BY_ITEM_FLAG[path] || "";
+    if (!packItemId && path === "inventory.giftBarley") packItemId = "giftBarley";
+    var itemWasHeld = packItemId !== "" && current === true;
     var next;
 
     if (typeof value === "boolean") {
@@ -1590,6 +1682,21 @@
     state.flags[path] = next;
     if (path === "inventory.giftBarley") state.inventory.giftBarley = next === true;
     mirrorPackItem(state, path, next);
+    if (packItemId) {
+      if (itemWasHeld && next === false) {
+        if (typeof reason === "string" && reason.trim()) {
+          recordPackEvent([packItemId], reason, path);
+        } else {
+          // 多选重装会先统一置 false；这一步不是消耗，不应留下“已消耗”的痕迹。
+          delete packFlash[packItemId];
+          if (packBadge && packBadge.kind === "gained" && packBadge.items.indexOf(packItemId) !== -1) {
+            packBadge = null;
+          }
+        }
+      } else if (!itemWasHeld && next === true) {
+        notePackGain(packItemId, reason);
+      }
+    }
     syncDerivedFlags(state);
     recordStatusDiff(beforeStatus, statusSnapshot(state.flags), reason, path);
     return true;
@@ -1770,6 +1877,11 @@
     packCapacity: packCapacity,
     canAddMultiOption: canAddMultiOption,
     usePackItems: usePackItems,
+    packItemName: packItemName,
+    takePackEvents: takePackEvents,
+    packBadgeInfo: packBadgeInfo,
+    resetPackFeedback: resetPackFeedback,
+    clearPackFlash: clearPackFlash,
     conditionLabel: conditionLabel,
     playerStatusLabel: playerStatusLabel,
     companionStatusLabel: companionStatusLabel,
@@ -3044,6 +3156,12 @@
     "vn-title-place",
     "status-notice",
     "status-notice-list",
+    "pack-notice",
+    "pack-notice-kicker",
+    "pack-notice-list",
+    "vn-pack-used",
+    "vn-pack-used-label",
+    "pack-used-detail",
     "vn-measure",
     "vn-settings",
     "settings-danger",
@@ -3158,6 +3276,14 @@
   var statusNoticeOpen = false;
   var statusQueue = [];
   var statusRunLog = [];
+  var packNoticeTimer = 0;
+  var packNoticeOpen = false;
+  var packQueue = [];
+  var pendingLackEvents = [];
+  var lackFlushPending = false;
+  var packLackShown = {};
+  var packDetailTimer = 0;
+  var packDetailPinned = false;
   // 状态原因只在变化后完整显示几秒，随后折叠成“状态 · 良好”；点 HUD 可看本周目记录。
   var STATUS_REASON_MS = 6000;
   var statusReasonUntil = 0;
@@ -5016,6 +5142,8 @@
       cancelChoiceTimer();
       stopInteract();
       clearStatusNotice();
+      clearPackNotice();
+      syncPackBadge();
       if (packState.open) closePackPanel(true);
       if (bagConfirmState.open) closeBagConfirm(true);
       if (doorState.open) {
@@ -5197,6 +5325,13 @@
     updateDebug();
     drainStatusEvents();
     flushStatusNotice();
+    drainPackEvents();
+    if (lackFlushPending && found.node.type !== "choice" && found.node.type !== "multichoice") {
+      lackFlushPending = false;
+      flushPackNotice();
+    }
+    syncPackBadge();
+    flushPackNotice();
   }
 
   /* ---------------- 打字机与分页 ---------------- */
@@ -5341,6 +5476,10 @@
     if (titleCardState.open || codexState.open) return;
     if (dangerState.open || packState.open || doorState.open || bagConfirmState.open) return;
     if (performance.now() < inputLockUntil) return;
+    if (els.packUsedDetail && !els.packUsedDetail.hidden) {
+      closePackDetail();
+      return;
+    }
     var node = currentNode(state);
     if (!node || node.type !== "line") return;
     cancelAuto();
@@ -5369,6 +5508,13 @@
 
   /* ---------------- 限时选项 ---------------- */
 
+  function missingRequirementItem(requires) {
+    if (typeof requires !== "string") return "";
+    var flag = requires.trim();
+    if (flag.charAt(0) === "!") return "";
+    return INVENTORY_BY_ITEM_FLAG[flag] || "";
+  }
+
   function renderChoice(node) {
     historyPush({ t: "prompt", c: state.chapterId, n: node.id, k: "choice" });
     els.vnChoices.hidden = false;
@@ -5380,6 +5526,7 @@
     els.vnChoiceHead.classList.remove("is-timeout");
     els.vnChoices.textContent = "";
     els.vnChoices.style.setProperty("--choice-progress", "1");
+    var lacks = [];
 
     // 缺物资的条件选项也留在原位，置灰禁用；玩家能看到“本来可以怎么做”。
     (node.options || []).forEach(function (option) {
@@ -5389,10 +5536,18 @@
       button.className = "xb-choice";
       button.dataset.action = "choose";
       button.dataset.key = option.key;
+      var lackText = "";
       if (!available) {
         button.disabled = true;
         button.classList.add("is-unavailable");
         button.setAttribute("aria-disabled", "true");
+        var missingId = missingRequirementItem(option.requires);
+        if (missingId) {
+          lackText = option.lackText || ("缺少" + XB.core.packItemName(missingId) + "，这件事做不了。");
+          if (!packLackShown[node.id]) {
+            lacks.push({ kind: "lack", items: [missingId], reason: lackText, source: node.id });
+          }
+        }
       }
 
       var index = document.createElement("span");
@@ -5406,16 +5561,23 @@
       var fill = document.createElement("i");
       timer.append(fill);
 
-      if (option.cost && !node.hideCost) {
+      if (lackText || (option.cost && !node.hideCost)) {
         var cost = document.createElement("span");
-        cost.className = "xb-choice__cost";
-        cost.textContent = "代价 · " + option.cost;
+        cost.className = "xb-choice__cost" + (lackText ? " is-lack" : "");
+        cost.textContent = lackText || "代价 · " + option.cost;
         button.append(index, label, cost, timer);
       } else {
         button.append(index, label, timer);
       }
       els.vnChoices.append(button);
     });
+
+    if (lacks.length) {
+      pendingLackEvents = lacks;
+      packLackShown[node.id] = true;
+    } else if (!packLackShown[node.id]) {
+      pendingLackEvents = [];
+    }
 
     choiceRun.node = node;
     choiceRun.resolved = false;
@@ -5515,6 +5677,11 @@
     els.vnChoiceHead.classList.remove("is-timeout");
     els.vnChoicePrompt.hidden = true;
     els.vnChoiceStakes.hidden = true;
+    if (pendingLackEvents.length) {
+      packQueue = packQueue.concat(pendingLackEvents).slice(-12);
+      pendingLackEvents = [];
+      lackFlushPending = true;
+    }
   }
 
   /* ---------------- 多选（行囊 / 弃物） ---------------- */
@@ -6835,6 +7002,8 @@
     if (callback) callback();
     drainStatusEvents();
     flushStatusNotice();
+    drainPackEvents();
+    flushPackNotice();
   }
 
   function badgeClassFor(text) {
@@ -8480,18 +8649,29 @@
 
   function packItemRows() {
     var rows = [];
-    var add = function (id, name, note, units) {
-      rows.push({ id: id, name: name, note: note, units: units });
+    var add = function (id, name, note, units, held) {
+      var flash = packFlash[id];
+      // 已消耗的东西不在清单里了，但它还要在原位置留一行“已消耗”，
+      // 否则玩家只看到行数变少，不知道少的到底是哪一件。
+      if (!held && !(flash && flash.kind === "used")) return;
+      rows.push({
+        id: id,
+        name: name,
+        note: flash && flash.kind === "used" ? "已消耗 · " + cleanStatusReason(flash.reason) : note,
+        units: flash && flash.kind === "used" ? 0 : units,
+        flash: flash ? flash.kind : ""
+      });
     };
-    if (state.inventory.items.indexOf("roster") !== -1) add("roster", "花名册", "一直贴身带着，不占格。", 0);
-    if (state.inventory.items.indexOf("pencil") !== -1) add("pencil", "铅笔", "记名字用的，不占格。", 0);
-    if (state.flags["item.door"] === true) add("door", "门板", "占两格；可铺桥、挡雨、当床板；草地上要状态优秀才背得出去。", DOOR_UNITS);
-    if (state.inventory.items.indexOf("medicine") !== -1) add("medicine", "药", "两包草药，油纸裹着。半格。", 1);
-    if (state.inventory.items.indexOf("barley") !== -1) add("barley", "青稞", "一小袋炒青稞。半格。", 1);
-    if (state.inventory.items.indexOf("shoes") !== -1) add("shoes", "布鞋", "新纳的底，针脚密。一格。", 2);
-    if (state.inventory.items.indexOf("pot") !== -1) add("pot", "铁锅", "家里那口铁锅。两格。", 4);
-    if (state.inventory.items.indexOf("raincloth") !== -1) add("raincloth", "雨布", "补过三次的油布。两格，只能在草地使用。", 4);
-    if (state.inventory.giftBarley === true) add("giftBarley", "冬生的青稞", "他塞给我的，不占格。", 0);
+    var has = function (id) { return state.inventory.items.indexOf(id) !== -1; };
+    add("roster", "花名册", "一直贴身带着，不占格。", 0, has("roster"));
+    add("pencil", "铅笔", "记名字用的，不占格。", 0, has("pencil"));
+    add("door", "门板", "占两格；可铺桥、挡雨、当床板；草地上要状态优秀才背得出去。", DOOR_UNITS, state.flags["item.door"] === true);
+    add("medicine", "药", "两包草药，油纸裹着。半格。", 1, has("medicine"));
+    add("barley", "青稞", "一小袋炒青稞。半格。", 1, has("barley"));
+    add("shoes", "布鞋", "新纳的底，针脚密。一格。", 2, has("shoes"));
+    add("pot", "铁锅", "家里那口铁锅。两格。", 4, has("pot"));
+    add("raincloth", "雨布", "补过三次的油布。两格，只能在草地使用。", 4, has("raincloth"));
+    add("giftBarley", "冬生的青稞", "他塞给我的，不占格。", 0, state.inventory.giftBarley === true);
     return rows;
   }
 
@@ -8508,7 +8688,7 @@
       label: "雨布",
       delta: 1,
       disabled: state.chapterId !== "grass",
-      reason: "雨布只能在草地使用。"
+      reason: "雨布只能在草地用，暂时补不了体力。"
     });
     if (has("medicine") && has("barley")) recipes.push({ key: "barley+medicine", label: "药 + 青稞", delta: 1, disabled: false });
     if (has("barley") && has("giftBarley")) recipes.push({ key: "barley+giftBarley", label: "青稞 + 冬生的青稞", delta: 2, disabled: false });
@@ -8547,13 +8727,13 @@
     els.packList.textContent = "";
     packItemRows().forEach(function (row) {
       var item = document.createElement("div");
-      item.className = "xb-pack__item";
+      item.className = "xb-pack__item" + (row.flash ? " is-pack-" + row.flash : "");
       var name = document.createElement("span");
       name.className = "xb-pack__item-name";
       name.textContent = row.name;
       var units = document.createElement("span");
       units.className = "xb-pack__item-units";
-      units.textContent = row.units ? formatSlots(row.units) : "不占格";
+      units.textContent = row.flash === "used" ? "已消耗" : row.units ? formatSlots(row.units) : "不占格";
       var note = document.createElement("span");
       note.className = "xb-pack__item-note";
       note.textContent = row.note;
@@ -8569,12 +8749,16 @@
     if (state.flags.condition >= 4) {
       var full = document.createElement("p");
       full.className = "xb-pack__empty";
-      full.textContent = "状态已经是优秀，不需要再用物资。";
+      full.textContent = "由于你的状态已经是优秀，再用物资也补不上去了。";
       els.packList.append(full);
     } else if (!recipes.length) {
       var none = document.createElement("p");
       none.className = "xb-pack__empty";
-      none.textContent = door ? "没有能用的物资了。" : "现在没有能用的组合。";
+      none.textContent = door
+        ? "由于没有能用的物资了，门板背不到吴起。"
+        : warning
+          ? "由于没有能用的物资了，你撑不过这片草地。"
+          : "由于行囊里没有能补体力的物资，你的状态只能硬撑。";
       els.packList.append(none);
     } else {
       var actions = document.createElement("div");
@@ -8592,9 +8776,9 @@
       els.packList.append(actions);
     }
     els.packNote.textContent = door
-      ? "门板还在你背上，但你的手已经握不住它。用物资把状态补回“优秀”；补不回来，就只能把它放下。"
+      ? "由于你的状态不够，门板还在你背上，你的手却已经握不住它。用物资把状态补回“优秀”；补不回来，就只能把它放下。"
       : warning
-        ? "用物资把状态提回“勉强”以上；不用就走不出去。"
+        ? "由于你的状态已经撑不住，必须把状态提回“勉强”以上；不用物资就走不出去。"
         : intro
           ? "你当前的状态为良好。使用物资可以把状态提到优秀；草地尽头还要留够能把状态补回优秀的物资（可以分几次用），门板才背得过去。"
           : "使用物资会消耗它；状态到优秀后不再需要。";
@@ -8602,7 +8786,7 @@
     els.packClose.hidden = warning;
     els.packContinue.hidden = !warning;
     els.packContinue.textContent = warning
-      ? (recipes.length ? "放弃补给，继续赶路" : "没有物资，继续赶路")
+      ? (recipes.length ? "放弃补给，继续赶路" : "没有物资，只能继续赶路")
       : "继续（不使用）";
   }
 
@@ -8614,6 +8798,7 @@
     packState.previousFocus = document.activeElement;
     renderPack();
     els.packPanel.hidden = false;
+    syncPackBadge();
     els.packClose.focus();
     refreshAudioDuck();
   }
@@ -8626,8 +8811,12 @@
     packState.previousFocus = null;
     if (!keepFocus && previous && previous.focus && previous !== document.body) previous.focus();
     refreshAudioDuck();
+    XB.core.clearPackFlash();
     drainStatusEvents();
     flushStatusNotice();
+    drainPackEvents();
+    syncPackBadge();
+    flushPackNotice();
   }
 
   function finishPackPanel() {
@@ -8650,7 +8839,9 @@
     }
     XB.audio.cue("choice-select");
     drainStatusEvents();
+    drainPackEvents();
     updateHud();
+    syncPackBadge();
     if (packState.mode === "warning" && state.flags.condition > 1) {
       toast("状态回到" + XB.core.conditionLabel(state.flags.condition) + "，能走了。");
       finishPackPanel();
@@ -8812,8 +9003,13 @@
       return;
     }
     clearStatusNotice();
+    clearPackNotice();
     resetStatusRunLog();
     XB.core.takeStatusEvents();
+    XB.core.takePackEvents();
+    XB.core.resetPackFeedback();
+    packLackShown = {};
+    syncPackBadge();
     state = defaults();
     state.settings = cloneJson(savesStore.settings);
     branchLastRun = null;
@@ -8878,6 +9074,7 @@
 
   function openPause() {
     if (!state || state.scene !== "vn" || state.paused) return;
+    closePackDetail();
     state.paused = true;
     settingsState.open = false;
     settingsState.from = "";
@@ -9185,6 +9382,19 @@
       event.stopPropagation();
       openStatusLogFromHud();
     });
+    // 鼠标悬浮先给一眼，点击才钉住；触屏只走点击，不依赖 hover。
+    els.vnPackUsed.addEventListener("pointerenter", function (event) {
+      if (event.pointerType === "mouse" && !packDetailPinned) openPackDetail(false);
+    });
+    els.vnPackUsed.addEventListener("pointerleave", function (event) {
+      if (event.pointerType === "mouse" && !packDetailPinned) closePackDetail();
+    });
+    els.vnPackUsed.addEventListener("focus", function () {
+      if (!packDetailPinned) openPackDetail(false);
+    });
+    els.vnPackUsed.addEventListener("blur", function () {
+      if (!packDetailPinned) closePackDetail();
+    });
     els.codexClose.addEventListener("click", function () {
       closeCodex();
     });
@@ -9412,6 +9622,11 @@
       return;
     }
     if (event.key === "Escape") {
+      if (els.packUsedDetail && !els.packUsedDetail.hidden) {
+        closePackDetail();
+        event.preventDefault();
+        return;
+      }
       if (codexState.open) {
         closeCodex();
         event.preventDefault();
@@ -9658,6 +9873,9 @@
         break;
       case "pack":
         if (!els.vnPackButton.disabled) openPackPanel("browse", null);
+        break;
+      case "pack-used-detail":
+        togglePackDetail();
         break;
       case "pack-use":
         usePackRecipe(target.dataset.packUse);
@@ -9943,6 +10161,184 @@
   function clearStatusNotice() {
     statusQueue = [];
     hideStatusNotice();
+  }
+
+  /* ---------------- 物资消耗弹窗 ---------------- */
+
+  function packEventLine(event) {
+    var reason = cleanStatusReason(event.reason);
+    var names = (event.items || []).map(function (id) {
+      return XB.core.packItemName(id);
+    }).join("、");
+    if (event.kind === "lack") return "由于" + reason + "。";
+    return "由于" + reason + "，" + names + "已被消耗。";
+  }
+
+  // 与状态弹窗同一套显示条件：标题卡、行囊面板、选择弹窗、图鉴、暂停时不抢正文。
+  function canShowPackNotice() {
+    if (els.vnChoices && !els.vnChoices.hidden) return false;
+    if (els.vnMultichoice && !els.vnMultichoice.hidden) return false;
+    return canShowStatusNotice();
+  }
+
+  function drainPackEvents() {
+    if (!XB.core || typeof XB.core.takePackEvents !== "function") return;
+    var events = XB.core.takePackEvents();
+    if (!events.length) return;
+    packQueue = packQueue.concat(events).slice(-12);
+    syncPackBadge();
+    flushPackNotice();
+  }
+
+  function flushPackNotice() {
+    if (packNoticeOpen || !packQueue.length || !canShowPackNotice()) return;
+    var batch = packQueue.splice(0, 3);
+    showPackNotice(batch);
+  }
+
+  function showPackNotice(events) {
+    if (!els.packNotice || !events.length) return;
+    clearTimeout(packNoticeTimer);
+    els.packNoticeList.textContent = "";
+    events.forEach(function (event) {
+      var row = document.createElement("li");
+      row.textContent = packEventLine(event);
+      els.packNoticeList.append(row);
+    });
+    var names = [];
+    events.forEach(function (event) {
+      (event.items || []).forEach(function (id) {
+        var name = XB.core.packItemName(id);
+        if (names.indexOf(name) === -1) names.push(name);
+      });
+    });
+    if (els.packNoticeKicker) els.packNoticeKicker.textContent = names.length ? names.join("、") : "物资消耗";
+    els.packNotice.hidden = false;
+    packNoticeOpen = true;
+    packNoticeTimer = window.setTimeout(function () {
+      hidePackNotice();
+      flushPackNotice();
+    }, STATUS_NOTICE_MS + Math.max(0, events.length - 1) * STATUS_NOTICE_LINE_MS);
+  }
+
+  function hidePackNotice() {
+    clearTimeout(packNoticeTimer);
+    packNoticeTimer = 0;
+    packNoticeOpen = false;
+    if (els.packNotice) els.packNotice.hidden = true;
+  }
+
+  function clearPackNotice() {
+    packQueue = [];
+    pendingLackEvents = [];
+    lackFlushPending = false;
+    hidePackNotice();
+  }
+
+  /* ---------------- 物资面板高亮与对话框右侧标识 ---------------- */
+
+  var PACK_EFFECT_TEXT = {
+    medicine: "药能让一个伤员多撑一夜。",
+    barley: "青稞能替你撑过断粮的那几天。",
+    pot: "铁锅能煮雪水，也能炒一把青稞。",
+    raincloth: "雨布能挡雨，也能裹住伤员。",
+    shoes: "布鞋能在草地那几天垫住脚，保住一点暖气。",
+    giftBarley: "这是冬生塞给你的口粮。他希望你走到吴起。"
+  };
+
+  function packEffectText(id) {
+    return PACK_EFFECT_TEXT[id] || "它能让你多撑一段路。";
+  }
+
+  function packNames(items) {
+    return (items || []).map(function (id) {
+      return XB.core.packItemName(id);
+    }).join("、");
+  }
+
+  function buildPackDetail(badge) {
+    if (!els.packUsedDetail) return;
+    els.packUsedDetail.textContent = "";
+    var summary = document.createElement("p");
+    summary.className = "xb-pack-detail__summary";
+    if (badge.kind === "used") {
+      summary.textContent = "由于" + cleanStatusReason(badge.reason) + "，" + packNames(badge.items) + "已被消耗。";
+    } else {
+      summary.textContent = "你获得了" + packNames(badge.items) + "。";
+    }
+    els.packUsedDetail.append(summary);
+    (badge.items || []).forEach(function (id) {
+      var row = document.createElement("p");
+      row.className = "xb-pack-detail__item";
+      var name = document.createElement("b");
+      name.textContent = XB.core.packItemName(id);
+      var effect = document.createElement("span");
+      effect.textContent = packEffectText(id);
+      row.append(name, document.createTextNode("："), effect);
+      els.packUsedDetail.append(row);
+    });
+  }
+
+  function syncPackBadge() {
+    if (!els.vnPackUsed) return;
+    var badge = XB.core && typeof XB.core.packBadgeInfo === "function" ? XB.core.packBadgeInfo() : null;
+    // 面板打开时先把右侧标识收起来，避免它从面板右边探出来；关闭面板后再显示。
+    if (!badge || !state || state.scene !== "vn" || packState.open) {
+      els.vnPackUsed.hidden = true;
+      closePackDetail();
+      return;
+    }
+    var label = (badge.kind === "used" ? "已消耗：" : "获得：") + packNames(badge.items);
+    els.vnPackUsed.hidden = false;
+    els.vnPackUsed.dataset.kind = badge.kind;
+    els.vnPackUsed.title = label;
+    if (els.vnPackUsedLabel) els.vnPackUsedLabel.textContent = label;
+    if (els.packUsedDetail && !els.packUsedDetail.hidden) buildPackDetail(badge);
+    els.vnPackUsed.setAttribute("aria-expanded", els.packUsedDetail && !els.packUsedDetail.hidden ? "true" : "false");
+  }
+
+  function openPackDetail(pinned) {
+    var badge = XB.core && typeof XB.core.packBadgeInfo === "function" ? XB.core.packBadgeInfo() : null;
+    if (!badge || !els.vnPackUsed || els.vnPackUsed.hidden || !els.packUsedDetail) return;
+    buildPackDetail(badge);
+    els.packUsedDetail.hidden = false;
+    els.vnPackUsed.setAttribute("aria-expanded", "true");
+    packDetailPinned = pinned === true;
+    clearTimeout(packDetailTimer);
+    if (packDetailPinned) {
+      packDetailTimer = window.setTimeout(function () {
+        packDetailTimer = 0;
+        closePackDetail();
+      }, 8000);
+    }
+    hidePackNotice();
+  }
+
+  function closePackDetail() {
+    if (!els.packUsedDetail) return;
+    var wasOpen = !els.packUsedDetail.hidden;
+    clearTimeout(packDetailTimer);
+    packDetailTimer = 0;
+    packDetailPinned = false;
+    els.packUsedDetail.hidden = true;
+    if (els.vnPackUsed) els.vnPackUsed.setAttribute("aria-expanded", "false");
+    if (wasOpen) flushPackNotice();
+  }
+
+  function togglePackDetail() {
+    if (!els.packUsedDetail) return;
+    if (els.packUsedDetail.hidden) {
+      openPackDetail(true);
+    } else if (!packDetailPinned) {
+      packDetailPinned = true;
+      clearTimeout(packDetailTimer);
+      packDetailTimer = window.setTimeout(function () {
+        packDetailTimer = 0;
+        closePackDetail();
+      }, 8000);
+    } else {
+      closePackDetail();
+    }
   }
 
   XB.engine = {
