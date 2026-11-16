@@ -168,7 +168,8 @@ function checkHtml() {
       fail("C03", "index.html 有内联 script：" + tag);
       return;
     }
-    srcs.push(path.basename(found[1]));
+    // 运行时给脚本加了 ?v=缓存串，比较顺序前先剥掉查询串/锚点
+    srcs.push(path.basename(found[1].split("?")[0].split("#")[0]));
   });
   if (srcs.join(",") !== SCRIPT_ORDER.join(",")) {
     fail("C03", "脚本顺序应为 " + SCRIPT_ORDER.join(" → ") + "，实际 " + srcs.join(" → "));
@@ -206,7 +207,9 @@ function checkBudget() {
     jsBytes += zlib.gzipSync(fs.readFileSync(path.join(PROJECT_DIR, file))).length;
   });
   var cssBytes = zlib.gzipSync(fs.readFileSync(path.join(PROJECT_DIR, "style.css"))).length;
-  if (jsBytes > 150 * 1024) fail("C05", "JS gzip " + jsBytes + "B 超过 150KB");
+  // 纯代码约 147KB；v1.9.2 起 art.js 内联 12 张 320×180 LQIP（约 63KB gzip），
+  // 用于慢网首屏保证照片场景不回落旧版画，因此总预算抬到 220KB。
+  if (jsBytes > 220 * 1024) fail("C05", "JS gzip " + jsBytes + "B 超过 220KB");
   if (cssBytes > 30 * 1024) fail("C05", "CSS gzip " + cssBytes + "B 超过 30KB");
   notes.push("C05 OK JS gzip " + Math.round(jsBytes / 1024) + "KB / CSS gzip " + Math.round(cssBytes / 1024) + "KB");
 }
@@ -236,7 +239,35 @@ function checkPlaceholders() {
   });
   var engine = stripComments(readProject("engine.js"));
   if (!/XB\.art\b/.test(engine)) fail("C07", "engine.js 未接入 XB.art");
-  notes.push("C07 OK art.js 五项契约就位、engine 已接入 XB.art");
+  // 慢网兜底：每张照片底图都必须有内联 LQIP，否则照片场景会空白。
+  var lqipBlock = /var PLATE_LQIP = \{([\s\S]*?)\n  \};/.exec(art);
+  var baseBlock = /var PLATE_BASE_BY_SCENE = \{([\s\S]*?)\n  \};/.exec(art);
+  if (!lqipBlock) {
+    fail("C07", "art.js 缺 PLATE_LQIP");
+  } else if (!baseBlock) {
+    fail("C07", "art.js 缺 PLATE_BASE_BY_SCENE");
+  } else {
+    var lqipKeys = [];
+    var lqipRe = /^    (\w+): "data:image\/webp;base64,/gm;
+    var found;
+    while ((found = lqipRe.exec(lqipBlock[1]))) lqipKeys.push(found[1]);
+    var bases = {};
+    var baseRe = /: "(plate_\w+)"/g;
+    while ((found = baseRe.exec(baseBlock[1]))) bases[found[1]] = true;
+    var missing = Object.keys(bases).filter(function (base) { return lqipKeys.indexOf(base) === -1; });
+    if (missing.length) fail("C07", "照片底图缺 LQIP：" + missing.join(", "));
+    if (lqipKeys.length !== Object.keys(bases).length) {
+      fail("C07", "LQIP 数量 " + lqipKeys.length + " 与底图数量 " + Object.keys(bases).length + " 不一致");
+    }
+  }
+  // 照片场景在图片未到时必须停在 LQIP，不能回落到程序化旧画。
+  if (art.indexOf("else if (!fullSrc) PAINTERS[sceneId](ctx, random, palette);") === -1) {
+    fail("C07", "art.js 缺“仅无照片场景才画版画”的分支");
+  }
+  ["setCanvasFallback", "is-lqip", "PLATE_RETRY_DELAYS", "retryFailedImages"].forEach(function (needle) {
+    if (art.indexOf(needle) === -1) fail("C07", "art.js 缺慢网契约 " + needle);
+  });
+  notes.push("C07 OK art.js 五项契约就位、engine 已接入 XB.art、照片底图 LQIP 齐全且不回退旧画");
 }
 
 function checkDocs() {
@@ -2321,6 +2352,133 @@ function checkChapterReplay() {
   notes.push("C52 OK 章节重玩：独立底片 2MB / 两步面板 / 拷贝前情与回顾 / 新档与章末采集 / 初始化清理");
 }
 
+// C53：物资消耗提示——剧情扣物资与主动使用都入队，重装/读档不误报
+function checkPackNotice() {
+  var XB;
+  try {
+    XB = loadGame(["story.js", "engine.js"]);
+  } catch (err) {
+    fail("C53", "story/engine 无法在同一上下文加载：" + err.message);
+    return;
+  }
+  var engine = stripComments(readProject("engine.js"));
+  var html = readProject("index.html");
+  var css = readProject("style.css");
+  ["pack-notice", "pack-notice-kicker", "pack-notice-list", "vn-pack-used", "vn-pack-used-label", "pack-used-detail"].forEach(function (id) {
+    if (html.indexOf('id="' + id + '"') === -1) fail("C53", "index.html 缺 #" + id);
+  });
+  if (html.indexOf("xb-pack-notice") === -1) fail("C53", "index.html 缺物资消耗弹窗样式类");
+  if (html.indexOf("物资消耗") === -1) fail("C53", "物资消耗弹窗缺 kicker 文案");
+  if (html.indexOf('data-action="pack-used-detail"') === -1) fail("C53", "index.html 缺右侧物资标识入口");
+  if (html.indexOf('aria-controls="pack-used-detail"') === -1) fail("C53", "物资标识缺 aria-controls");
+  if (css.indexOf(".xb-pack-notice") === -1) fail("C53", "style.css 缺 .xb-pack-notice");
+  if (css.indexOf("bottom: 188px") === -1) fail("C53", "style.css 缺对话框上方定位 bottom:188px");
+  if (css.indexOf(".vn-pack-used") === -1) fail("C53", "style.css 缺 .vn-pack-used");
+  if (css.indexOf(".xb-pack-detail") === -1) fail("C53", "style.css 缺 .xb-pack-detail");
+  if (css.indexOf(".is-pack-used") === -1) fail("C53", "style.css 缺行囊已消耗高亮");
+  if (css.indexOf(".is-pack-gained") === -1) fail("C53", "style.css 缺行囊获得高亮");
+  if (css.indexOf(".xb-choice__cost.is-lack") === -1) fail("C53", "style.css 缺缺物资原因样式");
+  ["recordPackEvent", "takePackEvents", "packItemName", "drainPackEvents", "flushPackNotice", "packEventLine", "notePackGain", "packBadgeInfo", "resetPackFeedback", "clearPackFlash", "syncPackBadge", "buildPackDetail", "PACK_EFFECT_TEXT"].forEach(function (name) {
+    if (engine.indexOf(name) === -1) fail("C53", "engine.js 缺 " + name);
+  });
+
+  XB.core.takePackEvents();
+  var carried = XB.core.defaults();
+  carried.chapterId = "xiangjiang";
+  carried.flags["item.barley"] = true;
+  carried.inventory.items = ["roster", "pencil", "barley"];
+  if (!XB.core.startChapter(carried, "xiangjiang", "x025b")) {
+    fail("C53", "定位不到 x025b");
+  } else {
+    var node = XB.core.currentNode(carried);
+    if (!node || node.id !== "x025b") {
+      fail("C53", "x025b 不在当前节点：" + (node && node.id));
+    } else if (!XB.core.applyChoice(carried, node, "A", false)) {
+      fail("C53", "x025b A 回头接应老周失败");
+    } else {
+      var events = XB.core.takePackEvents();
+      if (events.length !== 1) {
+        fail("C53", "回头接应老周应弹一条物资消耗，实际 " + JSON.stringify(events));
+      } else if (events[0].items.join(",") !== "barley" || events[0].reason !== "回头接应老周") {
+        fail("C53", "青稞消耗事件内容不对：" + JSON.stringify(events[0]));
+      }
+      var usedBadge = XB.core.packBadgeInfo();
+      if (!usedBadge || usedBadge.kind !== "used" || usedBadge.items.join(",") !== "barley") {
+        fail("C53", "青稞消耗后右侧标识应为“已消耗：青稞”，实际 " + JSON.stringify(usedBadge));
+      }
+      if (carried.flags["item.barley"] !== false) fail("C53", "回头接应老周后青稞仍为 true");
+      XB.core.setFlag(carried, "item.barley", false, "重复写 false");
+      if (XB.core.takePackEvents().length !== 0) fail("C53", "同件物资重复写 false 不应再报消耗");
+    }
+  }
+
+  XB.core.takePackEvents();
+  var empty = XB.core.defaults();
+  empty.chapterId = "xiangjiang";
+  if (!XB.core.startChapter(empty, "xiangjiang", "x025b")) {
+    fail("C53", "无青稞档定位不到 x025b");
+  } else if (!XB.core.applyChoice(empty, XB.core.currentNode(empty), "A", false)) {
+    fail("C53", "无青稞档 x025b A 失败");
+  } else if (XB.core.takePackEvents().length !== 0) {
+    fail("C53", "没有青稞时不应弹青稞消耗");
+  } else if (empty.flags["memory.xiangjiang.binding_lost"] !== true) {
+    fail("C53", "无青稞时应走绑腿丢失分支");
+  }
+
+  XB.core.takePackEvents();
+  var p024 = XB.core.locate("prologue", "p024").node;
+  var picked = XB.core.defaults();
+  if (!XB.core.startChapter(picked, "prologue", "p024")) {
+    fail("C53", "定位不到 p024");
+  } else if (!XB.core.applyMultiChoice(picked, p024, ["medicine", "barley"])) {
+    fail("C53", "p024 选药与青稞失败");
+  } else if (XB.core.takePackEvents().length !== 0) {
+    fail("C53", "序章重装行囊不应误报物资消耗");
+  }
+  var gainedBadge = XB.core.packBadgeInfo();
+  if (!gainedBadge || gainedBadge.kind !== "gained" || gainedBadge.items.sort().join(",") !== "barley,medicine") {
+    fail("C53", "序章装行囊后标识应为“获得：药、青稞”，实际 " + JSON.stringify(gainedBadge));
+  }
+
+  var l019 = XB.core.locate("luding", "l019");
+  var l019b = l019 && l019.node && l019.node.options.filter(function (option) { return option.key === "B"; })[0];
+  if (!l019b || l019b.lackText !== "没有药，飞毛腿背上的血止不住。") {
+    fail("C53", "泸定缺药选项缺少因果提示");
+  }
+  var g018x = XB.core.locate("grass", "g018x");
+  var g018a = g018x && g018x.node && g018x.node.options.filter(function (option) { return option.key === "A"; })[0];
+  if (!g018a || g018a.lackText !== "没有青稞，锅里还是空的。") {
+    fail("C53", "草地缺青稞选项缺少因果提示");
+  }
+
+  XB.core.takePackEvents();
+  XB.core.takeStatusEvents();
+  var used = XB.core.defaults();
+  used.chapterId = "grass";
+  used.flags["item.shoes"] = true;
+  used.inventory.items = ["roster", "pencil", "shoes"];
+  var result = XB.core.usePackItems(used, ["shoes"]);
+  var usePackEvents = XB.core.takePackEvents();
+  if (!result.ok) {
+    fail("C53", "物资面板用布鞋失败：" + result.reason);
+  } else if (usePackEvents.length !== 1 || usePackEvents[0].items.join(",") !== "shoes") {
+    fail("C53", "物资面板使用应弹一条布鞋消耗，实际 " + JSON.stringify(usePackEvents));
+  } else if (usePackEvents[0].reason.indexOf("补充体力") === -1) {
+    fail("C53", "物资面板消耗原因不对：" + usePackEvents[0].reason);
+  }
+
+  used.flags.condition = 2;
+  var missing = XB.core.usePackItems(used, ["barley", "medicine"]);
+  if (missing.ok || !Array.isArray(missing.missing) || missing.missing.indexOf("medicine") === -1) {
+    fail("C53", "缺件使用应返回 missing，实际 " + JSON.stringify(missing));
+  } else if (missing.reason.indexOf("由于行囊里没有") === -1 || missing.reason.indexOf("药") === -1) {
+    fail("C53", "缺件原因应写清缺少什么，实际 " + missing.reason);
+  }
+  XB.core.takeStatusEvents();
+
+  notes.push("C53 OK 物资消耗：剧情扣粮/主动使用入队，缺件写清原因，重装与重复写入不误报，右侧标识与行囊高亮可用");
+}
+
 checkCompile();
 checkForbiddenApis();
 checkHtml();
@@ -2371,6 +2529,7 @@ checkHistoryPanel();
 checkBagConfirm();
 checkDoorAuthority();
 checkChapterReplay();
+checkPackNotice();
 checkReleaseRuntime();
 
 notes.forEach(function (line) {

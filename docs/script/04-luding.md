@@ -68,11 +68,11 @@
 
 >> 选项｜限时 12s｜默认 C｜记录到 choice.luding.door｜when: item.door
 A｜把门板铺上桥面｜set: item.door=false, doorOutcome=bridge, trust=+1, rescues=+1, quality.feimao=3, fate.feimao.dead=false, memory.fly_bridge=true｜cost: 你的门板成了第三块桥板
-B｜先给他上药｜requires: item.medicine｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
+B｜先给他上药｜requires: item.medicine｜lack: 没有药，飞毛腿背上的血止不住｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
 C｜抱着门板先过桥｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你过去了。他没有。
 
 >> 选项｜限时 12s｜默认 B｜记录到 choice.luding.door｜when: !item.door && !choice.luding.door
-A｜把药敷在他背上｜requires: item.medicine｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
+A｜把药敷在他背上｜requires: item.medicine｜lack: 没有药，飞毛腿背上的血止不住｜set: item.medicine=false, rescues=+1, quality.feimao=2, fate.feimao.dead=false, memory.fly_medicine=true｜cost: 药只有一副，你留给了他
 B｜继续走｜set: fate.feimao.dead=true, memory.fly_leave=true｜cost: 你没有停。
 
 [[if:choice.luding.door]]

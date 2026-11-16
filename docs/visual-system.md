@@ -132,10 +132,10 @@
 - 只有一张全屏 `canvas#stage-art`（1280×720，`z-index: var(--z-art)`，`pointer-events: none`，`aria-hidden="true"`），标题 / 地图 / VN 共用；不新增第二张背景画布。
 - API（`XB.art`）：`mount(canvas)`、`paint(canvas, sceneId)`、`resize(displayScale)`、`rng(seed)`、`preload(sceneId)`，常量 `SCENES`。
 - 场景注册表 17 项：`title`、`map`、`yudu_river`、`yudu_night`、`xiangjiang_ford`、`xiangjiang_dawn`、`xiangjiang_map`、`zunyi_hall`、`zunyi_street`、`jinsha_river`、`jinsha_night`、`luding_bridge`、`luding_after`、`grass_marsh`、`grass_dawn`、`wuqi_dawn`、`wuqi_wall`；`story.js` 的 `bg` 必须是其中子集（C11 校验）。
-- 底图：`PLATE_BASE_BY_SCENE` 把场景映射到基名；先加载 `assets/backgrounds/placeholders/plate_*.webp`（480×270）占位，再加载 `assets/backgrounds/webp/plate_*.webp`（1600×900），失败回退 `assets/backgrounds/plate_*.jpg`（1920×1080），再失败才回退原程序化 painter。`paint` 在图片 ready 时 `drawImage` cover-fit 并叠 `PLATE_TINT`（夜/晨）；占位图阶段给 `#stage-art` 加 `is-placeholder`。`title` / `map` 仍为程序化，`title` 使用 `plate_title` 照片底。
+- 底图：`PLATE_BASE_BY_SCENE` 把场景映射到基名；先加载 `assets/backgrounds/placeholders/plate_*.webp`（480×270）占位，再加载 `assets/backgrounds/webp/plate_*.webp`（1600×900），失败回退 `assets/backgrounds/plate_*.jpg`（1920×1080）。三者都未到/失败时，`paint` 不调用程序化 painter，画布保持透明，由内联 320×180 WebP LQIP 的 CSS 背景兜底（`#stage-art.is-lqip`，`cover/center`）；只有无照片的 `map` 走程序化。`paint` 在图片 ready 时 `drawImage` cover-fit 并叠 `PLATE_TINT`（夜/晨）；480 占位图阶段加 `is-placeholder`。
 - 尺寸：`renderScale = clamp(舞台缩放 × devicePixelRatio, 1, 2)`；内部像素 = 1280×720 × renderScale；绘制坐标永远是 1280×720 设计坐标。
 - 绘制时机：`init` mount → `resize` → 各场景 render 时 paint；resize 用一次 `requestAnimationFrame` 合并；本步**不做** rAF 动画循环。
-- 失败兜底：单张底图加载失败只 `console.warn` 并继续用原程序化 painter，不白屏、不弹错；`paint` 整体返回 false 或抛错才由 engine `console.error` + 一次性 toast「插画加载失败」。
+- 失败兜底：单张底图加载失败只 `console.warn`，按 1s / 3s / 8s 重试，并在 `online` / 回到前台时再试；仍失败就停在 LQIP，不回退程序化旧画、不白屏、不弹错。`paint` 整体抛错才由 engine `console.error` + 一次性 toast「插画加载失败」。
 - 性能：照片只解码一次，`drawImage` 在场景切换/加载完成时绘制，不放进 rAF 循环；28s 推拉由 canvas 的 CSS transform 完成，不逐帧重绘。
 - 种子：场景 id 字符串 → FNV-1a → mulberry32；同场景两次绘制路径一致，便于对比与回归。
 - 文字安全区：标题左 0–340 / y 0–620；地图左下 64,660 提示区；VN 底部 560–720 允许画深（被对话框覆盖）。

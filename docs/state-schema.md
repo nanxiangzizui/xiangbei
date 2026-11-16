@@ -211,6 +211,14 @@
 - HUD 的“我”标签在最近一次玩家状态变化后追加短原因（如“良好 · 肩伤未愈”）；原因只保留在内存 `statusEvents`，不写主档。原因显示 6 秒后自动收起为“状态 · 良好”，不长期占用 HUD；点击状态区打开暂停菜单并自动展开“本周目状态记录”，HUD 键位支持 Enter/Space。
 - 暂停菜单“本周目状态记录”读同一内存队列，列最近 8 条（章 · 人物 · 原因），开新档/读档/章节重玩时清空；它不是存档字段，刷新后从当前局重新累计。
 
+### 4.3 物资提示（仅内存，不落档）
+
+- `packEvents`：剧情扣粮/主动使用/获得/缺件的队列，最多 32 条；`recordPackEvent` 写 used，`notePackGain` 写 gained；每条形如 `{items,reason,source,kind?}`，`kind` 缺省为 used，缺件为 lack。
+- `packFlash`：以物品 id 为键，记录 `{kind:"used"|"gained",reason}`，供行囊面板给已消耗幽灵行或获得行加高亮；读 `inventory.items`，不写主档。
+- `packBadge`：最近一次变化的 `{kind,items,reason,at}`；500ms 内的连续获得合并 items；只用于对话框右上 `#vn-pack-used` 与 `#pack-used-detail`。
+- 三个对象都在 `startNewGame`、离开 VN、关闭面板时按需清理（`resetPackFeedback/clearPackFlash`）；刷新页面即丢失，不参与路线、点名、存档或结局判定。未知物品 id 不写；门板不进入物资提示，仍只由 `doorOutcome` 表达。
+- `option.lackText` 是剧本静态字段，不是状态；`requires` 不满足时只用于代价行与 `kind:"lack"` 提示，不写旗标。
+
 ## 5. ending 快照
 
 固定 20 键（16 个既有键 + 可选的 `routeClosing/achievements/lastChoice/chapterTitle`）：`stats/names/answered/missed/cards/route/routeIndex/routeLabel/routeTitle/routeLede/routeClosing/fate/condition/rescues/doorOutcome/strain/recorded/achievements/lastChoice/chapterTitle`。`routeClosing` 是结局页两行收束句；`lastChoice` 记最后一条选择（超时前缀“超时：”），`chapterTitle` 记结局时章名，仅用于存档列表辨识；旧快照缺这些键不重算。

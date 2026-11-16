@@ -11,10 +11,10 @@
   <!-- 首屏静态底图：脚本未到时也先看到新版标题照片，而不是纸纹 fallback。 -->
   <style>
     #scene-title {
-      background: var(--paper) url("./assets/backgrounds/placeholders/plate_title.webp") center / cover no-repeat;
+      background: transparent url("./assets/backgrounds/placeholders/plate_title.webp") center / cover no-repeat;
     }
   </style>
-  <link rel="stylesheet" href="./style.css?v=20261115-title">
+  <link rel="stylesheet" href="./style.css?v=20261116-lqip">
 </head>
 <body>
   <!-- 固定 1280×720 舞台：所有坐标都是舞台坐标（docs/ui-layout.md） -->
@@ -69,6 +69,9 @@
         <p id="vn-name" class="vn-name"></p>
         <p id="vn-text" class="vn-text"></p>
         <span id="vn-next" class="vn-next" aria-hidden="true">▼</span>
+        <!-- 最近一次物资变化：悬浮/点击看“它本来能做什么”，不占正文。 -->
+        <button type="button" id="vn-pack-used" class="vn-pack-used" data-action="pack-used-detail" aria-expanded="false" aria-controls="pack-used-detail" hidden><span id="vn-pack-used-label"></span></button>
+        <div id="pack-used-detail" class="xb-pack-detail" role="tooltip" hidden></div>
       </div>
 
       <div id="vn-choice-head" class="vn-choice-head" hidden>
@@ -115,6 +118,12 @@
       <div id="status-notice" class="xb-status-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
         <p class="xb-status-notice__kicker">状态变化</p>
         <ul id="status-notice-list" class="xb-status-notice__list"></ul>
+      </div>
+
+      <!-- 物资消耗：贴在对话框上方，与状态弹窗分开队列，不遮正文与人名 -->
+      <div id="pack-notice" class="xb-status-notice xb-pack-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <p id="pack-notice-kicker" class="xb-status-notice__kicker">物资消耗</p>
+        <ul id="pack-notice-list" class="xb-status-notice__list"></ul>
       </div>
 
       <!-- 分页量具：屏外，与正文同字号同宽，只用来量行数；不能 display:none -->
@@ -537,8 +546,8 @@
   </div>
 
   <!-- 顺序固定：art → story → engine；全部经典 script，不用 module -->
-  <script src="./art.js"></script>
-  <script src="./story.js"></script>
-  <script src="./engine.js"></script>
+  <script src="./art.js?v=20261116-lqip"></script>
+  <script src="./story.js?v=20261116-lqip"></script>
+  <script src="./engine.js?v=20261116-lqip"></script>
 </body>
 </html>

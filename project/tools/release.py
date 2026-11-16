@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build, verify and hash the static release for 《向北》 v1.9.1-dev.
+"""Build, verify and hash the static release for 《向北》 v1.9.2-dev.
 
 Usage:
   python project/tools/release.py stage
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = ROOT / "project"
 DIST = ROOT / "dist"
-VERSION = "1.9.1-dev"
+VERSION = "1.9.2-dev"
 SITE = DIST / "site"
 PKG = DIST / f"xiangbei-v{VERSION}"
 ZIP = DIST / f"xiangbei-v{VERSION}-offline.zip"
@@ -132,6 +132,8 @@ file:// 下 Edge 可存档；若浏览器禁用 localStorage，游戏会提示
 七段：于都、湘江、遵义、金沙江、泸定、草地、吴起·点名。
 四段核心选择（行囊、弃物、先渡谁、门板/记名）+ 三次救人危机；
 行囊 4 格、状态 0–4、门板去向影响人物命运。
+物资消耗或获得时会在对话框上方提示具体物品；慢网下照片底图未到时
+先显示内嵌微缩图，失败自动重试，不回落旧版程序化画面。
 七张史实图鉴；照片章首卡带日期与地点。
 11 条人物结局（带板 5 + 无板 5 + 坏结局），没有全活；
 结局为点名 + 数字 + 五张精神卡。没有 Game Over，失败只改变代价。

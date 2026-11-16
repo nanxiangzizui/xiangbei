@@ -246,7 +246,7 @@
 | `.xb-gallery__thumb` | 0 | 0 | 82 | 140 | 图鉴卡左侧缩略；锁卡透明度 0.38；实现只创建 `<img>`，不写静态 `img` 标签 |
 | `.xb-gallery__asset-note` | — | — | 100% | — | 图鉴底部照片说明；12px，始终可见 |
 
-- 照片章卡只在对应节点有 `bg` 且图片已加载时加 `.has-photo`；加载失败仍回退原程序化画布，不出现空白。
+- 照片章卡只在对应节点有 `bg` 且图片已加载时加 `.has-photo`；图片未到时章卡显示夜色/压暗层，底层 `#stage-art` 铺内联 LQIP（`.is-lqip`），不回退程序化旧画，不出现旧版场景。
 - 花名册只读当前 `state`：点名前统一「在册」；点名后按 `ending.names.status` 显示「在别的连 / 在 / 你替他答了 / 未应」；不写新档、不新增旗标。
 - 设置滑杆 `input` 事件实时生效并 `saveNow()`；三个滑杆分别写 `volume` / `musicVolume` / `ambienceVolume`，静音仍由 `muted` 统管。
 - 背景照片有 28 秒缓慢推拉（`.stage-art.is-photo`）；`prefers-reduced-motion` 或设置「减少动效」时关闭。
@@ -300,6 +300,20 @@
 - 结局行由 `routeLabel` 与 `routeTitle` 生成：1–11 统一显示「结局N/11（结局名）」，坏结局为「结局11/11（草地无归）」；旧档显示「旧档」。
 - `.xb-ending__names` 桌面 `max-height:172px`，保证 8 名（7(5)/空页）首屏可见；坏结局空名册显示「名册没有翻到吴起。」。
 - 844×390：`#vn-condition` 移到 y=76、字号 22；物资按钮左移 700、190×64；面板 920×≤650、单列物品行；按钮放大到触摸可点；结局页单列、五卡 2 列、名字不限高。
+
+### 11.4 物资消耗/获得提示（2026-11-16）
+
+| 容器 | 位置 | 尺寸 | 说明 |
+|---|---|---|---|
+| `#pack-notice` | 居中，`bottom:188px`（设计底边 y=532） | max-width 860，高度自适应 | 对话框上方；kicker 是本批物品名（单件「青稞」，多件「青稞、药」）；`z=35`、`pointer-events:none`；与人名顶 y=540 留 8px，不压正文 |
+| `#pack-notice-list` | 同上 | 1–3 行 | 每行「由于{原因}，{物品}已被消耗。」；缺件为「由于{lackText}。」；6s + 每多一行 0.7s；队列上限 12，一屏最多 3 条 |
+| `#vn-pack-used` | 对话框内，`top:-20px`、`right:24px` | min-height 30，max-width 300 | 最近一次变化；「已消耗：青稞」/「获得：药、青稞」；悬浮/聚焦打开详情，点击固定，Esc/再点/失焦/8s 收起；面板打开时隐藏 |
+| `#pack-used-detail` | 对话框内，`right:24px`、`bottom:calc(100% + 38px)` | 520×≤260 | 墨底纸字，只读；摘要 + 每件一行「物品：效果」；`pointer-events:none`，不挡正文 |
+| `.xb-pack__item.is-pack-used` | 行囊面板 | — | 已消耗幽灵行：左 3px 橙条、背景闪 900ms；单位列「已消耗」，备注「已消耗 · 原因」 |
+| `.xb-pack__item.is-pack-gained` | 行囊面板 | — | 获得行：左 3px 朱砂条 + 900ms 背景闪；`prefers-reduced-motion` 关闭动画 |
+
+- 844×390：`#vn-pack-used` 改为 `top:-40px`、`right:20px`、min-height 64、max-width 420、字号 20；`#pack-used-detail` 宽 620、max-height 320、字号 18/20。视觉高度 64 设计≈34.7 CSS，低于 44 CSS 热区，记为 P1。
+- 物资不足的选项：`option.lackText` 直接替换代价行（如「没有药，飞毛腿背上的血止不住。」），class `xb-choice__cost.is-lack`；选项收起后才弹对应 `kind="lack"` 提示，不压选项。
 
 ## 12. v1.5.1 成就系统（2026-11-08）
 

@@ -1,4 +1,4 @@
-# 《向北》验收用例（T01–T51 + C01–C08 + T11-01…T11-26 + T12-01…T12-11 + T14-01…T14-10 + T15-01…T15-15 + T16-01…T16-10 + T17-01…T17-08 + T18-01…T18-08 + T19-01…T19-11 + T20-01…T20-04 + F01–F04；v1.9.1-dev 玩家反馈修复与 v1.9.0-dev 章节重玩/分享卡/统计/测试模式已实现）
+# 《向北》验收用例（T01–T51 + C01–C08 + T11-01…T11-26 + T12-01…T12-11 + T14-01…T14-10 + T15-01…T15-15 + T16-01…T16-10 + T17-01…T17-08 + T18-01…T18-08 + T19-01…T19-11 + T20-01…T20-04 + F01–F04 + T23-01…T23-07；v1.9.2-dev 物资消耗提示/慢网画面兜底，v1.9.1-dev 玩家反馈修复与 v1.9.0-dev 章节重玩/分享卡/统计/测试模式已实现）
 
 > 用法：每条按步骤跑一遍；通过填“通过”，失败记现象 + 截图/录屏。P0 必须全过，P1 可记录例外。
 > 测试数据：?reset=1 清档；?debug=1 看旗标；?chapter=&node= 直达节点；?fonts=fallback 查字体回退。v1.1.1 历史单关入口：?minigame=door|abandon|boat|climb（可加 ?trust=0..6&door=0/1&fire=0..100&lights=0..22）；v1.2.0-dev 已删除该入口，旧命令只作历史记录。浏览器：Chrome/Edge/Safari 各一次。
@@ -308,6 +308,42 @@
 - 修复：结局页入口从 3 个增至 5 个后，通用按钮 220px 最小宽把「生成分享卡 / 本周目统计」挤出面板左侧；给结局操作行加 `flex-wrap` 并把子按钮 `min-width` 归零。测试原来用 `getBoundingClientRect` 量 330×440，在 1366 宽舞台缩放下误报 354×471；改为量 computed style。测试模式章节列表误把 coda/badend 两个隐藏章计入 9 章，过滤 `hidden === true` 后为 7 章。
 - 说明：分享卡在 844×390 上预览约 178×238 CSS px，文字偏小；保存后的 PNG 仍是 1080×1440，可放大查看。移动端未做分享卡内缩放/手势，列为 P1。
 - 未覆盖（P1）：Chrome/Safari/真机；分享卡中文长文本极端换行；下载在 iOS 微信内嵌浏览器的行为。
+
+## 步骤二十二：物资消耗/获得提示（T22-01…T22-06，2026-11-16）
+
+> 来源：用户 m00001 与 5 点反馈。四类事件只存内存，不写 11 键存档：剧情消耗、主动使用、获得、缺件。提示在对话框上方，kicker 写具体物品；右侧标识与详情说明后果；行囊面板高亮已消耗/获得行。
+
+| 用例 | 级别 | 项目 | 步骤 | 预期 | 证据 | 结果 |
+|---|---|---|---|---|---|---|
+| T22-01 | P0 | 剧情消耗 | 湘江 x025b，带青稞，选 A「回头接应老周」 | kicker「青稞」；正文「由于回头接应老周，青稞已被消耗。」；HUD 行囊 0/4 格；右侧「已消耗：青稞」；点开后详情含「青稞能替你撑过断粮的那几天。」；弹窗底边不压人名/对话框 | `step-22/http3/story-xiangjiang-pack-notice.png`、`story-pack-detail.png` | PASS |
+| T22-02 | P0 | 主动使用 | 草地 g007，带布鞋，打开行囊 → 用布鞋 → 关闭 | 面板布鞋行左橙条、单位「已消耗」、备注含原因；关闭后 kicker「布鞋」、正文「由于你拿它补充体力，布鞋已被消耗。」；右侧「已消耗：布鞋」；详情含「布鞋能在草地那几天垫住脚」 | `step-22/http3/panel-shoes-used-row.png`、`panel-shoes-pack-notice.png` | PASS |
+| T22-03 | P0 | 多件使用 | 草地 g007，青稞 + 药组合 | 面板两行已消耗；关闭后 kicker「青稞、药」；正文「由于你拿它们补充体力，青稞、药已被消耗。」；右侧「已消耗：青稞、药」；详情两件效果 | `step-22/http3/multi-pack-notice.png`、`multi-pack-detail.png` | PASS |
+| T22-04 | P0 | 缺件因果 | 泸定 l019，无药，选 C | B 置灰，代价行「没有药，飞毛腿背上的血止不住。」、class `is-lack`；选项打开时通知隐藏；选 C 后 kicker「药」、正文「由于没有药，飞毛腿背上的血止不住。」；右侧不出现消耗标识 | `step-22/http3/lack-medicine-notice.png` | PASS |
+| T22-05 | P0 | 获得 | 序章 p024，选药 + 青稞，确认出发 | 出发前面板两行 `.is-pack-gained`；关闭并过结算页后右侧「获得：药、青稞」；详情含「你获得了药、青稞。」与两件效果；p024 重装/取消不误报消耗 | `step-22/http3/gain-panel-highlight.png`、`gain-pack-notice.png` | PASS |
+| T22-06 | P1 | 位置/三端 | 1366×768、844×390；http 与 `file://` 全用例 | 桌面 notice 底边 567.47 / 人名顶 580.27 / 对话框顶 597.33；移动 288.17 / 303.33，不压正文；`_pw-step22` http 78/78、file 78/78、移动 78/78；0 console error / pageerror / 失败请求 / 外部请求 | `step-22/http3/`、`file3/`、`mobile3/` | PASS |
+
+- 合计：`_pw-step22` http/file/844×390 各 78/78；`_pw-step11 --case=doorsupply` 63/63；check-build 52/52（C53）、smoke 47/47、check-script 9 文件 OK。
+- 修复：`#vn-name` 在旁白节点隐藏时 `rect.top=0`，几何断言只在人名可见时比较；中途不落档，改以 HUD 行囊计数验证；p024 后必须过 `.vn-result__more` 结算页再查右侧标识；动画期间量位置会偏差，统一等 250ms。
+- 未覆盖（P1）：右侧标识移动视觉高 64 设计≈34.7 CSS，低于 44 CSS 热区；20 分钟真人计时、11 路线全量、隐私模式、Chrome/Safari/真机未重跑。
+
+## 步骤二十三：慢网/高延迟画面兜底（T23-01…T23-07，2026-11-16）
+
+> 来源：用户 m00002。旧版画面不是线上旧文件，而是 `art.js` 在 480 占位图/1600 大图未到或失败时调用 `PAINTERS` 程序化版画。现行口径：照片场景首帧起显示内联 320×180 WebP LQIP；大图到达后替换；失败有限重试；仍失败停在 LQIP，不白屏、不弹错。
+
+| 用例 | 级别 | 项目 | 步骤 | 预期 | 证据 | 结果 |
+|---|---|---|---|---|---|---|
+| T23-01 | P0 | http 正常 | `?chapter=grass&node=g001&debug=1` | 约 465ms 时 `#stage-art` 为 `is-photo`，`hasLqip=true`；0 console error / pageerror / 失败请求 | `step-23/normal/result.json`、`t0.png` | PASS |
+| T23-02 | P0 | 8s 网络延迟 | 所有 `/assets/backgrounds/` 延迟 8s | t0/t1/t3 均 `is-lqip` 且背景为 `data:image/webp;base64,...`，截图是模糊照片草地而非平涂旧画；t9/t11 变 `is-photo is-placeholder`；0 错误 | `step-23/slow/t0.png`、`result.json` | PASS |
+| T23-03 | P0 | 全部背景失败 | 所有背景请求 abort | 0–11s 一直 `is-lqip`，不出现程序化草地；出现 `?r=1`、`?r=2` 重试；0 pageerror | `step-23/abort/result.json`、`t0.png` | PASS |
+| T23-04 | P0 | 恢复与 file:// | abort 后解除路由并派发 `online`；另跑 file:// normal/abort | 恢复后回到 `is-photo`；file:// normal 全程 `is-photo`，file:// abort 全程 `is-lqip`；0 pageerror | `step-23/recover/`、`step-23/file/`、`step-23/file-abort/` | PASS |
+| T23-05 | P0 | 16 场景与移动 | 阻断全部背景后逐个 `XB.art.paint`；844×390 normal | 16 个照片场景全部 `is-lqip` + LQIP；map 保留程序化、无 LQIP；844×390 全程 `is-photo`，0 错误 | `step-23/scenes/scenes.json`、`step-23/mobile/result.json` | PASS |
+| T23-06 | P1 | CPU 降速 | 8s 网络延迟 + CPU 6× | t0（1.08s）仍是 `is-lqip` 照片草地；t9（10.6s）`is-photo is-placeholder`；0 console/pageerror/failed | `step-23/cpu-slow/result.json`、`t0.png` | PASS |
+| T23-07 | P0 | 标题首屏 | `_pw-artload --title` normal/8s 延迟/abort | normal 452ms `is-photo`；延迟 t0（461ms）`is-lqip` + LQIP，t9 `is-photo`；abort 0–11s 停在 LQIP；0 pageerror | `step-23/title-normal/`、`title-slow/`、`title-abort/` | PASS |
+
+- 合计：`_pw-textpass` 33/33；check-build 52/52、smoke 47/47、check-script 9 文件 OK；0 pageerror。标题专项 normal/slow/abort 三路径均无 pageerror，slow/abort 截图同为 LQIP 版本（sha256 `09c92837…`），normal 为完整图版本（`a549f661…`）。
+- 修复：C03 解析 `script src` 时先剥 `?v=` 查询串；C05 JS gzip 预算从 150KB 抬到 220KB（纯代码约 147KB + LQIP 约 63KB）；C07 增加 LQIP 数量与“照片未到不画程序化”的源码回归。
+- 说明：`art.js` 从约 56KB 增至约 148KB；这是用一次性 63KB gzip 换慢网首屏不再出现旧版画。
+- 未覆盖（P1）：真实 3G/4G 手机、Chrome/Safari/真机、20 分钟真人计时、11 路线全量、隐私模式；旧 `index.html` 被浏览器缓存时仍会加载旧脚本，本次不承诺跨版本缓存修复。
 
 ## 失败记录模板
 

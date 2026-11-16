@@ -122,8 +122,8 @@ B｜留给自己｜set: memory.grass_keep=true｜cost: 伤员看着你把青稞�
 【灶王】文书，别管我。锅别倒。
 
 >> 选项｜限时 16s｜默认 C｜记录到 choice.grass.zaowang
-A｜把青稞倒进锅里｜requires: item.barley｜set: item.barley=false, rescues=+1, quality.zaowang=2, fate.zaowang.dead=false, memory.zaowang_barley=true｜cost: 青稞倒进锅里，你和他都少一口
-B｜把家里的铁锅架上去｜requires: item.homepot｜set: item.homepot=false, rescues=+1, quality.zaowang=3, fate.zaowang.dead=false, memory.zaowang_pot=true｜cost: 家里的锅，换了这一锅热水
+A｜把青稞倒进锅里｜requires: item.barley｜lack: 没有青稞，锅里还是空的｜set: item.barley=false, rescues=+1, quality.zaowang=2, fate.zaowang.dead=false, memory.zaowang_barley=true｜cost: 青稞倒进锅里，你和他都少一口
+B｜把家里的铁锅架上去｜requires: item.homepot｜lack: 没有铁锅，雪水只能凉着喝｜set: item.homepot=false, rescues=+1, quality.zaowang=3, fate.zaowang.dead=false, memory.zaowang_pot=true｜cost: 家里的锅，换了这一锅热水
 C｜继续赶路｜set: fate.zaowang.dead=true, memory.zaowang_leave=true｜cost: 你走在前头。他没有跟上来。
 
 [[if:fate.zaowang.dead]]
@@ -194,8 +194,8 @@ B｜把小锅留给他｜set: item.pot=false｜cost: 到了陕北，你没有锅
 【林先生】我不冷。你吹号，嘴不能冻。
 
 >> 选项｜限时 12s｜默认 C｜记录到 choice.grass.dongsheng
-A｜把自己的布鞋脱给他｜requires: item.shoes｜set: item.shoes=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_shoes=true, inventory.giftBarley=true｜cost: 你把鞋脱给他，脚上只剩一层布
-B｜把雨布裹在他身上｜requires: item.raincloth｜set: item.raincloth=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_cloth=true, inventory.giftBarley=true｜cost: 雨布裹着他，雨落在你身上
+A｜把自己的布鞋脱给他｜requires: item.shoes｜lack: 没有布鞋，冬生只能赤脚踩在泥里｜set: item.shoes=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_shoes=true, inventory.giftBarley=true｜cost: 你把鞋脱给他，脚上只剩一层布
+B｜把雨布裹在他身上｜requires: item.raincloth｜lack: 没有雨布，雨只能落在冬生身上｜set: item.raincloth=false, rescues=+1, quality.dongsheng=3, fate.dongsheng.dead=false, memory.dongsheng_cloth=true, inventory.giftBarley=true｜cost: 雨布裹着他，雨落在你身上
 C｜继续赶路｜set: fate.dongsheng.dead=true, memory.dongsheng_leave=true｜cost: 你走在前头。他不会跟上来。
 
 [[if:fate.dongsheng.dead]]

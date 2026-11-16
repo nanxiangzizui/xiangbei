@@ -23,7 +23,7 @@
 | 项 | 预算 | 说明 |
 |---|---|---|
 | 首屏 | 4G 下目标 ≤1.5s；v1.1.1 未单独计时 | 标题先出 480 WebP 占位图（本地测试约 32ms）+ 两份字体子集；1600 WebP 随后替换；音乐在首次手势后才加载；不依赖 CDN |
-| JS | ≤150KB gzip | v1.1.1 六个 js；v1.2.0-dev 删除 minigames.js 后按五个计 |
+| JS | ≤220KB gzip（纯代码约 147KB + 内联 LQIP 约 63KB） | v1.9.2 起 12 张 320×180 WebP 微缩图内联在 art.js；慢网/断图时先铺 LQIP，照片场景不回落到程序化旧画。见 §2.1 |
 | CSS | ≤30KB | 不含字体 |
 | 字体 | 约 552KB（v1.1.1） | 两份 OFL 1.1 子集（得意黑 158KB + 朱雀仿宋 394KB）；失败回退系统宋体/雅黑 |
 | 图片/音频 | 本地素材包，懒加载 | 12 张底图（1600 WebP + 480 占位 + 1920 JPEG 兜底）+ 7 张缩略图 + 5 条环境循环 + 8 首配乐；运行包约 31.4MB（待重打包）；底图先占位后 1600，音频首次手势后加载 |
@@ -33,6 +33,13 @@
 | 循环 | 同一时刻只有一个 rAF；v1.1.1 小游戏不另起第二个（历史） | 场景退出/暂停时停止并移除监听；v1.2.0 无小游戏循环 |
 | 音频节点 | 同时环境床 ≤2；单 cue 振荡器结束即停止/断开；噪声 buffer 只生成一次 | debug 看 beds；反复切场景 10 次不增长 |
 | 内存 | 一章不增长 | 重复进出选择/图鉴/花名册 5 次检查；v1.2.0 无小游戏结果数组 |
+
+### 2.1 慢网首屏兜底（v1.9.2）
+
+- 12 张照片底图各带一张 320×180 WebP LQIP（base64 内联在 `art.js`，合计约 90KB 字符 / gzip 约 63KB）。
+- 照片场景的 480 占位图、1600 全图都未到时，画布只显示 LQIP，不再调用 `PAINTERS`；程序化版画只保留给 map 等无照片场景。
+- 占位图/全图失败按 1s、3s、8s 重试；`online` 与回到前台时再试一次。全图失败先回退 1920 JPEG，再失败才停在 LQIP。
+- 代价：JS gzip 从约 147KB 增至约 211KB；换来慢网首屏不再出现旧版程序化画面。首屏目标仍是 4G 下 ≤1.5s 到可交互，LQIP 与正文同时出现。
 
 ## 3. 兼容
 
@@ -57,7 +64,7 @@
 - 20 分钟四口径：设计上限 20:00；真人首玩 4 次 04:52–08:33；静态慢读预算 19:48；九个限时项全超时且翻倍的极端等待约 23:44（压力上限，不是常速）。不把自动化 03:11 当真人。
 - 字体：v1.1.1 **随包**两份 OFL 1.1 子集（约 552KB），`@font-face` 用相对路径；失败回退 Songti SC/SimSun；`?fonts=fallback` 可读；无外部字体/CDN 请求。
 - 发布包：`dist/site` 与离线 ZIP 只含六运行时、`assets/`（底图/字体/音频）、CREDITS.txt、design-note.pdf；不含 tools/docs/step/evidence/.git/测试脚本；标题页“制作名单”链接可打开。
-- 链接与视频：GitHub Pages 主站 https://nanxiangzizui.github.io/xiangbei/ （v1.9.1-dev，`main` / root，部署提交 `821c4bd`）；Netlify 备站 https://xiangbei.netlify.app/ （v1.9.1-dev，deploy `6af1ccb8…`）；Cloudflare Pages 备二站 https://xiangbei-vn.pages.dev/ （v1.9.1-dev，2026-11-15 Direct Upload 72 文件；初始 deployment `ff305def…`，现行标题底图修复 `5bfb5a1d…`）；演示视频经用户 2026-11-03 明确取消，不列为缺口。
+- 链接与视频：GitHub Pages 主站 https://nanxiangzizui.github.io/xiangbei/ （v1.9.2-dev，`main` / root）；Netlify 备站 https://xiangbei.netlify.app/ （v1.9.2-dev）；Cloudflare Pages 备二站 https://xiangbei-vn.pages.dev/ （v1.9.2-dev，Direct Upload）；演示视频经用户 2026-11-03 明确取消，不列为缺口。
 - 三站线上自检：GitHub Pages 与 Netlify 各 32/32（2026-11-09）；Cloudflare 32/32、序章 14/14、移动 7/7（2026-11-15），另验证阻断 `engine.js` 时标题静态层先显示人物底图、阻断 full WebP 时先显示 480 占位（2026-11-15 标题修复）；5 个关键文件 SHA256 与 `dist/site` 全等；0 console error / pageerror / 失败请求；未重跑 20 分钟真人计时、11 路线全量、移动完整结局、隐私、Chrome/Safari/真机。
 - v1.2.0-dev：4 段选择可玩（行囊多选、弃物多选、金沙江先渡谁、泸定门板/记名），每段 60–90s；单选/多选都没有 Game Over、没有评分；v1.1.1 的四关（?minigame=…）作为历史回归，不再作为 v1.2.0 验收项。
 - 7 张史实注可解锁；结局点名 + 7000 + 五卡。

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>向北 · 一页设计说明 v1.9.1-dev</title>
+<title>向北 · 一页设计说明 v1.9.2-dev</title>
 <style>
   @page { size: A4 portrait; margin: 8mm 9mm 7mm; }
   * { box-sizing: border-box; }
@@ -38,7 +38,7 @@
   <div class="head">
     <span class="tag">虚构人物 · 非史料人物</span>
     <h1>向北</h1>
-    <p class="sub">一块门板，两万五千里 · 16 岁红军文书 · 七段 · 四段选择 + 三次危机 · 11 条人物结局 · v1.9.1-dev</p>
+    <p class="sub">一块门板，两万五千里 · 16 岁红军文书 · 七段 · 四段选择 + 三次危机 · 11 条人物结局 · v1.9.2-dev</p>
   </div>
 
   <p class="lede">玩家是 1934 年于都的 16 岁文书“满崽”，背着一块从自家门上锯下的木板，从于都走到吴起；通过对话、行囊取舍、限时选择与三次救人危机，决定带什么、救谁、记住谁、门板到哪里。<b>历史终点不可改：湘江必败、遵义必开、泸定必夺；没有全活，也没有 Game Over，失败只改变代价。</b></p>
@@ -94,7 +94,7 @@
         <tr><th style="width:35%">口径</th><th>数值 / 说明</th></tr>
         <tr><td>设计上限</td><td>20:00（硬验收）</td></tr>
         <tr><td>v1.0 真人首玩 4 次</td><td>04:52–08:33（四关旧版，仅历史参考）</td></tr>
-        <tr><td>v1.9.1-dev 自动流程</td><td>256s / 255s（http / file；路线 1/11，最快推进，不是真人阅读）</td></tr>
+        <tr><td>v1.9.1-dev 基线自动流程</td><td>256s / 255s（http / file；路线 1/11，最快推进，不是真人阅读）</td></tr>
         <tr><td>真人计时</td><td>文本扩写后未重做（P1）；不写成“20 分钟已通过”</td></tr>
         <tr><td>裁剪顺序</td><td>草地 → 金沙江 → 遵义改纯对话（保留序章/湘江/泸定/点名）</td></tr>
       </table>
@@ -102,7 +102,7 @@
     <div>
       <h2>已知例外（不写成“通过”）</h2>
       <p class="note">浏览器仅 Edge headless（含 844×390 触摸模拟）；Chrome/Safari 为 P0 环境例外，2026-11-02 用户接受；真机触摸未验。未重跑：20 分钟真人计时、11 条路线全量、移动完整结局、隐私模式、音频主观听感、真实后台/锁屏。</p>
-      <p class="note">已测：http/file 完整流程、四段选择与三次危机、11 条结局代表路线、分享卡/统计、章节重玩、分支/成就/回顾；0 console error / 0 失败请求，证据见 docs/evidence。公网三站：GitHub Pages、Netlify、Cloudflare Pages；纯静态，无后端/无 CDN/无 fetch；离线 ZIP 断网可玩。演示视频经用户 2026-11-03 明确取消。</p>
+      <p class="note">已测：http/file 完整流程、四段选择与三次危机、11 条结局代表路线、分享卡/统计、章节重玩、分支/成就/回顾；慢网/断图先显示内嵌微缩照片，失败自动重试，不回落旧版程序化画面；0 console error / 0 失败请求，证据见 docs/evidence。公网三站：GitHub Pages、Netlify、Cloudflare Pages；纯静态，无后端/无 CDN/无 fetch；离线 ZIP 断网可玩。演示视频经用户 2026-11-03 明确取消。</p>
     </div>
   </div>
 

@@ -1,7 +1,7 @@
 # 《向北》制作名单、字体与素材授权
 
-> 版本 v1.9.1-dev · 2026-11-15 · 课程项目，非商业使用。
-> 本文件与 `project/CREDITS.txt`、`README.md` 的口径一致；`docs/design-note.md` / `dist/design-note.pdf` 仍为 v1.1.1 历史交差稿（描述四关小游戏），待按现行玩法重写；发布记录见 `docs/release-record.md`。
+> 版本 v1.9.2-dev · 2026-11-16 · 课程项目，非商业使用。
+> 本文件与 `project/CREDITS.txt`、`README.md` 的口径一致；`docs/design-note.md` / `dist/design-note.pdf` 已按现行玩法（四段选择 + 三次危机、行囊 4 格/状态 0–4、11 条人物结局）重写；发布记录见 `docs/release-record.md`。
 > 2026-11-04 素材增强：12 张场景/地图底图 + 1 张 AI 标题插画、朱雀/得意黑 OFL 子集、5 条环境录音 + 8 首配乐；同日已部署到 GitHub Pages（`f8b2045`）。
 > 2026-11-05 慢网/竖屏适配：480 WebP 占位图先出、1600 WebP 替换、JPEG 兜底；竖屏提示“在浏览器打开”；公网更新为 v1.1.1（部署提交见 README.md）。同日另部署 Netlify 主站 https://xiangbei.netlify.app/（`dist/site` 静态直传；GitHub Pages 保留备用）。
 > 2026-11-06 至 2026-11-15（v1.2.0–v1.9.1-dev）：删除四关小游戏，改为行囊四格/弃物多选/先渡谁/门板记名 + 三次救人危机；加入状态 0–4、11 条人物结局、分支图、48 条成就、存档、回顾、章节重玩、分享卡与本周目统计。三站同版本：GitHub Pages `821c4bd`、Netlify `6af1ccb8`、Cloudflare Pages `5bfb5a1d`（标题底图首屏修复）。
