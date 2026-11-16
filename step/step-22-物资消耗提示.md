@@ -95,6 +95,6 @@
 
 ## 6. 未做
 
-- 已提交 `49edea8`、打包 v1.9.2-dev；GitHub Pages（`6324e5a`）与 Netlify（`6afa93e2`）已部署，Cloudflare Pages 仍为 v1.9.1-dev，待凭据补部署。
+- 已提交 `49edea8`、打包 v1.9.2-dev；GitHub Pages（`6324e5a`）、Netlify（`6afa93e2`）与 Cloudflare Pages（`e6797715`）已部署 v1.9.2-dev。
 - 未重跑 20 分钟真人计时、11 路线全量、隐私模式、Chrome/Safari/真机。
 - 移动端右侧标识视觉高度 64 设计 px ≈34.7 CSS，低于 44 CSS 热区；本轮记录为 P1，不阻塞本功能。

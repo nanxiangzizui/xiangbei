@@ -85,6 +85,6 @@
 
 ## 7. 未做
 
-- 已提交 `49edea8`、打包 v1.9.2-dev；GitHub Pages（`6324e5a`）与 Netlify（`6afa93e2`）已部署，线上慢网专项均停在 LQIP；Cloudflare Pages 仍为 v1.9.1-dev，待凭据补部署。部署已获用户 m00697 确认。
+- 已提交 `49edea8`、打包 v1.9.2-dev；GitHub Pages（`6324e5a`）、Netlify（`6afa93e2`）与 Cloudflare Pages（`e6797715`）已部署 v1.9.2-dev，三站线上慢网专项均停在 LQIP。部署已获用户 m00697 确认。
 - 未做真实 3G/4G 手机、Chrome/Safari/真机、20 分钟真人计时、11 路线全量、隐私模式重跑。
 - 如果浏览器本身返回了旧的 index.html（离线缓存/旧 ZIP），页面仍会加载旧脚本；本次只解决“当前 HTML 下图片慢/失败”的旧画回落。三站当前均返回 max-age=0, must-revalidate，正常刷新会拿到新版本。
